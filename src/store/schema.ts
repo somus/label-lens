@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { index, integer, real, sqliteTable, sqliteView, text } from "drizzle-orm/sqlite-core";
+import {
+  type AnySQLiteColumn,
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  sqliteView,
+  text,
+} from "drizzle-orm/sqlite-core";
 
 export const records = sqliteTable("records", {
   id: text("id").primaryKey(),
@@ -9,6 +18,7 @@ export const records = sqliteTable("records", {
   contextBefore: text("context_before"),
   contextAfter: text("context_after"),
   raw: text("raw").notNull(),
+  note: text("note"),
 });
 
 export const predictions = sqliteTable(
@@ -39,22 +49,37 @@ export const reviews = sqliteTable(
       .notNull()
       .references(() => records.id, { onDelete: "cascade" }),
     status: text("status", {
-      enum: ["accepted", "relabeled", "rejected", "skipped"],
+      enum: ["accepted", "relabeled", "rejected", "skipped", "undone"],
     }).notNull(),
     finalLabel: text("final_label"),
     prevLabel: text("prev_label"),
-    note: text("note"),
     reviewedAt: text("reviewed_at").notNull(),
     sourceOfTruth: text("source_of_truth", {
       enum: ["human", "human+assistant"],
     }).notNull(),
+    compensatesReviewId: integer("compensates_review_id").references(
+      (): AnySQLiteColumn => reviews.id,
+    ),
   },
   (t) => [
     index("idx_reviews_record").on(t.recordId),
     index("idx_reviews_status").on(t.status),
     index("idx_reviews_final").on(t.finalLabel),
     index("idx_reviews_prev").on(t.prevLabel),
+    index("idx_reviews_compensates").on(t.compensatesReviewId),
   ],
+);
+
+export const recordTags = sqliteTable(
+  "record_tags",
+  {
+    recordId: text("record_id")
+      .notNull()
+      .references(() => records.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.recordId, t.tag] }), index("idx_record_tags_tag").on(t.tag)],
 );
 
 /**
@@ -74,6 +99,7 @@ export const recordsWithPrimary = sqliteView("records_with_primary", {
   contextBefore: text("context_before"),
   contextAfter: text("context_after"),
   raw: text("raw").notNull(),
+  note: text("note"),
   primaryPredictionId: integer("primary_prediction_id"),
   primaryLabel: text("primary_label"),
   primaryConfidence: real("primary_confidence"),
@@ -88,6 +114,8 @@ export type Prediction = typeof predictions.$inferSelect;
 export type NewPrediction = typeof predictions.$inferInsert;
 export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;
+export type RecordTag = typeof recordTags.$inferSelect;
+export type NewRecordTag = typeof recordTags.$inferInsert;
 export type RecordWithPrimary = typeof recordsWithPrimary.$inferSelect;
 
 // Re-export sql tag so callers don't need a second drizzle-orm import for ad-hoc fragments.

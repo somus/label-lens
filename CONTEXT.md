@@ -22,6 +22,14 @@ The single prediction surfaced as the headline on the review screen. Selected by
 **Review state**:
 A record's lifecycle position. Mutually exclusive: `pending`, `accepted`, `relabeled`, `rejected`, `skipped`. **`skipped` is its own state** — counted separately from `pending` in stats; lives in a dedicated `skipped` queue, not in `pending`.
 
+**Undone**:
+A compensating review entry that logically removes a prior effective review. Insert-only (PRD §11.4): undo never deletes. Stored as a `reviews` row with `status='undone'`, `final_label=null`, `prev_label=<prior final_label>`, `compensates_review_id=<original id>`. The compensated row and the undo row are excluded from `currentReview` / progress counts; the record returns to `pending`. The undo row itself is shown in the history strip (rendered with `<`) so the action is visible to the reviewer.
+_Avoid_: Delete, revert (these imply destructive mutation).
+
+**Note**:
+Free-form per-record annotation stored on `records.note`. Auxiliary metadata orthogonal to review state — editable on a `pending` record without inventing a placeholder review row, and unaffected by undo. One note per record (overwriting replaces it). Not part of the audit trail; reviews carry no `note` column.
+_Avoid_: Comment (overloaded), reason (reason is a queueing signal).
+
 **Tag**:
 A free-form marker orthogonal to review state. A record can be `accepted` and tagged simultaneously. Built-in tag: `marked` (Needs Review).
 _Avoid_: Flag, status (status means review state).

@@ -15,6 +15,27 @@
       "when": 1778306297182,
       "tag": "0001_records_with_primary_view",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778319444492,
+      "tag": "0002_marked_and_undo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1778320814641,
+      "tag": "0003_records_note",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1778333189787,
+      "tag": "0004_drop_reviews_note",
+      "breakpoints": true
     }
   ]
 }

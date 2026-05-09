@@ -22,7 +22,7 @@ export type InputRecord = {
   meta?: Record<string, unknown>;
 };
 
-export type ReviewStatus = "pending" | "accepted" | "relabeled" | "rejected" | "skipped";
+export type ReviewStatus = "pending" | "accepted" | "relabeled" | "rejected" | "skipped" | "undone";
 
 export type SourceOfTruth = "human" | "human+assistant";
 
@@ -34,6 +34,7 @@ export type StoredRecord = {
   context_before: string | null;
   context_after: string | null;
   raw: string;
+  note: string | null;
 };
 
 export type StoredPrediction = {
@@ -52,9 +53,9 @@ export type StoredReview = {
   status: ReviewStatus;
   final_label: string | null;
   prev_label: string | null;
-  note: string | null;
   reviewed_at: string;
   source_of_truth: SourceOfTruth;
+  compensates_review_id: number | null;
 };
 
 export type RecordWithPrimaryPrediction = StoredRecord & {

@@ -32,15 +32,19 @@ export type InferenceResult = {
   fields: FieldMap;
   topLevelFields: string[];
   sampleSize: number;
+  /** Distinct prediction labels seen in the sample, ordered by descending frequency. */
+  labels: string[];
 };
 
 export async function inferSchema(filePath: string, sampleLimit = 100): Promise<InferenceResult> {
   const seenFields = new Set<string>();
+  const samples: Record<string, unknown>[] = [];
   let sampleSize = 0;
 
   for await (const { value } of streamJsonl(filePath)) {
     if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
     for (const k of Object.keys(value)) seenFields.add(k);
+    samples.push(value as Record<string, unknown>);
     sampleSize++;
     if (sampleSize >= sampleLimit) break;
   }
@@ -60,10 +64,13 @@ export async function inferSchema(filePath: string, sampleLimit = 100): Promise<
     );
   }
 
+  const predictionField = pickFirst("prediction");
+  const labels = collectLabels(samples, predictionField);
+
   return {
     fields: {
       text,
-      prediction: pickFirst("prediction"),
+      prediction: predictionField,
       confidence: pickFirst("confidence"),
       source: pickFirst("source"),
       context_before: pickFirst("context_before"),
@@ -72,7 +79,31 @@ export async function inferSchema(filePath: string, sampleLimit = 100): Promise<
     },
     topLevelFields: [...seenFields],
     sampleSize,
+    labels,
   };
+}
+
+function collectLabels(
+  samples: Record<string, unknown>[],
+  predictionField: string | undefined,
+): string[] {
+  const counts = new Map<string, number>();
+  const bump = (label: unknown) => {
+    if (typeof label !== "string" || label.length === 0) return;
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  };
+  for (const row of samples) {
+    if (predictionField && predictionField in row) bump(row[predictionField]);
+    const preds = row.predictions;
+    if (Array.isArray(preds)) {
+      for (const p of preds) {
+        if (p && typeof p === "object" && "label" in p) bump((p as { label: unknown }).label);
+      }
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([k]) => k);
 }
 
 export class InferenceError extends Error {

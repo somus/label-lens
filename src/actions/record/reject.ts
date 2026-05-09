@@ -2,23 +2,19 @@ import type { ReviewContext } from "../../app/context.ts";
 import { insertReview } from "../../store/records.ts";
 import type { Command } from "../command.ts";
 
-export const accept: Command<ReviewContext> = {
-  name: "record.accept",
+export const reject: Command<ReviewContext> = {
+  name: "record.reject",
   scope: "review",
-  binding: "a",
+  binding: "x",
   enabled: (ctx) => ctx.cursor.current() !== null,
   run: (ctx) => {
     const record = ctx.cursor.current();
     if (!record) return;
-    if (!record.primaryPrediction) {
-      ctx.setFlash("Cannot accept: no prediction", "error");
-      return;
-    }
     insertReview(ctx.db, {
       record_id: record.id,
-      status: "accepted",
-      final_label: record.primaryPrediction.label,
-      prev_label: null,
+      status: "rejected",
+      final_label: null,
+      prev_label: record.primaryPrediction?.label ?? null,
       source_of_truth: "human",
     });
     ctx.cursor.refresh();

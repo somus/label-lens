@@ -2,7 +2,7 @@
 
 exports[`review screen e2e initial render: progress strip + first record + primary prediction 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl                                                            0 / 10   q quit 
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                     
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │                                                                                                │ 
@@ -12,6 +12,9 @@ exports[`review screen e2e initial render: progress strip + first record + prima
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     
+  1 food >                                                                                          
+  2 travel                                                                                          
+  3 other                                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
@@ -19,18 +22,15 @@ exports[`review screen e2e initial render: progress strip + first record + prima
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-  a accept    j next    k prev    q quit                                                            
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
                                                                                                     
 "
 `;
 
 exports[`review screen e2e pressing 'a' writes an accepted review row and advances counter 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl                                                            1 / 10   q quit 
+  LabelLens · tiny.jsonl · Pending · 1 / 9               Reviewed: 1 / 10 · Skipped: 0 · Pending: 9 
                                                                                                     
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │                                                                                                │ 
@@ -40,25 +40,25 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
                                                                                                     
   src llm:gpt-4   →   travel  (88%)                                                                 
                                                                                                     
+  1 food                                                                                            
+  2 travel >                                                                                        
+  3 other                                                                                           
+                                                                                                    
+  history: 21b86d + food                                                                            
                                                                                                     
                                                                                                     
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-  a accept    j next    k prev    q quit                                                            
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
                                                                                                     
 "
 `;
 
 exports[`review screen e2e pressing 'j' moves to the next record without writing a review 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl                                                            0 / 10   q quit 
+  LabelLens · tiny.jsonl · Pending · 2 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                     
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │                                                                                                │ 
@@ -68,6 +68,9 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
                                                                                                     
   src llm:gpt-4   →   travel  (88%)                                                                 
                                                                                                     
+  1 food                                                                                            
+  2 travel >                                                                                        
+  3 other                                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
@@ -75,18 +78,15 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-  a accept    j next    k prev    q quit                                                            
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
                                                                                                     
 "
 `;
 
 exports[`review screen e2e pressing 'a' across all records empties pending and shows completion 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl                                                           10 / 10   q quit 
+  LabelLens · tiny.jsonl · Pending · 0 / 0              Reviewed: 10 / 10 · Skipped: 0 · Pending: 0 
                                                                                                     
                                                                                                     
                                                                                                     
@@ -94,6 +94,8 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
+  history: fee815 + ENTRY_START  ·  411293 + food  ·  7c11c2 + other  ·  f207ce + food  ·  bf0403   
+ + rent                                                                                             
                                                                                                     
                                                                                                     
                                                                                                     
@@ -104,10 +106,8 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-  a accept    j next    k prev    q quit                                                            
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
                                                                                                     
 "
 `;
