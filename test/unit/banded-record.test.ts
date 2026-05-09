@@ -100,6 +100,22 @@ describe("BandedRecord component", () => {
     expect(String(inner.props?.content ?? "")).toContain("Lunch");
   });
 
+  test("16-color focused record: borderColor is unset (mono fallback)", () => {
+    const box = asNode(
+      BandedRecord({ text: "x", isFocused: true, bandSlot: "even", display: sixteenLight }),
+    );
+    expect(box.props?.borderStyle).toBe("single");
+    expect(box.props?.borderColor).toBeUndefined();
+  });
+
+  test("mono focused record: borderColor is unset (NO_COLOR honored)", () => {
+    const box = asNode(
+      BandedRecord({ text: "x", isFocused: true, bandSlot: "even", display: monoLight }),
+    );
+    expect(box.props?.borderStyle).toBe("single");
+    expect(box.props?.borderColor).toBeUndefined();
+  });
+
   test("16-color context record: │ marker prefixed inline, no border", () => {
     const box = asNode(
       BandedRecord({ text: "Uber", isFocused: false, bandSlot: "even", display: sixteenLight }),

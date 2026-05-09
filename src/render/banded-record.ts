@@ -66,7 +66,9 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
   }
   if (isFocused) {
     opts.borderStyle = focusBoxStyle(display);
-    opts.borderColor = accentColor(display);
+    if (display.color === "truecolor" || display.color === "256") {
+      opts.borderColor = accentColor(display);
+    }
   }
   return Box(
     opts,

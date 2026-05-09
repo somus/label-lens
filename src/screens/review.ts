@@ -53,7 +53,11 @@ export function mountReviewScreen(args: {
     const bandRows = Math.max(8, renderer.terminalHeight - NON_BAND_ROWS);
     const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
     const nextN = Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - app.display.candidatePin)));
-    const window = cursor?.window(prevN, nextN) ?? { records: [], focusedIndex: -1 };
+    const window = cursor?.window(prevN, nextN) ?? {
+      records: [],
+      focusedIndex: -1,
+      startIndex: 0,
+    };
     const record = cursor?.current() ?? null;
     const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
     const history = recentReviews(app.db, 5);
@@ -81,7 +85,7 @@ export function mountReviewScreen(args: {
 
         Box({ height: 1 }),
 
-        bandRegion(window.records, window.focusedIndex, app.display),
+        bandRegion(window.records, window.focusedIndex, window.startIndex, app.display),
 
         record?.primaryPrediction
           ? Box(
@@ -176,6 +180,7 @@ export function mountReviewScreen(args: {
 function bandRegion(
   records: RecordWithPrimaryPrediction[],
   focusedIndex: number,
+  startIndex: number,
   display: ResolvedDisplay,
 ): ReturnType<typeof Box> {
   if (records.length === 0 || focusedIndex < 0) {
@@ -192,6 +197,7 @@ function bandRegion(
   const focused = records[focusedIndex]!;
   const after = records.slice(focusedIndex + 1);
   const pin = display.candidatePin;
+  const focusedAbsolute = startIndex + focusedIndex;
 
   return Box(
     { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
@@ -208,7 +214,7 @@ function bandRegion(
         BandedRecord({
           text: r.text,
           isFocused: false,
-          bandSlot: slotFor(focusedIndex - before.length + i),
+          bandSlot: slotFor(startIndex + i),
           display,
         }),
       ),
@@ -224,14 +230,14 @@ function bandRegion(
       BandedRecord({
         text: focused.text,
         isFocused: true,
-        bandSlot: slotFor(focusedIndex),
+        bandSlot: slotFor(focusedAbsolute),
         display,
       }),
       ...after.map((r, i) =>
         BandedRecord({
           text: r.text,
           isFocused: false,
-          bandSlot: slotFor(focusedIndex + 1 + i),
+          bandSlot: slotFor(focusedAbsolute + 1 + i),
           display,
         }),
       ),

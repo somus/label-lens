@@ -80,13 +80,18 @@ export class Cursor extends EventEmitter<CursorEvents> {
   window(
     beforeN: number,
     afterN: number,
-  ): { records: RecordWithPrimaryPrediction[]; focusedIndex: number } {
-    if (this.records.length === 0) return { records: [], focusedIndex: -1 };
+  ): {
+    records: RecordWithPrimaryPrediction[];
+    focusedIndex: number;
+    startIndex: number;
+  } {
+    if (this.records.length === 0) return { records: [], focusedIndex: -1, startIndex: 0 };
     const start = Math.max(0, this.index - beforeN);
     const end = Math.min(this.records.length, this.index + afterN + 1);
     return {
       records: this.records.slice(start, end),
       focusedIndex: this.index - start,
+      startIndex: start,
     };
   }
 }
