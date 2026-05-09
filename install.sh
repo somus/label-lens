@@ -22,7 +22,7 @@ err() { echo "label-lens installer: $*" >&2; exit 1; }
 log() { echo "label-lens installer: $*"; }
 
 detect_target() {
-  local os arch
+  local os arch target
   case "$(uname -s)" in
     Darwin) os=darwin ;;
     Linux)  os=linux  ;;
@@ -33,7 +33,11 @@ detect_target() {
     x86_64|amd64)  arch=x64   ;;
     *) err "unsupported arch: $(uname -m). Supported: arm64, x86_64." ;;
   esac
-  echo "${os}-${arch}"
+  target="${os}-${arch}"
+  if [ "$target" = "darwin-x64" ]; then
+    err "darwin-x64 (Intel Mac) is not shipped as a prebuilt. Build from source: clone the repo and run 'bun run build:bin'."
+  fi
+  echo "$target"
 }
 
 resolve_version() {

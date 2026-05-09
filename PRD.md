@@ -903,7 +903,7 @@ Resolution is: defaults → user config (merged at startup, user wins). MVP supp
 | LLM            | `pi-ai` (provider-agnostic, OAuth subscription auth + API keys) |
 | Validation     | TypeBox (aligned with `pi-ai` schemas); Zod elsewhere if useful |
 | Distribution   | Bun-compiled binary + runtime assets in one install dir. **MVP**: curl-installer (primary) + npm `optionalDependencies` (secondary). **V1**: brew formula. (OpenCode pattern, staged.) |
-| Targets        | macOS (arm64, x64), Linux (arm64, x64)     |
+| Targets        | macOS arm64, Linux (arm64, x64). Intel Mac (darwin-x64) intentionally not shipped as a prebuilt — see ADR 0006. |
 
 ### Constraints this implies
 

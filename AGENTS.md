@@ -4,7 +4,7 @@ You are working on **LabelLens**, a terminal-first review tool for noisy text tr
 
 1. **`PRD.md`** — full product spec (v2.7). Authoritative for behavior.
 2. **`CONTEXT.md`** — domain glossary. Use these terms in code, comments, commit messages, and PR descriptions. Avoid the alternatives listed under each `_Avoid_` line.
-3. **`docs/adr/`** — load-bearing decisions. ADRs 0001–0005 settle identity, re-ingest, skipped state, assistant audit, and the drizzle-orm + bundled-migrations storage approach. Don't relitigate unless you're explicitly superseding one.
+3. **`docs/adr/`** — load-bearing decisions. ADRs 0001–0006 settle identity, re-ingest, skipped state, assistant audit, drizzle storage, and no-darwin-x64-prebuilt. Don't relitigate unless you're explicitly superseding one.
 
 ## Issue tracker
 
