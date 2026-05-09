@@ -68,7 +68,9 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          # 24+ required for npm OIDC trusted publishing handshake (npm/cli#9088).
+          # Node 22's bundled npm rejects with misleading 404 'not in registry'.
+          node-version: 24
           registry-url: https://registry.npmjs.org
 
       - run: bun install --frozen-lockfile
