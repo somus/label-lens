@@ -6,6 +6,7 @@ import { type AppContext, createAppContext, enterReview } from "../../src/app/co
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { applyEffects } from "../../src/overlay/effects.ts";
 import { reduceOverlay } from "../../src/overlay/reduce.ts";
+import { defaultDisplay } from "../../src/render/capability.ts";
 import type { Db } from "../../src/store/db.ts";
 import { currentReview } from "../../src/store/queries.ts";
 import { hasTag } from "../../src/store/tags.ts";
@@ -19,7 +20,13 @@ const config: LabellensConfig = {
 };
 
 function makeApp(db: Db, queueId: "pending" | "skipped" = "pending"): AppContext {
-  const app = createAppContext({ db, config, requestRender: () => {}, onQuit: () => {} });
+  const app = createAppContext({
+    db,
+    config,
+    display: defaultDisplay(),
+    requestRender: () => {},
+    onQuit: () => {},
+  });
   enterReview(app, queueId);
   return app;
 }
@@ -211,6 +218,7 @@ describe("record.toggleMark", () => {
     const app = createAppContext({
       db: store.db,
       config,
+      display: defaultDisplay(),
       requestRender: () => {
         renders++;
       },

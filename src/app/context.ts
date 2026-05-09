@@ -1,7 +1,7 @@
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import type { Overlay } from "../overlay/types.ts";
-import { type ResolvedDisplay, resolveDisplay } from "../render/capability.ts";
+import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Db } from "../store/db.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 
@@ -34,19 +34,12 @@ export type AppContext = {
 export function createAppContext(args: {
   db: Db;
   config: LabellensConfig;
+  display: ResolvedDisplay;
   requestRender: () => void;
   onQuit: () => void;
-  display?: ResolvedDisplay;
 }): AppContext {
   const cursors = new Map<QueueId, Cursor>();
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
-  const display: ResolvedDisplay =
-    args.display ??
-    resolveDisplay({
-      detectedColor: { color: "mono" },
-      detectedTheme: "light",
-      config: args.config.display,
-    });
   const ctx: AppContext = {
     db: args.db,
     config: args.config,
@@ -54,7 +47,7 @@ export function createAppContext(args: {
     overlay: null,
     cursor: null,
     queueId: null,
-    display,
+    display: args.display,
     requestRender: args.requestRender,
     onQuit: args.onQuit,
     getCursor(queueId) {

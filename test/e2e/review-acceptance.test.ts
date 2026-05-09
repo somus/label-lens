@@ -3,6 +3,7 @@ import { createTestRenderer } from "@opentui/core/testing";
 import { sql } from "drizzle-orm";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
+import { defaultDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
 import { currentReview, progressCounts } from "../../src/store/queries.ts";
 import { DEFAULT_FIELDS, openTmpStore } from "../util/tmp.ts";
@@ -28,6 +29,7 @@ describe("slice 2 acceptance — accept → relabel → skip → undo", () => {
     const app = createAppContext({
       db: store.db,
       config,
+      display: defaultDisplay(),
       requestRender: () => {},
       onQuit: () => {},
     });

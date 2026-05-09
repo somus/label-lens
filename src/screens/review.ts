@@ -97,9 +97,7 @@ export function mountReviewScreen(args: {
             )
           : Box({}),
 
-        record
-          ? labelListBox(app.config.labels, record.primaryPrediction?.label ?? null, app.display)
-          : Box({}),
+        record ? labelListBox(app.config.labels, record.primaryPrediction?.label ?? null) : Box({}),
 
         record?.note
           ? Box(
@@ -208,7 +206,7 @@ function bandRegion(
       },
       ...before.map((r, i) =>
         BandedRecord({
-          text: bandText(r),
+          text: r.text,
           isFocused: false,
           bandSlot: slotFor(focusedIndex - before.length + i),
           display,
@@ -224,14 +222,14 @@ function bandRegion(
         overflow: "hidden",
       },
       BandedRecord({
-        text: bandText(focused),
+        text: focused.text,
         isFocused: true,
         bandSlot: slotFor(focusedIndex),
         display,
       }),
       ...after.map((r, i) =>
         BandedRecord({
-          text: bandText(r),
+          text: r.text,
           isFocused: false,
           bandSlot: slotFor(focusedIndex + 1 + i),
           display,
@@ -241,10 +239,6 @@ function bandRegion(
   );
 }
 
-function bandText(r: RecordWithPrimaryPrediction): string {
-  return r.text;
-}
-
 function slotFor(absoluteIndex: number): "even" | "odd" {
   return absoluteIndex % 2 === 0 ? "even" : "odd";
 }
@@ -252,7 +246,6 @@ function slotFor(absoluteIndex: number): "even" | "odd" {
 function labelListBox(
   labels: Parameters<typeof labelName>[0][],
   predicted: string | null,
-  display: ResolvedDisplay,
 ): ReturnType<typeof Box> {
   return Box(
     { flexDirection: "column", marginTop: 1 },
@@ -260,10 +253,9 @@ function labelListBox(
       const name = labelName(entry);
       const isPredicted = name === predicted;
       const marker = isPredicted ? " >" : "  ";
-      const bold = isPredicted || display.color === "mono";
       return Text({
         content: ` ${idx + 1} ${name}${marker}`,
-        attributes: bold ? TextAttributes.BOLD : TextAttributes.DIM,
+        attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.DIM,
       });
     }),
   );

@@ -143,10 +143,11 @@ describe("slice 3: review screen banding + focus + pin", () => {
     const lines = frameLines(frame);
     const topCornerRow = lines.findIndex((l) => l.includes("╭"));
     expect(topCornerRow).toBeGreaterThan(-1);
-    // Renderer is 24 rows tall. Header takes 2-3 rows, footer 2 rows, history 1.
-    // Band region ~16-18 rows; pin = 0.4 → focus top should land roughly rows 7..12 of the frame.
-    expect(topCornerRow).toBeGreaterThanOrEqual(5);
-    expect(topCornerRow).toBeLessThanOrEqual(13);
+    // 24-row renderer, pin = 0.4. After header + spacer (≈3 rows), the band
+    // region runs ~17 rows; focused-record top corner should land at row
+    // ≈ 3 + floor(17 × 0.4) = 9. Allow ±2 rows for flex rounding + spacers.
+    expect(topCornerRow).toBeGreaterThanOrEqual(7);
+    expect(topCornerRow).toBeLessThanOrEqual(11);
   });
 
   test("256-color: rounded border, no left-edge markers (banding does the work)", async () => {

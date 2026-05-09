@@ -63,6 +63,11 @@ export type ThemeProbe = {
   waitForThemeMode: (timeoutMs: number) => Promise<"light" | "dark" | null>;
 };
 
+/** Lowest-common-denominator display. Test-only — production paths must call `bootstrapDisplay`. */
+export function defaultDisplay(): ResolvedDisplay {
+  return { color: "mono", banding: false, theme: "light", candidatePin: 0.4 };
+}
+
 export async function bootstrapDisplay(args: {
   env: CapabilityEnv;
   themeProbe: ThemeProbe;

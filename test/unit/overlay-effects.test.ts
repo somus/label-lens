@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { type AppContext, createAppContext, enterReview } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { applyEffects } from "../../src/overlay/effects.ts";
+import { defaultDisplay } from "../../src/render/capability.ts";
 import { currentReview } from "../../src/store/queries.ts";
 import { DEFAULT_FIELDS, openTmpStore } from "../util/tmp.ts";
 
@@ -14,7 +15,13 @@ const config: LabellensConfig = {
 };
 
 function ctx(db: import("../../src/store/db.ts").Db): AppContext {
-  const app = createAppContext({ db, config, requestRender: () => {}, onQuit: () => {} });
+  const app = createAppContext({
+    db,
+    config,
+    display: defaultDisplay(),
+    requestRender: () => {},
+    onQuit: () => {},
+  });
   enterReview(app, "pending");
   return app;
 }

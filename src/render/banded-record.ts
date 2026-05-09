@@ -68,7 +68,6 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
     opts.borderStyle = focusBoxStyle(display);
     opts.borderColor = accentColor(display);
   }
-
   return Box(
     opts,
     Text({
