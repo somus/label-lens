@@ -21,6 +21,8 @@
     "dev:up": "bun run scripts/dev.ts up",
     "dev:down": "bun run scripts/dev.ts down",
     "dev:status": "bun run scripts/dev.ts status",
+    "reserve:stage": "bun run scripts/reserve-names.ts",
+    "reserve:publish": "bun run scripts/reserve-names.ts publish",
     "db:generate": "bun --bun drizzle-kit generate",
     "db:migrate": "bun --bun drizzle-kit migrate",
     "db:studio": "bun --bun drizzle-kit studio",

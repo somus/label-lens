@@ -88,16 +88,17 @@ jobs:
       - name: Stage npm packages
         run: bun run scripts/build-npm.ts --version ${{ github.event.release.tag_name }}
 
+      # npm OIDC trusted publishing: id-token: write (above) + npm publish
+      # --provenance is enough — no NPM_TOKEN. Each package must have a
+      # Trusted Publisher configured on npmjs.com pointing at this repo +
+      # this workflow. Initial 0.0.0 reservation lives in dist/reserve/
+      # (scripts/reserve-names.ts) and is published manually once.
       - name: Publish platform packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in dist/npm/label-lens-*; do
             (cd "$pkg" && npm publish --provenance --access public)
           done
 
       - name: Publish top-level package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: dist/npm/label-lens
         run: npm publish --provenance --access public
