@@ -31,10 +31,16 @@ export async function runInit(args: { input: string }): Promise<void> {
     `  sampled ${inference.sampleSize} records; top-level fields: ${inference.topLevelFields.join(", ")}`,
   );
   console.log(`  inferred fields: ${JSON.stringify(inference.fields)}`);
+  if (inference.labels.length > 0) {
+    console.log(`  inferred labels: ${inference.labels.join(", ")}`);
+  } else {
+    console.log("  inferred labels: (none — falling back to 'other')");
+  }
 
   const config = defaultConfig({
     inputPath,
     fields: inference.fields,
+    labels: inference.labels,
   });
 
   await Bun.write(configPath, `${JSON.stringify(config, null, 2)}\n`);

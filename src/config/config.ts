@@ -20,11 +20,14 @@ export type LabellensConfig = {
 export function defaultConfig(args: {
   inputPath: string;
   fields: FieldMap;
+  labels?: string[];
   outputPath?: string;
 }): LabellensConfig {
+  const labels = args.labels && args.labels.length > 0 ? [...args.labels] : ["other"];
+  if (!labels.includes("other")) labels.push("other");
   return {
     task: "classification",
-    labels: ["other"],
+    labels,
     input: {
       path: args.inputPath,
       format: "jsonl",
