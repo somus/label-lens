@@ -24,7 +24,6 @@ export function defaultConfig(args: {
   outputPath?: string;
 }): LabellensConfig {
   const labels = args.labels && args.labels.length > 0 ? [...args.labels] : ["other"];
-  if (!labels.includes("other")) labels.push("other");
   return {
     task: "classification",
     labels,

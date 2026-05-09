@@ -148,6 +148,17 @@ describe("review screen slice 2 UI", () => {
     expect(frame).not.toContain("m mark ");
   });
 
+  test("picker filter accepts space character", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { app, mockInput, renderOnce } = await setup(store);
+    mockInput.pressKey("r");
+    await renderOnce();
+    expect(app.mode).toBe("picker");
+    mockInput.pressKey(" ");
+    await renderOnce();
+    expect(app.picker?.filter).toBe(" ");
+  });
+
   test("note prompt accepts spaces between words", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { app, mockInput, renderOnce } = await setup(store);
