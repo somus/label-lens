@@ -16,6 +16,14 @@
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "format": "biome format --write",
+    "build:bin": "bun run scripts/build-bin.ts",
+    "seed": "bun run scripts/seed-dev.ts",
+    "dev:up": "bun run scripts/dev.ts up",
+    "dev:down": "bun run scripts/dev.ts down",
+    "dev:status": "bun run scripts/dev.ts status",
+    "db:generate": "bun --bun drizzle-kit generate",
+    "db:migrate": "bun --bun drizzle-kit migrate",
+    "db:studio": "bun --bun drizzle-kit studio",
     "prepare": "lefthook install"
   },
   "engines": {
@@ -23,12 +31,15 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
+    "@libsql/client": "^0.17.3",
     "@types/bun": "latest",
+    "drizzle-kit": "^0.31.10",
     "lefthook": "^2.1.6",
     "typescript": "^5"
   },
   "dependencies": {
     "@opentui/core": "^0.2.1",
-    "@sinclair/typebox": "^0.34.0"
+    "@sinclair/typebox": "^0.34.0",
+    "drizzle-orm": "^0.45.2"
   }
 }

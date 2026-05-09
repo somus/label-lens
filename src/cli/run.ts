@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { createCliRenderer } from "@opentui/core";
+import { createAppContext } from "../app/context.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { ingestFile } from "../ingest/ingest.ts";
 import { mountReviewScreen } from "../screens/review.ts";
@@ -29,5 +30,14 @@ export async function runReview(): Promise<void> {
   }
 
   const renderer = await createCliRenderer({ exitOnCtrlC: true });
-  mountReviewScreen({ renderer, db, config });
+  const app = createAppContext({
+    db,
+    config,
+    requestRender: () => {},
+    onQuit: () => {
+      renderer.destroy();
+      process.exit(0);
+    },
+  });
+  mountReviewScreen({ renderer, app });
 }

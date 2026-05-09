@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-binaries:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-14
+          - target: darwin-x64
+            runner: macos-13
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: linux-x64
+            runner: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build binary + bundle worker
+        run: bun run build:bin ${{ matrix.target }}
+
+      - name: Tarball
+        working-directory: dist
+        run: tar -czf label-lens-${{ matrix.target }}.tar.gz label-lens-${{ matrix.target }}
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/label-lens-${{ matrix.target }}.tar.gz
+
+      - name: Stage for npm job
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.target }}
+          path: dist/label-lens-${{ matrix.target }}/
+          retention-days: 1
+
+  publish-npm:
+    name: Publish npm packages
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - run: bun install --frozen-lockfile
+
+      - name: Pull build artifacts from matrix
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: build-*
+
+      - name: Reorganize artifacts to dist/label-lens-<target>/
+        run: |
+          for dir in dist/build-*; do
+            target="${dir#dist/build-}"
+            mv "$dir" "dist/label-lens-${target}"
+          done
+          ls -la dist/
+
+      - name: Stage npm packages
+        run: bun run scripts/build-npm.ts --version ${{ github.event.release.tag_name }}
+
+      # npm OIDC trusted publishing: id-token: write (above) + npm publish
+      # --provenance is enough — no NPM_TOKEN. Each package must have a
+      # Trusted Publisher configured on npmjs.com pointing at this repo +
+      # this workflow. Initial 0.0.0 reservation lives in dist/reserve/
+      # (scripts/reserve-names.ts) and is published manually once.
+      - name: Publish platform packages
+        run: |
+          for pkg in dist/npm/label-lens-*; do
+            (cd "$pkg" && npm publish --provenance --access public)
+          done
+
+      - name: Publish top-level package
+        working-directory: dist/npm/label-lens
+        run: npm publish --provenance --access public

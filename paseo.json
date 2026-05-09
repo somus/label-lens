@@ -1,0 +1,17 @@
+{
+  "worktree": {
+    "setup": ["bun install --frozen-lockfile", "bunx lefthook install"]
+  },
+  "scripts": {
+    "test": { "command": "bun test" },
+    "typecheck": { "command": "bun run typecheck" },
+    "lint": { "command": "bun run lint" },
+    "check": { "command": "bun run typecheck && bunx biome check && bun test" },
+    "build": { "command": "bun run build:bin" },
+    "seed": { "command": "bun run seed" },
+    "dev:up": { "command": "bun run dev:up" },
+    "dev:down": { "command": "bun run dev:down" },
+    "db:generate": { "command": "bun run db:generate" },
+    "db:studio": { "command": "bun run db:studio" }
+  }
+}
