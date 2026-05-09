@@ -86,7 +86,7 @@ jobs:
           ls -la dist/
 
       - name: Stage npm packages
-        run: bun run scripts/build-npm.ts
+        run: bun run scripts/build-npm.ts --version ${{ github.event.release.tag_name }}
 
       - name: Publish platform packages
         env:

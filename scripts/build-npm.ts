@@ -12,11 +12,35 @@ const PLATFORMS = [
   { name: "linux-x64", os: "linux", cpu: "x64" },
 ] as const;
 
-async function readVersion(): Promise<string> {
+function normalizeVersion(raw: string): string {
+  const trimmed = raw.trim().replace(/^v/, "");
+  if (!/^\d+\.\d+\.\d+(?:[-+].+)?$/.test(trimmed)) {
+    throw new Error(
+      `invalid semver '${raw}'. Expected MAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH (with optional -prerelease / +build).`,
+    );
+  }
+  return trimmed;
+}
+
+async function resolveVersion(): Promise<string> {
+  const argIdx = process.argv.indexOf("--version");
+  if (argIdx >= 0) {
+    const v = process.argv[argIdx + 1];
+    if (!v) throw new Error("--version requires a value");
+    return normalizeVersion(v);
+  }
+  const env =
+    process.env.LL_RELEASE_VERSION ||
+    (process.env.GITHUB_EVENT_NAME === "release" ? process.env.GITHUB_REF_NAME : undefined);
+  if (env) return normalizeVersion(env);
+
   const pkg = JSON.parse(await Bun.file(resolve(ROOT, "package.json")).text()) as {
     version: string;
   };
-  return pkg.version;
+  console.warn(
+    `  no --version / LL_RELEASE_VERSION / GITHUB_REF_NAME — falling back to package.json (${pkg.version}). This is fine for local dev; CI release should pass --version.`,
+  );
+  return normalizeVersion(pkg.version);
 }
 
 function buildPlatformPackage(platform: (typeof PLATFORMS)[number], version: string): boolean {
@@ -82,7 +106,7 @@ function buildTopLevelPackage(version: string): void {
 }
 
 async function main(): Promise<void> {
-  const version = await readVersion();
+  const version = await resolveVersion();
   console.log(`Building npm packages at version ${version}`);
 
   rmSync(NPM_DIR, { recursive: true, force: true });
