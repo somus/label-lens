@@ -26,6 +26,19 @@ Slices are tracer bullets — each cuts end-to-end through schema, store, render
 
 Render primitives wrap OpenTUI components in `src/render/` (4–6 small files) so OpenTUI version churn is one layer of work, not a global rewrite. See PRD §16.1.
 
+## Display config (PRD §14.5)
+
+Terminal capability + theme are detected once at startup by `bootstrapDisplay` in `src/render/capability.ts` and threaded through `AppContext.display`. Every callsite of `createAppContext` must pass a `ResolvedDisplay` — production code calls `bootstrapDisplay`; tests use `defaultDisplay()` (mono + light) from the same module.
+
+Users override via `labellens.config.json` `display.*`:
+
+- `color: "auto" | "truecolor" | "256" | "16" | "mono"` — force a capability level (auto reads `$COLORTERM` / `$TERM` / `$NO_COLOR`).
+- `banding: "auto" | "on" | "off"` — banded background tint per record. Always off at 16 / mono regardless of override.
+- `theme: "auto" | "light" | "dark"` — auto uses `renderer.waitForThemeMode(200)` with a `light` fallback on timeout / null / rejection.
+- `candidatePin: 0.05..0.95` — viewport pin position; default 0.4 = 40% from top of band region.
+
+Live theme switching mid-session is a V1 follow-up (PRD §14.5).
+
 ## Conventions
 
 - **Domain language is law.** "Annotation" means human label; "Prediction" means machine label. Don't say "label" alone unless you mean the value (`food`, `SECTION_HEADER`).

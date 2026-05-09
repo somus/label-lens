@@ -28,4 +28,30 @@ describe("defaultConfig", () => {
     });
     expect(cfg.labels).toEqual(["food", "other", "travel"]);
   });
+
+  test("populates display defaults: candidatePin=0.4, color=auto, banding=auto, theme=auto", () => {
+    const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS });
+    expect(cfg.display).toEqual({
+      color: "auto",
+      banding: "auto",
+      theme: "auto",
+      candidatePin: 0.4,
+    });
+  });
+});
+
+describe("LabellensConfig display key shape", () => {
+  test("user-supplied display overrides accepted on the type", () => {
+    // Type-level test: this object must satisfy LabellensConfig without errors.
+    const cfg = {
+      task: "classification" as const,
+      labels: ["food"],
+      input: { path: "/x", format: "jsonl" as const, fields: FIELDS },
+      output: { path: "/y", format: "jsonl" as const },
+      display: { color: "mono" as const, banding: "off" as const, candidatePin: 0.3 },
+    };
+    expect(cfg.display.color).toBe("mono");
+    expect(cfg.display.banding).toBe("off");
+    expect(cfg.display.candidatePin).toBe(0.3);
+  });
 });

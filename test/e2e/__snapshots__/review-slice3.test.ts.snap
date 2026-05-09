@@ -1,0 +1,197 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`slice 3: review screen banding + focus + pin truecolor: focused record at index 0 carries the rounded focus box; nothing else does 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                                      │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+  Uber ride to airport                                                                              
+  Amazon order #12345                                                                               
+  Netflix monthly                                                                                   
+  Salary credit October                                                                             
+                                                                                                    
+  src llm:gpt-4   →   food  (92%)                                                                   
+                                                                                                    
+  1 food >                                                                                          
+  2 travel                                                                                          
+  3 other                                                                                           
+                                                                                                    
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
+                                                                                                    
+"
+`;
+
+exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' moves the focus box to next record 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl · Pending · 2 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  Lunch at Zomato Bangalore                                                                         
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Uber ride to airport                                                                           │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+  Amazon order #12345                                                                               
+  Netflix monthly                                                                                   
+  Salary credit October                                                                             
+  Rent transfer to landlord                                                                         
+                                                                                                    
+  src llm:gpt-4   →   travel  (88%)                                                                 
+                                                                                                    
+  1 food                                                                                            
+  2 travel >                                                                                        
+  3 other                                                                                           
+                                                                                                    
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
+                                                                                                    
+"
+`;
+
+exports[`slice 3: review screen banding + focus + pin 16-color: plain border + ▶ marker on focused, │ on context 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
+ │ ▶ Lunch at Zomato Bangalore                                                                    │ 
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
+  │ Uber ride to airport                                                                            
+  │ Amazon order #12345                                                                             
+  │ Netflix monthly                                                                                 
+  │ Salary credit October                                                                           
+                                                                                                    
+  src llm:gpt-4   →   food  (92%)                                                                   
+                                                                                                    
+  1 food >                                                                                          
+  2 travel                                                                                          
+  3 other                                                                                           
+                                                                                                    
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
+                                                                                                    
+"
+`;
+
+exports[`slice 3: review screen banding + focus + pin mono: same plain border + markers as 16-color 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
+ │ ▶ Lunch at Zomato Bangalore                                                                    │ 
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
+  │ Uber ride to airport                                                                            
+  │ Amazon order #12345                                                                             
+  │ Netflix monthly                                                                                 
+  │ Salary credit October                                                                           
+                                                                                                    
+  src llm:gpt-4   →   food  (92%)                                                                   
+                                                                                                    
+  1 food >                                                                                          
+  2 travel                                                                                          
+  3 other                                                                                           
+                                                                                                    
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
+                                                                                                    
+"
+`;
+
+exports[`slice 3: review screen banding + focus + pin 256-color: rounded border, no left-edge markers (banding does the work) 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                                      │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+  Uber ride to airport                                                                              
+  Amazon order #12345                                                                               
+  Netflix monthly                                                                                   
+  Salary credit October                                                                             
+                                                                                                    
+  src llm:gpt-4   →   food  (92%)                                                                   
+                                                                                                    
+  1 food >                                                                                          
+  2 travel                                                                                          
+  3 other                                                                                           
+                                                                                                    
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
+                                                                                                    
+"
+`;
+
+exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: rounded border, accent border color differs from light 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                                      │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+  Uber ride to airport                                                                              
+  Amazon order #12345                                                                               
+  Netflix monthly                                                                                   
+  Salary credit October                                                                             
+                                                                                                    
+  src llm:gpt-4   →   food  (92%)                                                                   
+                                                                                                    
+  1 food >                                                                                          
+  2 travel                                                                                          
+  3 other                                                                                           
+                                                                                                    
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
+                                                                                                    
+"
+`;
+
+exports[`slice 3: review screen banding + focus + pin display.banding = off at truecolor: rounded border still present, no banding bg 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                                      │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+  Uber ride to airport                                                                              
+  Amazon order #12345                                                                               
+  Netflix monthly                                                                                   
+  Salary credit October                                                                             
+                                                                                                    
+  src llm:gpt-4   →   food  (92%)                                                                   
+                                                                                                    
+  1 food >                                                                                          
+  2 travel                                                                                          
+  3 other                                                                                           
+                                                                                                    
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
+ queue   ] next queue   q quit                                                                      
+                                                                                                    
+"
+`;

@@ -76,4 +76,59 @@ describe("Cursor", () => {
     cursor.seekIndex(-5);
     expect(cursor.position).toBe(0);
   });
+
+  test("window(before, after) returns a slice with focusedIndex relative to slice", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
+    cursor.seekIndex(3);
+    const w = cursor.window(2, 2);
+    expect(w.records.length).toBe(5);
+    expect(w.focusedIndex).toBe(2);
+    expect(w.records[w.focusedIndex]?.id).toBe(cursor.current()?.id);
+  });
+
+  test("window clamps at the start of the queue", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
+    const w = cursor.window(2, 2);
+    expect(w.records.length).toBe(3);
+    expect(w.focusedIndex).toBe(0);
+  });
+
+  test("window clamps at the end of the queue", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
+    cursor.seekIndex(9);
+    const w = cursor.window(2, 2);
+    expect(w.records.length).toBe(3);
+    expect(w.focusedIndex).toBe(2);
+    expect(w.records[w.focusedIndex]?.id).toBe(cursor.current()?.id);
+  });
+
+  test("window on empty queue returns empty slice with focusedIndex -1", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "skipped");
+    const w = cursor.window(2, 2);
+    expect(w.records.length).toBe(0);
+    expect(w.focusedIndex).toBe(-1);
+    expect(w.startIndex).toBe(0);
+  });
+
+  test("window exposes startIndex so absolute queue positions can be derived", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
+    cursor.seekIndex(5);
+    const w = cursor.window(2, 2);
+    // index 5, before 2 → start at index 3.
+    expect(w.startIndex).toBe(3);
+    expect(w.startIndex + w.focusedIndex).toBe(5);
+    // Same record, viewed via two different windows, must keep the same
+    // absolute queue index.
+    cursor.seekIndex(6);
+    const w2 = cursor.window(2, 2);
+    expect(w2.startIndex).toBe(4);
+    // Record at slice index 1 of w2 was at slice index 2 of w (original
+    // window). Both must map to absolute queue index 5.
+    expect(w2.startIndex + 1).toBe(w.startIndex + 2);
+  });
 });

@@ -1,6 +1,7 @@
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import type { Overlay } from "../overlay/types.ts";
+import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Db } from "../store/db.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 
@@ -27,11 +28,13 @@ export type AppContext = {
   /** The active Cursor + queue when a review screen is mounted. Null otherwise. */
   cursor: Cursor | null;
   queueId: QueueId | null;
+  display: ResolvedDisplay;
 };
 
 export function createAppContext(args: {
   db: Db;
   config: LabellensConfig;
+  display: ResolvedDisplay;
   requestRender: () => void;
   onQuit: () => void;
 }): AppContext {
@@ -44,6 +47,7 @@ export function createAppContext(args: {
     overlay: null,
     cursor: null,
     queueId: null,
+    display: args.display,
     requestRender: args.requestRender,
     onQuit: args.onQuit,
     getCursor(queueId) {

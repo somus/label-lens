@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
+import { defaultDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
@@ -23,6 +24,7 @@ async function setup(store: TmpStore) {
   const app = createAppContext({
     db: store.db,
     config: makeConfig(),
+    display: defaultDisplay(),
     requestRender: () => {},
     onQuit: () => {},
   });

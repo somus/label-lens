@@ -2,6 +2,13 @@ import type { FieldMap } from "./inference.ts";
 
 export type LabelConfigEntry = string | { name: string; key?: string; color?: string };
 
+export type DisplayConfig = {
+  color?: "truecolor" | "256" | "16" | "mono" | "auto";
+  banding?: "on" | "off" | "auto";
+  theme?: "light" | "dark" | "auto";
+  candidatePin?: number;
+};
+
 export type LabellensConfig = {
   task: "classification" | "boundary";
   labels: LabelConfigEntry[];
@@ -15,6 +22,7 @@ export type LabellensConfig = {
     path: string;
     format: "jsonl" | "csv";
   };
+  display?: DisplayConfig;
 };
 
 export function defaultConfig(args: {
@@ -35,6 +43,12 @@ export function defaultConfig(args: {
     output: {
       path: args.outputPath ?? "./reviewed.jsonl",
       format: "jsonl",
+    },
+    display: {
+      color: "auto",
+      banding: "auto",
+      theme: "auto",
+      candidatePin: 0.4,
     },
   };
 }
