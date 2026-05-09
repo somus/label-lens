@@ -1,9 +1,9 @@
-import type { ReviewContext } from "../../app/context.ts";
 import type { Command } from "../command.ts";
 
-export const prev: Command<ReviewContext> = {
+export const prev: Command = {
   name: "record.prev",
   scope: "review",
   binding: "k",
-  run: (ctx) => ctx.cursor.prev(),
+  enabled: (ctx) => ctx.cursor !== null,
+  run: (ctx) => ctx.cursor?.prev(),
 };
