@@ -63,7 +63,12 @@ function main(): void {
 
   const targetName = target();
   const migrations = loadMigrations();
-  console.log(`Building label-lens for ${targetName} (${migrations.length} migrations)...`);
+  // Resolve version from LL_RELEASE_VERSION (set by release.yml from the tag)
+  // or fall back to "dev" so local builds aren't pretending to be a release.
+  const version = process.env.LL_RELEASE_VERSION?.replace(/^v/, "") ?? "dev";
+  console.log(
+    `Building label-lens ${version} for ${targetName} (${migrations.length} migrations)...`,
+  );
 
   const result = spawnSync(
     "bun",
@@ -73,6 +78,7 @@ function main(): void {
       `--target=${bunTarget(targetName)}`,
       `--outfile=${join(OUT, "labellens.bin")}`,
       `--define=LABELLENS_MIGRATIONS=${JSON.stringify(migrations)}`,
+      `--define=LABELLENS_VERSION=${JSON.stringify(version)}`,
       "src/main.ts",
     ],
     { cwd: ROOT, stdio: "inherit" },
