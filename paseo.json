@@ -1,0 +1,12 @@
+{
+  "worktree": {
+    "setup": ["bun install --frozen-lockfile", "bunx lefthook install"]
+  },
+  "scripts": {
+    "test": { "command": "bun test" },
+    "typecheck": { "command": "bun run typecheck" },
+    "lint": { "command": "bun run lint" },
+    "check": { "command": "bun run typecheck && bunx biome check && bun test" },
+    "build": { "command": "bun run build:bin" }
+  }
+}
