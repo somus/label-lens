@@ -4,6 +4,7 @@ import { createCliRenderer } from "@opentui/core";
 import { createAppContext } from "../app/context.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { ingestFile } from "../ingest/ingest.ts";
+import { bootstrapDisplay } from "../render/capability.ts";
 import { mountReviewScreen } from "../screens/review.ts";
 import { openDb } from "../store/db.ts";
 
@@ -30,9 +31,19 @@ export async function runReview(): Promise<void> {
   }
 
   const renderer = await createCliRenderer({ exitOnCtrlC: true });
+  const display = await bootstrapDisplay({
+    env: {
+      COLORTERM: process.env.COLORTERM,
+      TERM: process.env.TERM,
+      NO_COLOR: process.env.NO_COLOR,
+    },
+    themeProbe: { waitForThemeMode: (ms) => renderer.waitForThemeMode(ms) },
+    config: config.display,
+  });
   const app = createAppContext({
     db,
     config,
+    display,
     requestRender: () => {},
     onQuit: () => {
       renderer.destroy();

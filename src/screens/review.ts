@@ -7,12 +7,14 @@ import { resolve } from "../keymap/engine.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
+import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
+import type { ResolvedDisplay } from "../render/capability.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { progressCounts, recentReviews } from "../store/queries.ts";
 import { type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import { hasTag } from "../store/tags.ts";
-import type { StoredReview } from "../types.ts";
+import type { RecordWithPrimaryPrediction, StoredReview } from "../types.ts";
 
 export type ReviewScreenHandle = {
   destroy: () => void;
@@ -26,6 +28,9 @@ const STATUS_SYMBOL: Record<StoredReview["status"], string> = {
   undone: "<",
   pending: "?",
 };
+
+const WINDOW_BEFORE = 6;
+const WINDOW_AFTER = 6;
 
 export function mountReviewScreen(args: {
   renderer: CliRenderer;
@@ -45,6 +50,7 @@ export function mountReviewScreen(args: {
     const queueId = app.queueId ?? initialQueueId;
     const counts = progressCounts(app.db);
     const reviewedTotal = counts.accepted + counts.relabeled + counts.rejected;
+    const window = cursor?.window(WINDOW_BEFORE, WINDOW_AFTER) ?? { records: [], focusedIndex: -1 };
     const record = cursor?.current() ?? null;
     const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
     const history = recentReviews(app.db, 5);
@@ -72,18 +78,7 @@ export function mountReviewScreen(args: {
 
         Box({ height: 1 }),
 
-        record
-          ? Box(
-              { flexDirection: "column", borderStyle: "rounded", padding: 1 },
-              Text({ content: record.text }),
-            )
-          : Box(
-              { padding: 2 },
-              Text({
-                content: "All records reviewed. Press q to quit.",
-                attributes: TextAttributes.DIM,
-              }),
-            ),
+        bandRegion(window.records, window.focusedIndex, app.display),
 
         record?.primaryPrediction
           ? Box(
@@ -99,7 +94,9 @@ export function mountReviewScreen(args: {
             )
           : Box({}),
 
-        record ? labelListBox(app.config.labels, record.primaryPrediction?.label ?? null) : Box({}),
+        record
+          ? labelListBox(app.config.labels, record.primaryPrediction?.label ?? null, app.display)
+          : Box({}),
 
         record?.note
           ? Box(
@@ -124,8 +121,6 @@ export function mountReviewScreen(args: {
           : Box({}),
 
         app.overlay ? renderOverlay(app.overlay) : Box({}),
-
-        Box({ flexGrow: 1 }),
 
         flash
           ? Box(
@@ -177,9 +172,84 @@ export function mountReviewScreen(args: {
   };
 }
 
+function bandRegion(
+  records: RecordWithPrimaryPrediction[],
+  focusedIndex: number,
+  display: ResolvedDisplay,
+): ReturnType<typeof Box> {
+  if (records.length === 0 || focusedIndex < 0) {
+    return Box(
+      { flexGrow: 1, padding: 2 },
+      Text({
+        content: "All records reviewed. Press q to quit.",
+        attributes: TextAttributes.DIM,
+      }),
+    );
+  }
+
+  const before = records.slice(0, focusedIndex);
+  const focused = records[focusedIndex]!;
+  const after = records.slice(focusedIndex + 1);
+  const pin = display.candidatePin;
+
+  return Box(
+    { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+    Box(
+      {
+        flexDirection: "column",
+        flexBasis: 0,
+        flexGrow: pin,
+        flexShrink: 0,
+        justifyContent: "flex-end",
+        overflow: "hidden",
+      },
+      ...before.map((r, i) =>
+        BandedRecord({
+          text: bandText(r),
+          isFocused: false,
+          bandSlot: slotFor(focusedIndex - before.length + i),
+          display,
+        }),
+      ),
+    ),
+    Box(
+      {
+        flexDirection: "column",
+        flexBasis: 0,
+        flexGrow: 1 - pin,
+        flexShrink: 1,
+        overflow: "hidden",
+      },
+      BandedRecord({
+        text: bandText(focused),
+        isFocused: true,
+        bandSlot: slotFor(focusedIndex),
+        display,
+      }),
+      ...after.map((r, i) =>
+        BandedRecord({
+          text: bandText(r),
+          isFocused: false,
+          bandSlot: slotFor(focusedIndex + 1 + i),
+          display,
+        }),
+      ),
+    ),
+  );
+}
+
+function bandText(r: RecordWithPrimaryPrediction): string {
+  return r.text;
+}
+
+function slotFor(absoluteIndex: number): "even" | "odd" {
+  return absoluteIndex % 2 === 0 ? "even" : "odd";
+}
+
 function labelListBox(
   labels: Parameters<typeof labelName>[0][],
   predicted: string | null,
+  display: ResolvedDisplay,
 ): ReturnType<typeof Box> {
   return Box(
     { flexDirection: "column", marginTop: 1 },
@@ -187,9 +257,10 @@ function labelListBox(
       const name = labelName(entry);
       const isPredicted = name === predicted;
       const marker = isPredicted ? " >" : "  ";
+      const bold = isPredicted || display.color === "mono";
       return Text({
         content: ` ${idx + 1} ${name}${marker}`,
-        attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.DIM,
+        attributes: bold ? TextAttributes.BOLD : TextAttributes.DIM,
       });
     }),
   );
