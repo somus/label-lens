@@ -1,17 +1,11 @@
-import type { Database } from "bun:sqlite";
 import type { CliRenderer } from "@opentui/core";
-import { ACTIONS, type ActionContext } from "../actions/registry.ts";
-import type { LabellensConfig } from "../config/config.ts";
-import { DEFAULT_BINDINGS } from "../keymap/defaults.ts";
-import { type Binding, resolve } from "../keymap/engine.ts";
+import { dispatch } from "../actions/dispatch.ts";
+import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
+import { type AppContext, reviewContext } from "../app/context.ts";
+import { resolve } from "../keymap/engine.ts";
 import { Box } from "../render/box.ts";
 import { Text, TextAttributes } from "../render/text.ts";
-import {
-  insertReview,
-  listPendingRecords,
-  progressCounts,
-  type RecordWithPrimaryPrediction,
-} from "../store/records.ts";
+import type { QueueId } from "../store/builtin-queues.ts";
 
 export type ReviewScreenHandle = {
   destroy: () => void;
@@ -19,38 +13,29 @@ export type ReviewScreenHandle = {
 
 export function mountReviewScreen(args: {
   renderer: CliRenderer;
-  db: Database;
-  config: LabellensConfig;
-  bindings?: Binding[];
-  onQuit?: () => void;
+  app: AppContext;
+  registry?: CommandRegistry;
+  initialQueueId?: QueueId;
 }): ReviewScreenHandle {
-  const { renderer, db, config } = args;
-  const bindings = args.bindings ?? DEFAULT_BINDINGS;
-  const onQuit =
-    args.onQuit ??
-    (() => {
-      renderer.destroy();
-      process.exit(0);
-    });
-
-  let pending: RecordWithPrimaryPrediction[] = listPendingRecords(db);
-  let cursor = 0;
-
-  const counts = () => progressCounts(db);
+  const { renderer, app } = args;
+  const registry = args.registry ?? defaultRegistry();
+  const ctx = reviewContext(app, args.initialQueueId ?? "pending");
+  const bindings = bindingsFor([...registry.values()]);
 
   const renderState = () => {
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
-    const { reviewed, total } = counts();
-    const record = pending[cursor];
+    const total = totalRecords(ctx);
+    const reviewed = reviewedCount(ctx);
+    const record = ctx.cursor.current();
+    const flash = ctx.flash && ctx.flash.expiresAt > Date.now() ? ctx.flash : null;
 
     renderer.root.add(
       Box(
         { flexDirection: "column", flexGrow: 1, padding: 1 },
 
-        // top strip
         Box(
           { flexDirection: "row", justifyContent: "space-between" },
-          Text({ content: ` LabelLens · ${basename(config.input.path)}` }),
+          Text({ content: ` LabelLens · ${basename(ctx.config.input.path)}` }),
           Text({
             content: `${reviewed} / ${total}   q quit`,
             attributes: TextAttributes.DIM,
@@ -59,14 +44,9 @@ export function mountReviewScreen(args: {
 
         Box({ height: 1 }),
 
-        // candidate
         record
           ? Box(
-              {
-                flexDirection: "column",
-                borderStyle: "rounded",
-                padding: 1,
-              },
+              { flexDirection: "column", borderStyle: "rounded", padding: 1 },
               Text({ content: record.text }),
             )
           : Box(
@@ -77,7 +57,6 @@ export function mountReviewScreen(args: {
               }),
             ),
 
-        // metadata
         record?.primaryPrediction
           ? Box(
               { flexDirection: "row", marginTop: 1 },
@@ -94,49 +73,27 @@ export function mountReviewScreen(args: {
 
         Box({ flexGrow: 1 }),
 
-        // action bar
-        Box(
-          { flexDirection: "row" },
-          Text({
-            content: " a accept    j next    k prev    q quit",
-            attributes: TextAttributes.DIM,
-          }),
-        ),
+        flash
+          ? Box(
+              { flexDirection: "row" },
+              Text({
+                content: ` ! ${flash.message}`,
+                attributes: TextAttributes.BOLD,
+              }),
+            )
+          : Box(
+              { flexDirection: "row" },
+              Text({
+                content: " a accept    j next    k prev    q quit",
+                attributes: TextAttributes.DIM,
+              }),
+            ),
       ),
     );
   };
 
-  const refreshPending = () => {
-    pending = listPendingRecords(db);
-    if (cursor >= pending.length) cursor = Math.max(0, pending.length - 1);
-  };
-
-  const ctx: ActionContext = {
-    acceptCurrent: () => {
-      const record = pending[cursor];
-      if (!record) return;
-      insertReview(db, {
-        record_id: record.id,
-        status: "accepted",
-        final_label: record.primaryPrediction?.label ?? null,
-        prev_label: null,
-        note: null,
-        source_of_truth: "human",
-      });
-      refreshPending();
-      renderState();
-    },
-    next: () => {
-      if (pending.length === 0) return;
-      cursor = Math.min(cursor + 1, pending.length - 1);
-      renderState();
-    },
-    prev: () => {
-      cursor = Math.max(cursor - 1, 0);
-      renderState();
-    },
-    quit: () => onQuit(),
-  };
+  app.requestRender = renderState;
+  ctx.requestRender = renderState;
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
     const action = resolve(bindings, "review", {
@@ -145,7 +102,8 @@ export function mountReviewScreen(args: {
       shift: event.shift,
       meta: event.meta,
     });
-    if (action && ACTIONS[action]) ACTIONS[action](ctx);
+    if (!action) return;
+    void dispatch(registry, "review", ctx, action);
   };
 
   renderer.keyInput.on("keypress", onKey);
@@ -156,6 +114,20 @@ export function mountReviewScreen(args: {
       renderer.keyInput.off("keypress", onKey);
     },
   };
+}
+
+function reviewedCount(ctx: ReturnType<typeof reviewContext>): number {
+  const row = ctx.db
+    .query<{ n: number }, []>(
+      `SELECT COUNT(DISTINCT record_id) AS n FROM reviews WHERE status IN ('accepted','relabeled','rejected')`,
+    )
+    .get();
+  return row?.n ?? 0;
+}
+
+function totalRecords(ctx: ReturnType<typeof reviewContext>): number {
+  const row = ctx.db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM records").get();
+  return row?.n ?? 0;
 }
 
 function basename(p: string): string {

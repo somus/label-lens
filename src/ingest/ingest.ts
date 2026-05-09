@@ -51,7 +51,7 @@ export async function ingestFile(
     const input = mapInput(obj, fields, text);
     const id = input.id ?? contentHashId(input.text, input.context_before, input.context_after);
 
-    const predictions = collectPredictions(input);
+    const predictions = input.predictions ?? [];
     buffer.push({
       record: {
         id,
@@ -111,8 +111,4 @@ function mapInput(obj: Record<string, unknown>, fields: FieldMap, text: string):
     }
   }
   return out;
-}
-
-function collectPredictions(input: InputRecord): InputPrediction[] {
-  return input.predictions ?? [];
 }

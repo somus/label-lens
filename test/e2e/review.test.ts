@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { createTestRenderer } from "@opentui/core/testing";
+import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import type { FieldMap } from "../../src/config/inference.ts";
 import { ingestFile } from "../../src/ingest/ingest.ts";
@@ -36,15 +37,16 @@ async function setup() {
   });
 
   let quitCalled = false;
-  mountReviewScreen({
-    renderer,
+  const app = createAppContext({
     db,
     config: makeConfig(),
+    requestRender: () => {},
     onQuit: () => {
       quitCalled = true;
     },
   });
 
+  mountReviewScreen({ renderer, app });
   await renderOnce();
   return { db, renderer, mockInput, renderOnce, captureCharFrame, quitCalled: () => quitCalled };
 }

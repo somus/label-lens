@@ -45,6 +45,10 @@ A review entry whose record no longer matches any current ingest (because source
 **Queue**:
 A SQL-backed filter over records. Built-in: `pending`, `low-confidence`, `disagreements`, `flagged`, `marked`, `skipped`, `by-source:<s>`, `by-reason:<r>`, `by-label:<l>`, `by-issue:<t>`, `by-correction:<from>:<to>`. Power users compose with `:where`.
 
+**Cursor**:
+The reviewer's position within a **Queue** — index into the ordered list of pending records the queue resolves to. One Cursor per Queue, persisted at app scope so screen switches and queue switches preserve focus. Reset when the queue is invalidated (re-ingest, re-prioritize, label set change).
+_Avoid_: Position, pointer, head (overloaded with linked-list pointers).
+
 ## Relationships
 
 - A **Record** carries zero or more **Predictions** and zero or more **Issues**.

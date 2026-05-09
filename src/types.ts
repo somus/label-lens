@@ -56,3 +56,8 @@ export type StoredReview = {
   reviewed_at: string;
   source_of_truth: SourceOfTruth;
 };
+
+export type RecordWithPrimaryPrediction = StoredRecord & {
+  primaryPrediction: StoredPrediction | null;
+  latestReview: StoredReview | null;
+};
