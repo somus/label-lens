@@ -46,6 +46,9 @@ export function mountReviewScreen(args: {
     const history = recentReviews(ctx.db, 5);
     const marked = record ? hasTag(ctx.db, record.id, "marked") : false;
     const queueLabel = resolveQueue(ctx.cursor.queueId).label;
+    const queueTotal = ctx.cursor.total;
+    const queuePosition = queueTotal === 0 ? 0 : ctx.cursor.position + 1;
+    const queueIndicator = queueTotal === 0 ? "0 / 0" : `${queuePosition} / ${queueTotal}`;
 
     renderer.root.add(
       Box(
@@ -54,7 +57,7 @@ export function mountReviewScreen(args: {
         Box(
           { flexDirection: "row", justifyContent: "space-between" },
           Text({
-            content: ` LabelLens · ${basename(ctx.config.input.path)} · ${queueLabel}${marked ? "   ● marked" : ""}`,
+            content: ` LabelLens · ${basename(ctx.config.input.path)} · ${queueLabel} · ${queueIndicator}${marked ? "   ● marked" : ""}`,
             attributes: marked ? TextAttributes.BOLD : undefined,
           }),
           Text({

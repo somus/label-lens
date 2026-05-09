@@ -2,7 +2,7 @@
 
 exports[`review screen e2e initial render: progress strip + first record + primary prediction 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending                      Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                     
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │                                                                                                │ 
@@ -30,7 +30,7 @@ exports[`review screen e2e initial render: progress strip + first record + prima
 
 exports[`review screen e2e pressing 'a' writes an accepted review row and advances counter 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending                       Reviewed: 1 / 10 · Skipped: 0 · Pending: 9 
+  LabelLens · tiny.jsonl · Pending · 1 / 9               Reviewed: 1 / 10 · Skipped: 0 · Pending: 9 
                                                                                                     
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │                                                                                                │ 
@@ -58,7 +58,7 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
 
 exports[`review screen e2e pressing 'j' moves to the next record without writing a review 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending                      Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens · tiny.jsonl · Pending · 2 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                     
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │                                                                                                │ 
@@ -86,7 +86,7 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
 
 exports[`review screen e2e pressing 'a' across all records empties pending and shows completion 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending                      Reviewed: 10 / 10 · Skipped: 0 · Pending: 0 
+  LabelLens · tiny.jsonl · Pending · 0 / 0              Reviewed: 10 / 10 · Skipped: 0 · Pending: 0 
                                                                                                     
                                                                                                     
                                                                                                     

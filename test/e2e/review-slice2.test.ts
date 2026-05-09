@@ -159,6 +159,15 @@ describe("review screen slice 2 UI", () => {
     expect(app.picker?.filter).toBe(" ");
   });
 
+  test("header shows '<position> / <total>' indicator and advances on action", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
+    expect(captureCharFrame()).toContain("Pending · 1 / 10");
+    mockInput.pressKey("a");
+    await renderOnce();
+    expect(captureCharFrame()).toContain("Pending · 1 / 9");
+  });
+
   test("']' switches to the skipped queue and updates header", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store);
