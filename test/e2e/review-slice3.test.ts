@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
+import { ingestFile } from "../../src/ingest/ingest.ts";
 import type { ResolvedDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
-import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
+import { DEFAULT_FIELDS, openTmpStore, type TmpStore, tmpdir } from "../util/tmp.ts";
 
 function makeConfig(): LabellensConfig {
   return {
@@ -47,10 +50,14 @@ const TRUECOLOR_DARK: ResolvedDisplay = { ...TRUECOLOR_LIGHT, theme: "dark" };
 
 const TRUECOLOR_NO_BANDING: ResolvedDisplay = { ...TRUECOLOR_LIGHT, banding: false };
 
-async function setup(store: TmpStore, display: ResolvedDisplay = TRUECOLOR_LIGHT) {
+async function setup(
+  store: TmpStore,
+  display: ResolvedDisplay = TRUECOLOR_LIGHT,
+  size: { width: number; height: number } = { width: 100, height: 24 },
+) {
   const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
-    width: 100,
-    height: 24,
+    width: size.width,
+    height: size.height,
   });
   let quitCalled = false;
   const app = createAppContext({
@@ -168,6 +175,35 @@ describe("slice 3: review screen banding + focus + pin", () => {
     expect(frame).toContain("╭");
     expect(frame).not.toContain("▶");
     expect(frame).toMatchSnapshot();
+  });
+
+  test("tall terminal: window grows so prev-context fills space above focus pin", async () => {
+    using dir = tmpdir({ prefix: "labellens-bigfx-" });
+    const jsonl = join(dir.path, "big.jsonl");
+    const lines = Array.from({ length: 60 }, (_, i) =>
+      JSON.stringify({ text: `record-${String(i).padStart(3, "0")}` }),
+    );
+    writeFileSync(jsonl, `${lines.join("\n")}\n`);
+    using store = await openTmpStore({ prefix: "labellens-store-bigfx-" });
+    await ingestFile(store.db, jsonl, DEFAULT_FIELDS);
+
+    // 60-row terminal. Move cursor deep enough that prev-window is unlimited
+    // by queue start (well past 30).
+    const { mockInput, renderOnce, captureCharFrame } = await setup(store, SIXTEEN_LIGHT, {
+      width: 100,
+      height: 60,
+    });
+    for (let i = 0; i < 35; i++) {
+      mockInput.pressKey("j");
+      await renderOnce();
+    }
+    const frame = captureCharFrame();
+    const frameLines = frame.split("\n");
+    const contextLines = frameLines.filter((l) => /^\s+│\s/.test(l)).length;
+    // On a 60-row terminal the band region accommodates well over a dozen
+    // context records; with a hardcoded window of 6 we'd cap at ~12 (6 above
+    // + 6 below). Dynamic sizing should beat that floor.
+    expect(contextLines).toBeGreaterThan(14);
   });
 
   test("empty queue: no focus box, completion message rendered", async () => {

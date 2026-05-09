@@ -29,8 +29,8 @@ const STATUS_SYMBOL: Record<StoredReview["status"], string> = {
   pending: "?",
 };
 
-const WINDOW_BEFORE = 6;
-const WINDOW_AFTER = 6;
+const NON_BAND_ROWS = 14;
+const MIN_WINDOW = 2;
 
 export function mountReviewScreen(args: {
   renderer: CliRenderer;
@@ -50,7 +50,10 @@ export function mountReviewScreen(args: {
     const queueId = app.queueId ?? initialQueueId;
     const counts = progressCounts(app.db);
     const reviewedTotal = counts.accepted + counts.relabeled + counts.rejected;
-    const window = cursor?.window(WINDOW_BEFORE, WINDOW_AFTER) ?? { records: [], focusedIndex: -1 };
+    const bandRows = Math.max(8, renderer.terminalHeight - NON_BAND_ROWS);
+    const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
+    const nextN = Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - app.display.candidatePin)));
+    const window = cursor?.window(prevN, nextN) ?? { records: [], focusedIndex: -1 };
     const record = cursor?.current() ?? null;
     const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
     const history = recentReviews(app.db, 5);
