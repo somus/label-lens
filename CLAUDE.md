@@ -38,11 +38,13 @@ Render primitives wrap OpenTUI components in `src/render/` (4–6 small files) s
 
 ## Testing
 
-- Keymap engine: pure unit tests. String-in, action-out. No renderer.
-- Storage layer: integration tests against a real `bun:sqlite` (no mocks).
-- Rendering: snapshot at terminal-capability levels (truecolor, 256, 16, mono).
-- Performance: shared fixtures (issue #14); perf harness (issue #15).
-- SSH path matters — manually verify any rendering changes over a real SSH session before declaring a slice done.
+- **Keymap engine**: pure unit tests. String-in, action-out. No renderer.
+- **Storage layer**: integration tests against a real `bun:sqlite` (no mocks).
+- **Screens (e2e)**: drive the actual screen with `@opentui/core/testing` — `createTestRenderer({ width, height })` returns `{ renderer, mockInput, renderOnce, captureCharFrame }`. Mount the screen on the test renderer, press keys via `mockInput.pressKey('a')`, await `renderOnce()`, then assert against `captureCharFrame()` (rendered text without ANSI) and direct DB queries. See `test/e2e/review.test.ts` for the pattern.
+- **Quit injection**: screens that exit the process accept an `onQuit` callback. Tests pass a no-op so the test process doesn't die.
+- **Rendering at multiple capability levels**: snapshot at truecolor, 256, 16, mono.
+- **Performance**: shared fixtures (issue #14); perf harness (issue #15).
+- **SSH path matters** — manually verify any rendering changes over a real SSH session before declaring a slice done. The test renderer doesn't simulate transport loss.
 
 ## Commits and PRs
 

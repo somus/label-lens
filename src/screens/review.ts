@@ -22,9 +22,16 @@ export function mountReviewScreen(args: {
   db: Database;
   config: LabellensConfig;
   bindings?: Binding[];
+  onQuit?: () => void;
 }): ReviewScreenHandle {
   const { renderer, db, config } = args;
   const bindings = args.bindings ?? DEFAULT_BINDINGS;
+  const onQuit =
+    args.onQuit ??
+    (() => {
+      renderer.destroy();
+      process.exit(0);
+    });
 
   let pending: RecordWithPrimaryPrediction[] = listPendingRecords(db);
   let cursor = 0;
@@ -128,10 +135,7 @@ export function mountReviewScreen(args: {
       cursor = Math.max(cursor - 1, 0);
       renderState();
     },
-    quit: () => {
-      renderer.destroy();
-      process.exit(0);
-    },
+    quit: () => onQuit(),
   };
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
