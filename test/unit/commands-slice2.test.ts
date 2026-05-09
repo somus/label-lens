@@ -311,6 +311,30 @@ describe("queue cycling", () => {
     expect(app.cursor!.queueId).toBe("skipped");
     expect(app.cursor!.current()?.id).toBe(skippedId);
   });
+
+  test("skipped cursor refreshes on each queue switch", async () => {
+    // Regression: cached skipped cursor was stale when revisiting after
+    // additional skips landed in pending.
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const registry = defaultRegistry();
+
+    // Visit skipped while empty — Cursor gets cached with []
+    await dispatch(registry, "review", app, "queue.next");
+    expect(app.cursor!.total).toBe(0);
+
+    // Back to pending; skip three records
+    await dispatch(registry, "review", app, "queue.prev");
+    expect(app.cursor!.queueId).toBe("pending");
+    await dispatch(registry, "review", app, "record.skip");
+    await dispatch(registry, "review", app, "record.skip");
+    await dispatch(registry, "review", app, "record.skip");
+
+    // Revisit skipped — should now show all three
+    await dispatch(registry, "review", app, "queue.next");
+    expect(app.cursor!.queueId).toBe("skipped");
+    expect(app.cursor!.total).toBe(3);
+  });
 });
 
 describe("record.accept (no prediction)", () => {
