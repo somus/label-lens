@@ -134,8 +134,7 @@ export function mountReviewScreen(args: {
           : Box(
               { flexDirection: "row" },
               Text({
-                content:
-                  " a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   q quit",
+                content: ` a accept   r relabel   x reject   s skip   m ${marked ? "unmark" : "mark"}   n note   u undo   j next   k prev   q quit`,
                 attributes: TextAttributes.DIM,
               }),
             ),
