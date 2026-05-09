@@ -1,4 +1,5 @@
-import type { QueueQuery } from "./queries.ts";
+import type { QueueQuery } from "../queries.ts";
+import { pending } from "./pending.ts";
 
 export type QueueId = string;
 
@@ -8,17 +9,8 @@ export type QueueDefinition = {
   query: QueueQuery;
 };
 
-const NOT_REVIEWED = `NOT EXISTS (
-  SELECT 1 FROM reviews v
-  WHERE v.record_id = records_with_primary.id
-)`;
-
 export const BUILTIN_QUEUES: Record<QueueId, QueueDefinition> = {
-  pending: {
-    id: "pending",
-    label: "Pending",
-    query: { where: NOT_REVIEWED, orderBy: "ORDER BY row_index ASC" },
-  },
+  pending,
 };
 
 export function resolveQueue(id: QueueId): QueueDefinition {

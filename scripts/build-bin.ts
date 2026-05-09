@@ -1,12 +1,21 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "..");
 const OUT = resolve(ROOT, "dist", `label-lens-${target()}`);
 const WORKER_SRC = resolve(ROOT, "node_modules/@opentui/core/parser.worker.js");
 const SHIM_SRC = resolve(ROOT, "scripts/labellens-shim.sh");
+const MIGRATION_DIR = resolve(ROOT, "migration");
 
 function target(): string {
   const arg = process.argv[2];
@@ -31,6 +40,19 @@ function bunTarget(name: string): string {
   }
 }
 
+function loadMigrations(): { sql: string; timestamp: number; name: string }[] {
+  if (!existsSync(MIGRATION_DIR)) return [];
+  const files = readdirSync(MIGRATION_DIR, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".sql"))
+    .map((e) => e.name)
+    .sort();
+  return files.map((name) => ({
+    sql: readFileSync(join(MIGRATION_DIR, name), "utf-8"),
+    timestamp: parseInt(name.slice(0, 4), 10),
+    name: name.replace(/\.sql$/, ""),
+  }));
+}
+
 function main(): void {
   if (!existsSync(WORKER_SRC)) {
     throw new Error(`parser.worker.js not found at ${WORKER_SRC}. Run 'bun install' first.`);
@@ -40,7 +62,8 @@ function main(): void {
   mkdirSync(OUT, { recursive: true });
 
   const targetName = target();
-  console.log(`Building label-lens for ${targetName}...`);
+  const migrations = loadMigrations();
+  console.log(`Building label-lens for ${targetName} (${migrations.length} migrations)...`);
 
   const result = spawnSync(
     "bun",
@@ -49,6 +72,7 @@ function main(): void {
       "--compile",
       `--target=${bunTarget(targetName)}`,
       `--outfile=${join(OUT, "labellens.bin")}`,
+      `--define=LABELLENS_MIGRATIONS=${JSON.stringify(migrations)}`,
       "src/main.ts",
     ],
     { cwd: ROOT, stdio: "inherit" },

@@ -1,9 +1,9 @@
-import type { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { buildRegistry, type Command } from "../../src/actions/command.ts";
 import { dispatch } from "../../src/actions/dispatch.ts";
 import { type AppContext, createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
+import type { Db } from "../../src/store/db.ts";
 import { DEFAULT_FIELDS, openTmpStore } from "../util/tmp.ts";
 
 const config: LabellensConfig = {
@@ -13,7 +13,7 @@ const config: LabellensConfig = {
   output: { path: "/tmp/out.jsonl", format: "jsonl" },
 };
 
-function makeCtx(db: Database): AppContext {
+function makeCtx(db: Db): AppContext {
   return createAppContext({ db, config, requestRender: () => {}, onQuit: () => {} });
 }
 

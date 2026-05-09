@@ -1,7 +1,7 @@
-import type { Database } from "bun:sqlite";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
-import type { QueueId } from "../store/builtin-queues.ts";
+import type { Db } from "../store/db.ts";
+import type { QueueId } from "../store/queues/registry.ts";
 
 export type FlashKind = "info" | "error";
 
@@ -12,7 +12,7 @@ export type FlashMessage = {
 };
 
 export type AppContext = {
-  db: Database;
+  db: Db;
   config: LabellensConfig;
   getCursor(queueId: QueueId): Cursor;
   flash: FlashMessage | null;
@@ -28,7 +28,7 @@ export type ReviewContext = AppContext & {
 };
 
 export function createAppContext(args: {
-  db: Database;
+  db: Db;
   config: LabellensConfig;
   requestRender: () => void;
   onQuit: () => void;

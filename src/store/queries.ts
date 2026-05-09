@@ -1,74 +1,55 @@
-import type { Database, SQLQueryBindings } from "bun:sqlite";
+import { asc, eq, type SQL } from "drizzle-orm";
 import type { RecordWithPrimaryPrediction, StoredPrediction } from "../types.ts";
+import type { Db } from "./db.ts";
+import { recordsWithPrimary } from "./schema.ts";
 
-type RecordWithPrimaryRow = {
-  id: string;
-  source_path: string;
-  row_index: number;
-  text: string;
-  context_before: string | null;
-  context_after: string | null;
-  raw: string;
-  primary_prediction_id: number | null;
-  primary_label: string | null;
-  primary_confidence: number | null;
-  primary_source: string | null;
-  primary_reason: string | null;
-  primary_raw: string | null;
-};
+type ViewRow = typeof recordsWithPrimary.$inferSelect;
 
-function hydrate(row: RecordWithPrimaryRow): RecordWithPrimaryPrediction {
+function hydrate(row: ViewRow): RecordWithPrimaryPrediction {
   const primary: StoredPrediction | null =
-    row.primary_prediction_id !== null &&
-    row.primary_label !== null &&
-    row.primary_source !== null &&
-    row.primary_raw !== null
+    row.primaryPredictionId !== null &&
+    row.primaryLabel !== null &&
+    row.primarySource !== null &&
+    row.primaryRaw !== null
       ? {
-          id: row.primary_prediction_id,
+          id: row.primaryPredictionId,
           record_id: row.id,
-          label: row.primary_label,
-          confidence: row.primary_confidence,
-          source: row.primary_source,
-          reason: row.primary_reason,
-          raw: row.primary_raw,
+          label: row.primaryLabel,
+          confidence: row.primaryConfidence,
+          source: row.primarySource,
+          reason: row.primaryReason,
+          raw: row.primaryRaw,
         }
       : null;
   return {
     id: row.id,
-    source_path: row.source_path,
-    row_index: row.row_index,
+    source_path: row.sourcePath,
+    row_index: row.rowIndex,
     text: row.text,
-    context_before: row.context_before,
-    context_after: row.context_after,
+    context_before: row.contextBefore,
+    context_after: row.contextAfter,
     raw: row.raw,
     primaryPrediction: primary,
     latestReview: null,
   };
 }
 
-const SELECT_BASE = `
-  SELECT * FROM records_with_primary
-`;
-
-const ORDER_DEFAULT = "ORDER BY row_index ASC";
-
 export type QueueQuery = {
-  where?: string;
-  orderBy?: string;
-  params?: SQLQueryBindings[];
+  where?: SQL;
+  orderBy?: SQL;
   limit?: number;
 };
 
-export function queueRecords(db: Database, query: QueueQuery = {}): RecordWithPrimaryPrediction[] {
-  const where = query.where ? `WHERE ${query.where}` : "";
-  const order = query.orderBy ?? ORDER_DEFAULT;
-  const limit = query.limit ? `LIMIT ${query.limit}` : "";
-  const sql = `${SELECT_BASE} ${where} ${order} ${limit}`.trim();
-  const stmt = db.query<RecordWithPrimaryRow, SQLQueryBindings[]>(sql);
-  return stmt.all(...(query.params ?? [])).map(hydrate);
+export function queueRecords(db: Db, query: QueueQuery = {}): RecordWithPrimaryPrediction[] {
+  const order = query.orderBy ?? asc(recordsWithPrimary.rowIndex);
+  let q = db.select().from(recordsWithPrimary).$dynamic();
+  if (query.where) q = q.where(query.where);
+  q = q.orderBy(order);
+  if (query.limit) q = q.limit(query.limit);
+  return q.all().map(hydrate);
 }
 
-export function recordById(db: Database, id: string): RecordWithPrimaryPrediction | null {
-  const row = db.query<RecordWithPrimaryRow, [string]>(`${SELECT_BASE} WHERE id = ?`).get(id);
+export function recordById(db: Db, id: string): RecordWithPrimaryPrediction | null {
+  const row = db.select().from(recordsWithPrimary).where(eq(recordsWithPrimary.id, id)).get();
   return row ? hydrate(row) : null;
 }

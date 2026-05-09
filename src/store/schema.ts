@@ -1,79 +1,94 @@
-import type { Database } from "bun:sqlite";
+import { sql } from "drizzle-orm";
+import { index, integer, real, sqliteTable, sqliteView, text } from "drizzle-orm/sqlite-core";
 
-export function applySchema(db: Database): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS records (
-      id              TEXT PRIMARY KEY,
-      source_path     TEXT NOT NULL,
-      row_index       INTEGER NOT NULL,
-      text            TEXT NOT NULL,
-      context_before  TEXT,
-      context_after   TEXT,
-      raw             TEXT NOT NULL
-    );
+export const records = sqliteTable("records", {
+  id: text("id").primaryKey(),
+  sourcePath: text("source_path").notNull(),
+  rowIndex: integer("row_index").notNull(),
+  text: text("text").notNull(),
+  contextBefore: text("context_before"),
+  contextAfter: text("context_after"),
+  raw: text("raw").notNull(),
+});
 
-    CREATE TABLE IF NOT EXISTS predictions (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      record_id   TEXT NOT NULL REFERENCES records(id) ON DELETE CASCADE,
-      label       TEXT NOT NULL,
-      confidence  REAL,
-      source      TEXT NOT NULL,
-      reason      TEXT,
-      raw         TEXT NOT NULL
-    );
+export const predictions = sqliteTable(
+  "predictions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    recordId: text("record_id")
+      .notNull()
+      .references(() => records.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    confidence: real("confidence"),
+    source: text("source").notNull(),
+    reason: text("reason"),
+    raw: text("raw").notNull(),
+  },
+  (t) => [
+    index("idx_predictions_record").on(t.recordId),
+    index("idx_predictions_source").on(t.source),
+    index("idx_predictions_conf").on(t.confidence),
+  ],
+);
 
-    CREATE TABLE IF NOT EXISTS reviews (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      record_id       TEXT NOT NULL REFERENCES records(id) ON DELETE CASCADE,
-      status          TEXT NOT NULL CHECK (status IN ('accepted','relabeled','rejected','skipped')),
-      final_label     TEXT,
-      prev_label      TEXT,
-      note            TEXT,
-      reviewed_at     TEXT NOT NULL,
-      source_of_truth TEXT NOT NULL CHECK (source_of_truth IN ('human','human+assistant'))
-    );
+export const reviews = sqliteTable(
+  "reviews",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    recordId: text("record_id")
+      .notNull()
+      .references(() => records.id, { onDelete: "cascade" }),
+    status: text("status", {
+      enum: ["accepted", "relabeled", "rejected", "skipped"],
+    }).notNull(),
+    finalLabel: text("final_label"),
+    prevLabel: text("prev_label"),
+    note: text("note"),
+    reviewedAt: text("reviewed_at").notNull(),
+    sourceOfTruth: text("source_of_truth", {
+      enum: ["human", "human+assistant"],
+    }).notNull(),
+  },
+  (t) => [
+    index("idx_reviews_record").on(t.recordId),
+    index("idx_reviews_status").on(t.status),
+    index("idx_reviews_final").on(t.finalLabel),
+    index("idx_reviews_prev").on(t.prevLabel),
+  ],
+);
 
-    CREATE INDEX IF NOT EXISTS idx_predictions_record  ON predictions(record_id);
-    CREATE INDEX IF NOT EXISTS idx_predictions_source  ON predictions(source);
-    CREATE INDEX IF NOT EXISTS idx_predictions_conf    ON predictions(confidence);
-    CREATE INDEX IF NOT EXISTS idx_reviews_record      ON reviews(record_id);
-    CREATE INDEX IF NOT EXISTS idx_reviews_status      ON reviews(status);
-    CREATE INDEX IF NOT EXISTS idx_reviews_final       ON reviews(final_label);
-    CREATE INDEX IF NOT EXISTS idx_reviews_prev        ON reviews(prev_label);
+/**
+ * Every record joined to its primary prediction.
+ * Primary = highest confidence; NULL confidence loses to any numeric;
+ * ties broken by predictions.id ASC (insertion order). PRD §11.4 + ADR 0001.
+ *
+ * View definition lives in a raw-SQL migration (drizzle-kit doesn't emit
+ * window functions); here we declare its existing columns so the query
+ * builder can SELECT from it with full type information.
+ */
+export const recordsWithPrimary = sqliteView("records_with_primary", {
+  id: text("id").notNull(),
+  sourcePath: text("source_path").notNull(),
+  rowIndex: integer("row_index").notNull(),
+  text: text("text").notNull(),
+  contextBefore: text("context_before"),
+  contextAfter: text("context_after"),
+  raw: text("raw").notNull(),
+  primaryPredictionId: integer("primary_prediction_id"),
+  primaryLabel: text("primary_label"),
+  primaryConfidence: real("primary_confidence"),
+  primarySource: text("primary_source"),
+  primaryReason: text("primary_reason"),
+  primaryRaw: text("primary_raw"),
+}).existing();
 
-    -- records_with_primary: every record joined to its primary prediction.
-    -- Primary = highest confidence; NULL confidence loses to any numeric;
-    -- ties broken by predictions.id ASC (insertion order). PRD §11.4 + ADR 0001.
-    CREATE VIEW IF NOT EXISTS records_with_primary AS
-    SELECT
-      r.id              AS id,
-      r.source_path     AS source_path,
-      r.row_index       AS row_index,
-      r.text            AS text,
-      r.context_before  AS context_before,
-      r.context_after   AS context_after,
-      r.raw             AS raw,
-      p.id              AS primary_prediction_id,
-      p.label           AS primary_label,
-      p.confidence      AS primary_confidence,
-      p.source          AS primary_source,
-      p.reason          AS primary_reason,
-      p.raw             AS primary_raw
-    FROM records r
-    LEFT JOIN (
-      SELECT
-        record_id,
-        id,
-        label,
-        confidence,
-        source,
-        reason,
-        raw,
-        ROW_NUMBER() OVER (
-          PARTITION BY record_id
-          ORDER BY (confidence IS NULL), confidence DESC, id ASC
-        ) AS rn
-      FROM predictions
-    ) p ON p.record_id = r.id AND p.rn = 1;
-  `);
-}
+export type Record_ = typeof records.$inferSelect;
+export type NewRecord = typeof records.$inferInsert;
+export type Prediction = typeof predictions.$inferSelect;
+export type NewPrediction = typeof predictions.$inferInsert;
+export type Review = typeof reviews.$inferSelect;
+export type NewReview = typeof reviews.$inferInsert;
+export type RecordWithPrimary = typeof recordsWithPrimary.$inferSelect;
+
+// Re-export sql tag so callers don't need a second drizzle-orm import for ad-hoc fragments.
+export { sql };

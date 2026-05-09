@@ -1,11 +1,12 @@
 import type { CliRenderer } from "@opentui/core";
+import { sql } from "drizzle-orm";
 import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, reviewContext } from "../app/context.ts";
 import { resolve } from "../keymap/engine.ts";
 import { Box } from "../render/box.ts";
 import { Text, TextAttributes } from "../render/text.ts";
-import type { QueueId } from "../store/builtin-queues.ts";
+import type { QueueId } from "../store/queues/registry.ts";
 
 export type ReviewScreenHandle = {
   destroy: () => void;
@@ -117,17 +118,15 @@ export function mountReviewScreen(args: {
 }
 
 function reviewedCount(ctx: ReturnType<typeof reviewContext>): number {
-  const row = ctx.db
-    .query<{ n: number }, []>(
-      `SELECT COUNT(DISTINCT record_id) AS n FROM reviews WHERE status IN ('accepted','relabeled','rejected')`,
-    )
-    .get();
-  return row?.n ?? 0;
+  const row = ctx.db.all<{ n: number }>(
+    sql`SELECT COUNT(DISTINCT record_id) AS n FROM reviews WHERE status IN ('accepted','relabeled','rejected')`,
+  );
+  return row[0]?.n ?? 0;
 }
 
 function totalRecords(ctx: ReturnType<typeof reviewContext>): number {
-  const row = ctx.db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM records").get();
-  return row?.n ?? 0;
+  const row = ctx.db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records`);
+  return row[0]?.n ?? 0;
 }
 
 function basename(p: string): string {

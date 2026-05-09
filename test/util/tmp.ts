@@ -1,10 +1,9 @@
-import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir as osTmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { FieldMap } from "../../src/config/inference.ts";
 import { ingestFile } from "../../src/ingest/ingest.ts";
-import { applySchema } from "../../src/store/schema.ts";
+import { type Db, openDb } from "../../src/store/db.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../..");
 
@@ -39,7 +38,7 @@ export function tmpdir(options: { prefix?: string } = {}): TmpDir {
 export type TmpStore = {
   path: string;
   dbPath: string;
-  db: Database;
+  db: Db;
   [Symbol.dispose](): void;
 };
 
@@ -49,21 +48,10 @@ export type TmpStoreOptions = {
   fields?: FieldMap;
 };
 
-/**
- * Open a fresh state.db inside a temp dir. Optionally ingest a fixture JSONL.
- * Use with `using`:
- *
- *   using store = await openTmpStore({ ingest: "tiny.jsonl" });
- *   const cursor = openCursor(store.db, "pending");
- *   ...
- *
- * Both the db and the temp dir are cleaned up on scope exit.
- */
 export async function openTmpStore(options: TmpStoreOptions = {}): Promise<TmpStore> {
   const dir = tmpdir({ prefix: options.prefix ?? "labellens-store-" });
   const dbPath = join(dir.path, "state.db");
-  const db = new Database(dbPath);
-  applySchema(db);
+  const db = openDb(dbPath);
 
   if (options.ingest) {
     await ingestFile(db, fixturePath(options.ingest), options.fields ?? DEFAULT_FIELDS);
@@ -74,7 +62,7 @@ export async function openTmpStore(options: TmpStoreOptions = {}): Promise<TmpSt
     dbPath,
     db,
     [Symbol.dispose]() {
-      db.close();
+      db.$client.close();
       dir[Symbol.dispose]();
     },
   };

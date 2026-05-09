@@ -1,63 +1,56 @@
-import type { Database } from "bun:sqlite";
-import type { ReviewStatus, SourceOfTruth, StoredRecord } from "../types.ts";
+import type { ReviewStatus, SourceOfTruth } from "../types.ts";
+import type { TxOrDb } from "./db.ts";
+import { type NewPrediction, type NewRecord, predictions, records, reviews } from "./schema.ts";
+
+export type RecordPredictionInput = Omit<NewPrediction, "id" | "recordId">;
 
 export function insertRecord(
-  db: Database,
-  rec: StoredRecord & {
-    predictions: {
-      label: string;
-      confidence: number | null;
-      source: string;
-      reason: string | null;
-      raw: string;
-    }[];
-  },
+  db: TxOrDb,
+  rec: NewRecord & { predictions: RecordPredictionInput[] },
 ): void {
-  const insert = db.prepare(`
-    INSERT OR IGNORE INTO records (id, source_path, row_index, text, context_before, context_after, raw)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  insert.run(
-    rec.id,
-    rec.source_path,
-    rec.row_index,
-    rec.text,
-    rec.context_before,
-    rec.context_after,
-    rec.raw,
-  );
+  db.insert(records)
+    .values({
+      id: rec.id,
+      sourcePath: rec.sourcePath,
+      rowIndex: rec.rowIndex,
+      text: rec.text,
+      contextBefore: rec.contextBefore ?? null,
+      contextAfter: rec.contextAfter ?? null,
+      raw: rec.raw,
+    })
+    .onConflictDoNothing()
+    .run();
 
   if (rec.predictions.length === 0) return;
-  const insertPred = db.prepare(`
-    INSERT INTO predictions (record_id, label, confidence, source, reason, raw)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
   for (const p of rec.predictions) {
-    insertPred.run(rec.id, p.label, p.confidence, p.source, p.reason, p.raw);
+    db.insert(predictions)
+      .values({ ...p, recordId: rec.id })
+      .run();
   }
 }
 
+export type StoredReviewStatus = Exclude<ReviewStatus, "pending">;
+
 export function insertReview(
-  db: Database,
+  db: TxOrDb,
   args: {
     record_id: string;
-    status: ReviewStatus;
+    status: StoredReviewStatus;
     final_label: string | null;
     prev_label: string | null;
     note: string | null;
     source_of_truth: SourceOfTruth;
   },
 ): void {
-  db.prepare(
-    `INSERT INTO reviews (record_id, status, final_label, prev_label, note, reviewed_at, source_of_truth)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    args.record_id,
-    args.status,
-    args.final_label,
-    args.prev_label,
-    args.note,
-    new Date().toISOString(),
-    args.source_of_truth,
-  );
+  db.insert(reviews)
+    .values({
+      recordId: args.record_id,
+      status: args.status,
+      finalLabel: args.final_label,
+      prevLabel: args.prev_label,
+      note: args.note,
+      reviewedAt: new Date().toISOString(),
+      sourceOfTruth: args.source_of_truth,
+    })
+    .run();
 }

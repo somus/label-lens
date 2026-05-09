@@ -1,7 +1,7 @@
-import type { Database } from "bun:sqlite";
 import { EventEmitter } from "node:events";
-import { type QueueDefinition, type QueueId, resolveQueue } from "../store/builtin-queues.ts";
+import type { Db } from "../store/db.ts";
 import { queueRecords } from "../store/queries.ts";
+import { type QueueDefinition, type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import type { RecordWithPrimaryPrediction } from "../types.ts";
 
 export type CursorEvents = {
@@ -13,7 +13,7 @@ export class Cursor extends EventEmitter<CursorEvents> {
   private index: number;
 
   constructor(
-    private readonly db: Database,
+    private readonly db: Db,
     private readonly definition: QueueDefinition,
   ) {
     super();
@@ -78,6 +78,6 @@ export class Cursor extends EventEmitter<CursorEvents> {
   }
 }
 
-export function openCursor(db: Database, queueId: QueueId): Cursor {
+export function openCursor(db: Db, queueId: QueueId): Cursor {
   return new Cursor(db, resolveQueue(queueId));
 }

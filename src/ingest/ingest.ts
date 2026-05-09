@@ -1,6 +1,6 @@
-import type { Database } from "bun:sqlite";
 import type { FieldMap } from "../config/inference.ts";
-import { insertRecord } from "../store/records.ts";
+import type { Db } from "../store/db.ts";
+import { insertRecord, type RecordPredictionInput } from "../store/records.ts";
 import type { InputPrediction, InputRecord } from "../types.ts";
 import { contentHashId } from "./id.ts";
 import { streamJsonl } from "./jsonl.ts";
@@ -10,8 +10,19 @@ export type IngestResult = {
   skipped: number;
 };
 
+type PendingRecord = {
+  id: string;
+  sourcePath: string;
+  rowIndex: number;
+  text: string;
+  contextBefore: string | null;
+  contextAfter: string | null;
+  raw: string;
+  predictions: RecordPredictionInput[];
+};
+
 export async function ingestFile(
-  db: Database,
+  db: Db,
   filePath: string,
   fields: FieldMap,
 ): Promise<IngestResult> {
@@ -19,20 +30,13 @@ export async function ingestFile(
   let skipped = 0;
   let rowIndex = 0;
 
-  const tx = db.transaction(
-    (
-      batch: {
-        record: Parameters<typeof insertRecord>[1];
-      }[],
-    ) => {
-      for (const item of batch) insertRecord(db, item.record);
-    },
-  );
+  let buffer: PendingRecord[] = [];
 
-  let buffer: { record: Parameters<typeof insertRecord>[1] }[] = [];
   const flush = () => {
     if (buffer.length === 0) return;
-    tx(buffer);
+    db.transaction((tx) => {
+      for (const item of buffer) insertRecord(tx, item);
+    });
     buffer = [];
   };
 
@@ -50,25 +54,23 @@ export async function ingestFile(
 
     const input = mapInput(obj, fields, text);
     const id = input.id ?? contentHashId(input.text, input.context_before, input.context_after);
-
     const predictions = input.predictions ?? [];
+
     buffer.push({
-      record: {
-        id,
-        source_path: filePath,
-        row_index: rowIndex++,
-        text: input.text,
-        context_before: input.context_before ?? null,
-        context_after: input.context_after ?? null,
-        raw,
-        predictions: predictions.map((p) => ({
-          label: typeof p.label === "string" ? p.label : JSON.stringify(p.label),
-          confidence: typeof p.confidence === "number" ? p.confidence : null,
-          source: p.source,
-          reason: p.reason ?? null,
-          raw: JSON.stringify(p),
-        })),
-      },
+      id,
+      sourcePath: filePath,
+      rowIndex: rowIndex++,
+      text: input.text,
+      contextBefore: input.context_before ?? null,
+      contextAfter: input.context_after ?? null,
+      raw,
+      predictions: predictions.map((p) => ({
+        label: typeof p.label === "string" ? p.label : JSON.stringify(p.label),
+        confidence: typeof p.confidence === "number" ? p.confidence : null,
+        source: p.source,
+        reason: p.reason ?? null,
+        raw: JSON.stringify(p),
+      })),
     });
     ingested++;
     if (buffer.length >= 500) flush();

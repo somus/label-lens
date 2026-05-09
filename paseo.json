@@ -8,6 +8,8 @@
     "lint": { "command": "bun run lint" },
     "check": { "command": "bun run typecheck && bunx biome check && bun test" },
     "build": { "command": "bun run build:bin" },
-    "seed": { "command": "bun run seed" }
+    "seed": { "command": "bun run seed" },
+    "db:generate": { "command": "bun run db:generate" },
+    "db:studio": { "command": "bun run db:studio" }
   }
 }

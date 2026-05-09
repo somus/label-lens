@@ -1,13 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { resolveQueue } from "../../src/store/builtin-queues.ts";
+import { sql } from "drizzle-orm";
+import type { Db } from "../../src/store/db.ts";
 import { queueRecords, recordById } from "../../src/store/queries.ts";
+import { resolveQueue } from "../../src/store/queues/registry.ts";
 import { insertReview } from "../../src/store/records.ts";
 import { openTmpStore } from "../util/tmp.ts";
 
 const PENDING = resolveQueue("pending").query;
 
-function totalRecords(db: Parameters<typeof queueRecords>[0]): number {
-  return (db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM records").get() ?? { n: 0 }).n;
+function totalRecords(db: Db): number {
+  const rows = db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records`);
+  return rows[0]?.n ?? 0;
 }
 
 describe("store + ingest", () => {
