@@ -11,6 +11,24 @@ export type FlashMessage = {
   expiresAt: number;
 };
 
+export type AppMode = "review" | "picker" | "note";
+
+export type PickerCandidate = { label: string; predicted: boolean };
+
+export type PickerState = {
+  recordId: string;
+  allLabels: string[];
+  predicted: string | null;
+  filter: string;
+  candidates: PickerCandidate[];
+  highlight: number;
+};
+
+export type NotePromptState = {
+  recordId: string;
+  value: string;
+};
+
 export type AppContext = {
   db: Db;
   config: LabellensConfig;
@@ -20,6 +38,12 @@ export type AppContext = {
   clearFlash(): void;
   requestRender(): void;
   onQuit(): void;
+  mode: AppMode;
+  picker: PickerState | null;
+  notePrompt: NotePromptState | null;
+  enterPicker(state: PickerState): void;
+  enterNote(state: NotePromptState): void;
+  exitOverlay(): void;
 };
 
 export type ReviewContext = AppContext & {
@@ -38,6 +62,9 @@ export function createAppContext(args: {
     db: args.db,
     config: args.config,
     flash: null,
+    mode: "review",
+    picker: null,
+    notePrompt: null,
     requestRender: args.requestRender,
     onQuit: args.onQuit,
     getCursor(queueId) {
@@ -51,20 +78,37 @@ export function createAppContext(args: {
     },
     setFlash(message, kind, ttlMs = 3000) {
       ctx.flash = { kind, message, expiresAt: Date.now() + ttlMs };
-      args.requestRender();
+      ctx.requestRender();
     },
     clearFlash() {
       ctx.flash = null;
-      args.requestRender();
+      ctx.requestRender();
+    },
+    enterPicker(state) {
+      ctx.mode = "picker";
+      ctx.picker = state;
+      ctx.notePrompt = null;
+      ctx.requestRender();
+    },
+    enterNote(state) {
+      ctx.mode = "note";
+      ctx.notePrompt = state;
+      ctx.picker = null;
+      ctx.requestRender();
+    },
+    exitOverlay() {
+      ctx.mode = "review";
+      ctx.picker = null;
+      ctx.notePrompt = null;
+      ctx.requestRender();
     },
   };
   return ctx;
 }
 
 export function reviewContext(app: AppContext, queueId: QueueId = "pending"): ReviewContext {
-  return {
-    ...app,
-    scope: "review",
-    cursor: app.getCursor(queueId),
-  };
+  const ctx = Object.create(app) as ReviewContext;
+  ctx.scope = "review";
+  ctx.cursor = app.getCursor(queueId);
+  return ctx;
 }

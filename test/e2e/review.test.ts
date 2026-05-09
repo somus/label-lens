@@ -44,7 +44,9 @@ describe("review screen e2e", () => {
 
     expect(frame).toContain("LabelLens");
     expect(frame).toContain("tiny.jsonl");
-    expect(frame).toContain("0 / 10");
+    expect(frame).toContain("Reviewed: 0 / 10");
+    expect(frame).toContain("Skipped: 0");
+    expect(frame).toContain("Pending: 10");
     expect(frame).toContain("Lunch at Zomato Bangalore");
     expect(frame).toContain("food");
     expect(frame).toContain("(92%)");
@@ -73,7 +75,7 @@ describe("review screen e2e", () => {
     expect(review?.source_of_truth).toBe("human");
 
     const frame = captureCharFrame();
-    expect(frame).toContain("1 / 10");
+    expect(frame).toContain("Reviewed: 1 / 10");
     expect(frame).toMatchSnapshot();
   });
 
@@ -113,7 +115,7 @@ describe("review screen e2e", () => {
 
     const frame = captureCharFrame();
     expect(frame).toContain("All records reviewed");
-    expect(frame).toContain("10 / 10");
+    expect(frame).toContain("Reviewed: 10 / 10");
     expect(frame).toMatchSnapshot();
   });
 });

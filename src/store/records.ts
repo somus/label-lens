@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { ReviewStatus, SourceOfTruth } from "../types.ts";
 import type { TxOrDb } from "./db.ts";
 import { type NewPrediction, type NewRecord, predictions, records, reviews } from "./schema.ts";
@@ -52,5 +53,13 @@ export function insertReview(
       reviewedAt: new Date().toISOString(),
       sourceOfTruth: args.source_of_truth,
     })
+    .run();
+}
+
+/** Update a record's note column. Empty string is stored as NULL. */
+export function updateRecordNote(db: TxOrDb, recordId: string, note: string): void {
+  db.update(records)
+    .set({ note: note.length === 0 ? null : note })
+    .where(eq(records.id, recordId))
     .run();
 }
