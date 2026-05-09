@@ -1,5 +1,7 @@
 # PRD: LabelLens — Terminal Reviewer for Noisy Text Training Data
 
+> **Version 2.8.** Update over v2.7: storage layer adopts `drizzle-orm/bun-sqlite` with bundled migrations (per ADR 0005), and `records_with_primary` is now a SQL view defined in a custom migration. No behavior change to the review loop or any user-visible feature. Earlier change log preserved.
+>
 > **Version 2.7.** Supersedes v2.6. Updates over v2.6 (all from grilling session resolved against `docs/adr/0001`–`0004`): `skipped` promoted to a distinct review state with its own queue (§10.3, §11.4); smart re-ingest distinguishes text-change vs predictions-only refresh (§13); SSH-default assistant config flow tightened — disabled at init, prompt on first `i` (§10.5); `source_of_truth` tags `human+assistant` whenever the panel was viewed, not only when the suggestion was accepted (§10.5, §11.2); stats screen drilldown closed via `:by-correction` and `:where` queue forms (§10.3, §10.8); multi-prediction display: alternatives strip below focus box (§14.1); boundary navigation stays queue-ordered with expanded context plus `g d` doc-jump (§14.1); `labellens migrate --rename` introduced for label renames (§11.4); MVP distribution staged to curl-installer + npm at v0.1, brew formula deferred to V1 (§16, §16.1, §18). Earlier v2.6 changes preserved below.
 
 ## 1. Product summary
@@ -588,22 +590,32 @@ my-project/
 - Backup is whatever already exists for the source file.
 - The source file stays git-friendly; the binary db file is `.gitignore`d.
 
-### Why SQLite (via `bun:sqlite`)
+### Why SQLite (via `bun:sqlite` + drizzle-orm)
 
-- Built into Bun — no native module dependency, bundles cleanly into `--compile` binary.
-- Synchronous and fast — fits the TUI hot path.
+- `bun:sqlite` is built into Bun — no native module dependency, bundles cleanly into `--compile` binary. Synchronous and fast — fits the TUI hot path.
+- **Drizzle ORM** (`drizzle-orm/bun-sqlite`) sits on top for type-safe schema + query building. Schema in `src/store/schema.ts` is the source of truth; `drizzle-kit` generates SQL migrations under `migration/`. Migrations are bundled into the compiled binary via Bun `--define` (per ADR 0005). `applyMigrations()` runs automatically on every `openDb()` — idempotent across launches.
 - Indexed queries make queues, filters, and stats trivial.
 - Scales comfortably to 10K records (target) and well beyond.
 
 ### Schema (sketch)
 
+The authoritative schema lives in `src/store/schema.ts` as drizzle table defs. SQL emitted by `drizzle-kit generate`:
+
 ```sql
 records (id, source_path, row_index, text, context_before, context_after, raw JSON);
 predictions (id, record_id, label, confidence, source, reason, raw JSON);
-reviews (id, record_id, status, final_label, prev_label, note, reviewed_at);
-issues (id, record_id, type, score);
-assistant_queries (id, record_id, prompt_hash, response JSON, created_at);
+reviews (id, record_id, status, final_label, prev_label, note, reviewed_at, source_of_truth);
+issues (id, record_id, type, score);                      -- slice 6 / #10
+assistant_queries (id, record_id, prompt_hash, response JSON, created_at);  -- slice 11 / #7
 sessions (id, started_at, ended_at, action_count);
+
+-- view: every record joined to its primary prediction (window function picks the row)
+CREATE VIEW records_with_primary AS
+  SELECT records.*, p.* FROM records LEFT JOIN (
+    SELECT *, ROW_NUMBER() OVER (
+      PARTITION BY record_id ORDER BY (confidence IS NULL), confidence DESC, id ASC
+    ) rn FROM predictions
+  ) p ON p.record_id = records.id AND p.rn = 1;
 
 -- indexes
 CREATE INDEX idx_reviews_status ON reviews(status);
@@ -887,7 +899,7 @@ Resolution is: defaults → user config (merged at startup, user wins). MVP supp
 | Runtime        | Bun                                        |
 | Language       | TypeScript                                 |
 | TUI            | OpenTUI                                    |
-| Storage        | `bun:sqlite`                               |
+| Storage        | `bun:sqlite` (runtime) + `drizzle-orm/bun-sqlite` (schema, queries, migrations) — see ADR 0005. `@libsql/client` is a dev-only dep so `drizzle-kit studio` works on Bun. |
 | LLM            | `pi-ai` (provider-agnostic, OAuth subscription auth + API keys) |
 | Validation     | TypeBox (aligned with `pi-ai` schemas); Zod elsewhere if useful |
 | Distribution   | Bun-compiled binary + runtime assets in one install dir. **MVP**: curl-installer (primary) + npm `optionalDependencies` (secondary). **V1**: brew formula. (OpenCode pattern, staged.) |

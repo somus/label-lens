@@ -101,6 +101,7 @@ The test renderer doesn't simulate transport loss. Manually verify any rendering
 
 ## Don't
 
-- Don't mock `bun:sqlite`. Use the real one via `openTmpStore`. ADR 0001 + the rest of the data model rely on real SQL semantics.
+- Don't mock `bun:sqlite` or drizzle. Use the real db via `openTmpStore` — `applySchema`-equivalent migrations run automatically on `openDb()`. ADR 0001 + the rest of the data model rely on real SQL semantics; ADR 0005 keeps the runtime path identical between tests and prod.
 - Don't share DB state across tests. Each test gets its own `using store = …`.
 - Don't hardcode `/tmp/...` paths. Use `tmpdir()` so cleanup is automatic.
+- Don't import from `bun:sqlite` directly in app code or tests — go through `Db` / `TxOrDb` from `src/store/db.ts` so types stay aligned with the schema.

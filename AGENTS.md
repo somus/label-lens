@@ -4,7 +4,7 @@ You are working on **LabelLens**, a terminal-first review tool for noisy text tr
 
 1. **`PRD.md`** — full product spec (v2.7). Authoritative for behavior.
 2. **`CONTEXT.md`** — domain glossary. Use these terms in code, comments, commit messages, and PR descriptions. Avoid the alternatives listed under each `_Avoid_` line.
-3. **`docs/adr/`** — load-bearing decisions. ADRs 0001–0004 settle identity, re-ingest, skipped state, and assistant audit. Don't relitigate unless you're explicitly superseding one.
+3. **`docs/adr/`** — load-bearing decisions. ADRs 0001–0005 settle identity, re-ingest, skipped state, assistant audit, and the drizzle-orm + bundled-migrations storage approach. Don't relitigate unless you're explicitly superseding one.
 
 ## Issue tracker
 
@@ -19,7 +19,7 @@ Slices are tracer bullets — each cuts end-to-end through schema, store, render
 
 - Bun + TypeScript
 - OpenTUI (imperative core API; bootstrap from `bun create tui -t core`)
-- `bun:sqlite` for state.db
+- `bun:sqlite` (runtime) + `drizzle-orm/bun-sqlite` (schema, queries, migrations) — see ADR 0005. Schema in `src/store/schema.ts`; migrations under `migration/`; bundled into the compiled binary via Bun `--define`. `@libsql/client` is dev-only (powers `drizzle-kit studio`).
 - `pi-ai` for assistant (slice 11 only)
 - TypeBox schemas (aligned with `pi-ai`)
 - Pure-TS keymap engine (PRD §15) — no UI deps, deterministic, unit-testable
