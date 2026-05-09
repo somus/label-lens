@@ -53,6 +53,15 @@ bun run build:bin
 /Users/somu/Code/label-lens/dist/label-lens-darwin-arm64/labellens   # from a seeded dir
 ```
 
+To browse the local DB visually (drizzle-studio):
+
+```sh
+LL_DEV_DIR=/tmp/llens-dev bun run db:studio
+# UI at https://local.drizzle.studio (proxies to your localhost:4983)
+```
+
+drizzle-kit studio uses `@libsql/client` (dev dep) — runtime still uses `bun:sqlite`. They share the same on-disk file. drizzle-kit cannot use bun:sqlite directly as of 2026 (drizzle-team/drizzle-orm#1520, #4350); libsql is the working escape hatch.
+
 ## Testing
 
 See **`test/AGENTS.md`** for the full guide (tmp-store helper, snapshot conventions, screen e2e harness, what NOT to mock).
