@@ -48,8 +48,10 @@ Render primitives wrap OpenTUI components in `src/render/` (4–6 small files) s
 
 ## Commits and PRs
 
-- Reference the issue you're closing in the PR title or body.
-- Commits use conventional format. `feat:`, `fix:`, `refactor:`, `test:`, `docs:`.
+- **Always work on a feature branch and open a PR — never push directly to `main`.** Branch naming: `<type>/<slug>` (e.g. `feat/walking-skeleton`, `chore/ci-setup`).
+- **Do not merge PRs yourself.** Wait for human review.
+- Reference the issue you're closing in the PR title or body (`closes #N`).
+- Commits use conventional format. `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
 - **Never add Claude / agent attribution to commits or PRs.** No `Co-Authored-By: Claude` trailers, no "🤖 Generated with Claude Code" footers, no agent-self-referential lines anywhere. The author is the human running the tool.
 - Don't add backwards-compat shims, dead-code comments, or feature flags. Just change the code.
 - Default to no comments. If WHY is non-obvious, one short line.
