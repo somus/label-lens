@@ -9,7 +9,7 @@ import { pickerReduce } from "../picker/reducer.ts";
 import { Box } from "../render/box.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { progressCounts, recentReviews } from "../store/queries.ts";
-import type { QueueId } from "../store/queues/registry.ts";
+import { type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import { hasTag } from "../store/tags.ts";
 import type { StoredReview } from "../types.ts";
 
@@ -45,6 +45,7 @@ export function mountReviewScreen(args: {
     const flash = ctx.flash && ctx.flash.expiresAt > Date.now() ? ctx.flash : null;
     const history = recentReviews(ctx.db, 5);
     const marked = record ? hasTag(ctx.db, record.id, "marked") : false;
+    const queueLabel = resolveQueue(ctx.cursor.queueId).label;
 
     renderer.root.add(
       Box(
@@ -53,7 +54,7 @@ export function mountReviewScreen(args: {
         Box(
           { flexDirection: "row", justifyContent: "space-between" },
           Text({
-            content: ` LabelLens · ${basename(ctx.config.input.path)}${marked ? "   ● marked" : ""}`,
+            content: ` LabelLens · ${basename(ctx.config.input.path)} · ${queueLabel}${marked ? "   ● marked" : ""}`,
             attributes: marked ? TextAttributes.BOLD : undefined,
           }),
           Text({
@@ -134,7 +135,7 @@ export function mountReviewScreen(args: {
           : Box(
               { flexDirection: "row" },
               Text({
-                content: ` a accept   r relabel   x reject   s skip   m ${marked ? "unmark" : "mark"}   n note   u undo   j next   k prev   q quit`,
+                content: ` a accept   r relabel   x reject   s skip   m ${marked ? "unmark" : "mark"}   n note   u undo   j/k next/prev   [/] queue   q quit`,
                 attributes: TextAttributes.DIM,
               }),
             ),

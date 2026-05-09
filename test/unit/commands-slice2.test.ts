@@ -268,6 +268,54 @@ describe("record.undo", () => {
   });
 });
 
+describe("queue cycling", () => {
+  test("queue.next switches cursor from pending to skipped", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const ctx = reviewContext(app);
+    expect(ctx.cursor.queueId).toBe("pending");
+    await dispatch(defaultRegistry(), "review", ctx, "queue.next");
+    expect(ctx.cursor.queueId).toBe("skipped");
+  });
+
+  test("queue.next from skipped wraps back to pending", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const ctx = reviewContext(app, "skipped");
+    await dispatch(defaultRegistry(), "review", ctx, "queue.next");
+    expect(ctx.cursor.queueId).toBe("pending");
+  });
+
+  test("queue.prev cycles backwards", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const ctx = reviewContext(app);
+    expect(ctx.cursor.queueId).toBe("pending");
+    await dispatch(defaultRegistry(), "review", ctx, "queue.prev");
+    expect(ctx.cursor.queueId).toBe("skipped");
+  });
+
+  test("queue.next flashes the queue label", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const ctx = reviewContext(app);
+    await dispatch(defaultRegistry(), "review", ctx, "queue.next");
+    expect(app.flash?.message).toContain("Skipped");
+  });
+
+  test("skip then queue-cycle reaches the skipped record", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const ctx = reviewContext(app);
+    const skippedId = ctx.cursor.current()!.id;
+    const registry = defaultRegistry();
+    await dispatch(registry, "review", ctx, "record.skip");
+    await dispatch(registry, "review", ctx, "queue.next");
+    expect(ctx.cursor.queueId).toBe("skipped");
+    expect(ctx.cursor.current()?.id).toBe(skippedId);
+  });
+});
+
 describe("record.accept (no prediction)", () => {
   test("flashes error and writes no review when primary prediction is null", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });

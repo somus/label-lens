@@ -1,5 +1,6 @@
 import { quit } from "./app/quit.ts";
 import { bindingsFor, buildRegistry, type Command, type CommandRegistry } from "./command.ts";
+import { nextQueue, prevQueue } from "./queue/cycle-queue.ts";
 import { accept } from "./record/accept.ts";
 import { commitNote } from "./record/commit-note.ts";
 import { next } from "./record/next.ts";
@@ -24,6 +25,8 @@ export const ALL_COMMANDS: Command[] = [
   commitNote as unknown as Command,
   openRelabelPicker as unknown as Command,
   ...(relabelByIndexCommands as unknown as Command[]),
+  nextQueue as unknown as Command,
+  prevQueue as unknown as Command,
   quit as unknown as Command,
 ];
 
