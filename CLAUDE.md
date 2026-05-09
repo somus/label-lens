@@ -46,6 +46,37 @@ Render primitives wrap OpenTUI components in `src/render/` (4–6 small files) s
 - **Performance**: shared fixtures (issue #14); perf harness (issue #15).
 - **SSH path matters** — manually verify any rendering changes over a real SSH session before declaring a slice done. The test renderer doesn't simulate transport loss.
 
+## Worktrees (paseo)
+
+`paseo.json` configures auto-setup for worktrees of this repo (`bun install --frozen-lockfile` + `bunx lefthook install`). Use a paseo worktree when:
+
+- **Parallel slices are in flight** — multiple branches need their own checkouts so reviews / tests don't trip over each other.
+- **Risky refactor or experiment** — keep `main`'s working tree clean so a quick context-switch doesn't lose state.
+- **Comparing two implementations** — branch off twice from the same base, run both side-by-side.
+- **Long-running agent work** — hand off the worktree path to a Codex / Claude agent so its edits don't collide with interactive work.
+
+Skip worktrees for trivial single-branch fixes — the regular feature-branch flow is lighter.
+
+**How to spin one up:**
+
+```sh
+# from a real terminal (Claude's Bash tool can crash paseo's electron helper)
+paseo worktree create --mode branch-off --new-branch <type>/<slug> --base main
+# returns { worktreePath } — cd in, work, commit, push, open PR
+```
+
+Branch naming matches the PR convention: `<type>/<slug>`. paseo reads `paseo.json` from the **base branch's committed copy**, so any setup changes must land on `main` first.
+
+**When done:**
+
+```sh
+paseo worktree archive <worktree-name>   # removes worktree + branch
+```
+
+If the CLI crashes from a non-tty environment (Claude's Bash tool), fall back to `git worktree remove <path> --force && git branch -D <name>`.
+
+**Available scripts inside any worktree** (defined in `paseo.json`): `test`, `typecheck`, `lint`, `check` (full pre-merge gate), `build`. Same names usable from the paseo UI / CLI.
+
 ## Commits and PRs
 
 - **Always work on a feature branch and open a PR — never push directly to `main`.** Branch naming: `<type>/<slug>` (e.g. `feat/walking-skeleton`, `chore/ci-setup`).
