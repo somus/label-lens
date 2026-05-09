@@ -4,7 +4,7 @@ You are working on **LabelLens**, a terminal-first review tool for noisy text tr
 
 1. **`PRD.md`** — full product spec (v2.7). Authoritative for behavior.
 2. **`CONTEXT.md`** — domain glossary. Use these terms in code, comments, commit messages, and PR descriptions. Avoid the alternatives listed under each `_Avoid_` line.
-3. **`docs/adr/`** — load-bearing decisions. ADRs 0001–0006 settle identity, re-ingest, skipped state, assistant audit, drizzle storage, and no-darwin-x64-prebuilt. Don't relitigate unless you're explicitly superseding one.
+3. **`docs/adr/`** — load-bearing decisions. ADRs 0001–0007 settle identity, re-ingest, skipped state, assistant audit, drizzle storage, no-darwin-x64-prebuilt, and effective Review entry. Don't relitigate unless you're explicitly superseding one.
 
 ## Issue tracker
 
@@ -32,6 +32,8 @@ Render primitives wrap OpenTUI components in `src/render/` (4–6 small files) s
 - **Skipped is its own state, not a flavor of pending.** ADR 0003.
 - **Source data is immutable.** Never write back to the user's JSONL. State lives in `.labellens/state.db`.
 - **Source-of-truth = `human+assistant`** whenever the assistant panel was viewed for a record, not only when accepted. ADR 0004.
+- **"Current" Review state always reads from `effective_reviews`.** Never re-derive the "non-undone, non-compensated" predicate inline. ADR 0007. Audit-log queries (history strip) intentionally read raw `reviews`.
+- **Modal sub-surfaces go through the Overlay seam.** Picker, Note, and the slice-11 Assistant share `src/overlay/`: a pure reducer per overlay + an `applyEffects` interpreter against AppContext. Don't add bespoke key handlers in screens.
 - **No native modules besides `bun:sqlite`.** Pure-TS deps only — keeps the compiled binary clean.
 - **Heavy CPU work runs in a Bun `Worker`.** Hashing, signal computation, embeddings. Main thread stays responsive.
 - **Streaming JSONL ingest.** Never load the full file into memory.
