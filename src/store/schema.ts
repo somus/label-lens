@@ -92,6 +92,26 @@ export const recordTags = sqliteTable(
  * window functions); here we declare its existing columns so the query
  * builder can SELECT from it with full type information.
  */
+/**
+ * Every review row that is currently effective — not undone, not compensated.
+ * Single source of truth for "current Review entry" semantics. ADR 0007.
+ */
+export const effectiveReviews = sqliteView("effective_reviews", {
+  id: integer("id").notNull(),
+  recordId: text("record_id").notNull(),
+  status: text("status", {
+    enum: ["accepted", "relabeled", "rejected", "skipped", "undone"],
+  }).notNull(),
+  finalLabel: text("final_label"),
+  prevLabel: text("prev_label"),
+  note: text("note"),
+  reviewedAt: text("reviewed_at").notNull(),
+  sourceOfTruth: text("source_of_truth", {
+    enum: ["human", "human+assistant"],
+  }).notNull(),
+  compensatesReviewId: integer("compensates_review_id"),
+}).existing();
+
 export const recordsWithPrimary = sqliteView("records_with_primary", {
   id: text("id").notNull(),
   sourcePath: text("source_path").notNull(),
