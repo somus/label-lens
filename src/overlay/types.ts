@@ -1,0 +1,64 @@
+import type { KeyEvent } from "../keymap/engine.ts";
+import type { ReviewStatus, SourceOfTruth } from "../types.ts";
+
+/** Per-Overlay state types. */
+
+export type PickerCandidate = { label: string; predicted: boolean };
+
+export type PickerState = {
+  recordId: string;
+  allLabels: string[];
+  predicted: string | null;
+  filter: string;
+  candidates: PickerCandidate[];
+  highlight: number;
+};
+
+export type NoteState = {
+  recordId: string;
+  value: string;
+};
+
+export type AssistantState = {
+  recordId: string;
+  status: "loading" | "streaming" | "done" | "error";
+  buffer: string;
+  suggestion: string | null;
+  reason: string | null;
+  errorMessage: string | null;
+};
+
+export type Overlay =
+  | { kind: "picker"; state: PickerState }
+  | { kind: "note"; state: NoteState }
+  | { kind: "assistant"; state: AssistantState };
+
+export type OverlayKind = Overlay["kind"];
+
+/** Uniform event union — keystrokes, async stream tokens, lifecycle. */
+export type OverlayEvent =
+  | { kind: "key"; event: KeyEvent }
+  | { kind: "streamToken"; token: string }
+  | { kind: "streamEnd" }
+  | { kind: "streamError"; error: unknown }
+  | { kind: "cancel" }
+  | { kind: "commit" };
+
+/** Data effects emitted by the reducer; the screen-side interpreter applies them. */
+export type Effect =
+  | { kind: "close" }
+  | {
+      kind: "commitDecision";
+      recordId: string;
+      status: Exclude<ReviewStatus, "pending" | "undone">;
+      finalLabel: string | null;
+      prevLabel: string | null;
+      sourceOfTruth: SourceOfTruth;
+    }
+  | { kind: "updateNote"; recordId: string; value: string }
+  | { kind: "markAssistantViewed"; recordId: string };
+
+export type ReduceResult = {
+  overlay: Overlay | null;
+  effects: Effect[];
+};

@@ -1,7 +1,7 @@
-import type { AppContext, ReviewContext } from "../app/context.ts";
+import type { AppContext } from "../app/context.ts";
 import type { Scope } from "../keymap/engine.ts";
 
-export type ActionContext = AppContext | ReviewContext;
+export type ActionContext = AppContext;
 
 export type Command<Ctx extends ActionContext = ActionContext> = {
   name: string;

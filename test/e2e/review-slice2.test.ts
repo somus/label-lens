@@ -91,7 +91,7 @@ describe("review screen slice 2 UI", () => {
     const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
     mockInput.pressKey("r");
     await renderOnce();
-    expect(app.mode).toBe("picker");
+    expect(app.overlay?.kind).toBe("picker");
     const frame = captureCharFrame();
     expect(frame).toContain("relabel>");
     expect(frame).toContain("food");
@@ -107,9 +107,15 @@ describe("review screen slice 2 UI", () => {
     await renderOnce();
     mockInput.pressKey("t");
     await renderOnce();
-    expect(app.mode).toBe("picker");
-    expect(app.picker?.filter).toBe("t");
-    expect(app.picker?.candidates.map((c) => c.label)).toEqual(["travel", "utility", "other"]);
+    expect(app.overlay?.kind).toBe("picker");
+    if (app.overlay?.kind === "picker") {
+      expect(app.overlay.state.filter).toBe("t");
+      expect(app.overlay.state.candidates.map((c) => c.label)).toEqual([
+        "travel",
+        "utility",
+        "other",
+      ]);
+    }
     const frame = captureCharFrame();
     expect(frame).toContain("relabel> t");
   });
@@ -119,7 +125,7 @@ describe("review screen slice 2 UI", () => {
     const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
     mockInput.pressKey("n");
     await renderOnce();
-    expect(app.mode).toBe("note");
+    expect(app.overlay?.kind).toBe("note");
     const frame = captureCharFrame();
     expect(frame).toContain("note>");
     expect(frame).toContain("enter save");
@@ -153,10 +159,11 @@ describe("review screen slice 2 UI", () => {
     const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey("r");
     await renderOnce();
-    expect(app.mode).toBe("picker");
+    expect(app.overlay?.kind).toBe("picker");
     mockInput.pressKey(" ");
     await renderOnce();
-    expect(app.picker?.filter).toBe(" ");
+    if (app.overlay?.kind === "picker") expect(app.overlay.state.filter).toBe(" ");
+    else throw new Error("expected picker overlay");
   });
 
   test("header shows '<position> / <total>' indicator and advances on action", async () => {
@@ -191,6 +198,7 @@ describe("review screen slice 2 UI", () => {
     mockInput.pressKey("y");
     mockInput.pressKey("o");
     await renderOnce();
-    expect(app.notePrompt?.value).toBe("hi yo");
+    if (app.overlay?.kind === "note") expect(app.overlay.state.value).toBe("hi yo");
+    else throw new Error("expected note overlay");
   });
 });

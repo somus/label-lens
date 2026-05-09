@@ -1,11 +1,12 @@
 import type { CliRenderer } from "@opentui/core";
 import { dispatch } from "../actions/dispatch.ts";
-import { commitPickerSelection } from "../actions/record/commit-picker.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
-import { type AppContext, reviewContext } from "../app/context.ts";
+import { type AppContext, enterReview } from "../app/context.ts";
 import { labelName } from "../config/config.ts";
 import { resolve } from "../keymap/engine.ts";
-import { pickerReduce } from "../picker/reducer.ts";
+import { applyEffects } from "../overlay/effects.ts";
+import { reduceOverlay } from "../overlay/reduce.ts";
+import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { Box } from "../render/box.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { progressCounts, recentReviews } from "../store/queries.ts";
@@ -34,20 +35,23 @@ export function mountReviewScreen(args: {
 }): ReviewScreenHandle {
   const { renderer, app } = args;
   const registry = args.registry ?? defaultRegistry();
-  const ctx = reviewContext(app, args.initialQueueId ?? "pending");
+  const initialQueueId = args.initialQueueId ?? "pending";
+  enterReview(app, initialQueueId);
   const bindings = bindingsFor([...registry.values()]);
 
   const renderState = () => {
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
-    const counts = progressCounts(ctx.db);
+    const cursor = app.cursor;
+    const queueId = app.queueId ?? initialQueueId;
+    const counts = progressCounts(app.db);
     const reviewedTotal = counts.accepted + counts.relabeled + counts.rejected;
-    const record = ctx.cursor.current();
-    const flash = ctx.flash && ctx.flash.expiresAt > Date.now() ? ctx.flash : null;
-    const history = recentReviews(ctx.db, 5);
-    const marked = record ? hasTag(ctx.db, record.id, "marked") : false;
-    const queueLabel = resolveQueue(ctx.cursor.queueId).label;
-    const queueTotal = ctx.cursor.total;
-    const queuePosition = queueTotal === 0 ? 0 : ctx.cursor.position + 1;
+    const record = cursor?.current() ?? null;
+    const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
+    const history = recentReviews(app.db, 5);
+    const marked = record ? hasTag(app.db, record.id, "marked") : false;
+    const queueLabel = resolveQueue(queueId).label;
+    const queueTotal = cursor?.total ?? 0;
+    const queuePosition = queueTotal === 0 ? 0 : (cursor?.position ?? 0) + 1;
     const queueIndicator = queueTotal === 0 ? "0 / 0" : `${queuePosition} / ${queueTotal}`;
 
     renderer.root.add(
@@ -57,7 +61,7 @@ export function mountReviewScreen(args: {
         Box(
           { flexDirection: "row", justifyContent: "space-between" },
           Text({
-            content: ` LabelLens · ${basename(ctx.config.input.path)} · ${queueLabel} · ${queueIndicator}${marked ? "   ● marked" : ""}`,
+            content: ` LabelLens · ${basename(app.config.input.path)} · ${queueLabel} · ${queueIndicator}${marked ? "   ● marked" : ""}`,
             attributes: marked ? TextAttributes.BOLD : undefined,
           }),
           Text({
@@ -95,7 +99,7 @@ export function mountReviewScreen(args: {
             )
           : Box({}),
 
-        record ? labelListBox(ctx.config.labels, record.primaryPrediction?.label ?? null) : Box({}),
+        record ? labelListBox(app.config.labels, record.primaryPrediction?.label ?? null) : Box({}),
 
         record?.note
           ? Box(
@@ -119,11 +123,7 @@ export function mountReviewScreen(args: {
             )
           : Box({}),
 
-        ctx.mode === "picker" && ctx.picker
-          ? pickerOverlay(ctx.picker.filter, ctx.picker.candidates, ctx.picker.highlight)
-          : Box({}),
-
-        ctx.mode === "note" && ctx.notePrompt ? noteOverlay(ctx.notePrompt.value) : Box({}),
+        app.overlay ? renderOverlay(app.overlay) : Box({}),
 
         Box({ flexGrow: 1 }),
 
@@ -147,16 +147,13 @@ export function mountReviewScreen(args: {
   };
 
   app.requestRender = renderState;
-  ctx.requestRender = renderState;
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
-    if (app.mode === "picker") {
-      handlePickerKey(app, ctx, event);
-      renderState();
-      return;
-    }
-    if (app.mode === "note") {
-      handleNoteKey(registry, ctx, app, event);
+    if (app.overlay) {
+      const result = reduceOverlay(app.overlay, { kind: "key", event });
+      app.overlay = result.overlay;
+      const queueId = app.queueId ?? initialQueueId;
+      applyEffects(app, queueId, result.effects);
       renderState();
       return;
     }
@@ -167,7 +164,7 @@ export function mountReviewScreen(args: {
       meta: event.meta,
     });
     if (!action) return;
-    void dispatch(registry, "review", ctx, action);
+    void dispatch(registry, "review", app, action);
   };
 
   renderer.keyInput.on("keypress", onKey);
@@ -181,19 +178,61 @@ export function mountReviewScreen(args: {
 }
 
 function labelListBox(
-  labels: ReturnType<typeof labelName> extends string ? unknown[] : never,
+  labels: Parameters<typeof labelName>[0][],
   predicted: string | null,
-) {
+): ReturnType<typeof Box> {
   return Box(
     { flexDirection: "column", marginTop: 1 },
-    ...(labels as unknown[]).slice(0, 9).map((entry, idx) => {
-      const name = labelName(entry as Parameters<typeof labelName>[0]);
+    ...labels.slice(0, 9).map((entry, idx) => {
+      const name = labelName(entry);
       const isPredicted = name === predicted;
       const marker = isPredicted ? " >" : "  ";
       return Text({
         content: ` ${idx + 1} ${name}${marker}`,
         attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.DIM,
       });
+    }),
+  );
+}
+
+function renderOverlay(overlay: Overlay): ReturnType<typeof Box> {
+  switch (overlay.kind) {
+    case "picker":
+      return renderPicker(overlay.state);
+    case "note":
+      return renderNote(overlay.state);
+    case "assistant":
+      return Box(
+        { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+        Text({ content: " assistant overlay (slice 11)" }),
+      );
+  }
+}
+
+function renderPicker(state: PickerState): ReturnType<typeof Box> {
+  return Box(
+    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    Text({ content: ` relabel> ${state.filter}_` }),
+    ...state.candidates.slice(0, 9).map((c: PickerCandidate, i) =>
+      Text({
+        content: ` ${i + 1} ${c.label}${c.predicted ? " >" : ""}${i === state.highlight ? "  <-" : ""}`,
+        attributes: i === state.highlight ? TextAttributes.BOLD : TextAttributes.DIM,
+      }),
+    ),
+    Text({
+      content: " enter commit · esc cancel",
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function renderNote(state: NoteState): ReturnType<typeof Box> {
+  return Box(
+    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    Text({ content: ` note> ${state.value}_` }),
+    Text({
+      content: " enter save · esc cancel",
+      attributes: TextAttributes.DIM,
     }),
   );
 }
@@ -206,107 +245,6 @@ function formatHistory(history: StoredReview[]): string {
       return `${shortId(h.record_id)} ${sym} ${lbl}`;
     })
     .join("  ·  ");
-}
-
-function pickerOverlay(
-  filter: string,
-  candidates: { label: string; predicted: boolean }[],
-  highlight: number,
-) {
-  return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
-    Text({ content: ` relabel> ${filter}_` }),
-    ...candidates.slice(0, 9).map((c, i) =>
-      Text({
-        content: ` ${i + 1} ${c.label}${c.predicted ? " >" : ""}${i === highlight ? "  <-" : ""}`,
-        attributes: i === highlight ? TextAttributes.BOLD : TextAttributes.DIM,
-      }),
-    ),
-    Text({
-      content: " enter commit · esc cancel",
-      attributes: TextAttributes.DIM,
-    }),
-  );
-}
-
-function noteOverlay(value: string) {
-  return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
-    Text({ content: ` note> ${value}_` }),
-    Text({
-      content: " enter save · esc cancel",
-      attributes: TextAttributes.DIM,
-    }),
-  );
-}
-
-function handlePickerKey(
-  app: AppContext,
-  ctx: ReturnType<typeof reviewContext>,
-  event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
-) {
-  if (!app.picker) return;
-  if (event.name === "escape") {
-    ctx.exitOverlay();
-    return;
-  }
-  if (event.name === "return") {
-    commitPickerSelection(ctx);
-    return;
-  }
-  if (event.name === "up") {
-    app.picker = pickerReduce(app.picker, { kind: "up" });
-    return;
-  }
-  if (event.name === "down") {
-    app.picker = pickerReduce(app.picker, { kind: "down" });
-    return;
-  }
-  if (event.name === "backspace") {
-    app.picker = pickerReduce(app.picker, { kind: "backspace" });
-    return;
-  }
-  const ch = event.name === "space" ? " " : event.name;
-  if (ch.length === 1) {
-    if (/^[1-9]$/.test(ch)) {
-      app.picker = pickerReduce(app.picker, { kind: "number", n: Number(ch) });
-      return;
-    }
-    if (/^[\w \-_]$/i.test(ch)) {
-      app.picker = pickerReduce(app.picker, { kind: "char", char: ch });
-    }
-  }
-}
-
-function handleNoteKey(
-  registry: CommandRegistry,
-  ctx: ReturnType<typeof reviewContext>,
-  app: AppContext,
-  event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
-) {
-  if (!app.notePrompt) return;
-  if (event.name === "escape") {
-    ctx.exitOverlay();
-    return;
-  }
-  if (event.name === "return") {
-    void dispatch(registry, "note", ctx, "record.commitNote");
-    return;
-  }
-  if (event.name === "backspace") {
-    app.notePrompt = {
-      ...app.notePrompt,
-      value: app.notePrompt.value.slice(0, -1),
-    };
-    return;
-  }
-  const ch = event.name === "space" ? " " : event.name;
-  if (ch.length === 1 && ch >= " " && ch <= "~") {
-    app.notePrompt = {
-      ...app.notePrompt,
-      value: app.notePrompt.value + ch,
-    };
-  }
 }
 
 function shortId(id: string): string {

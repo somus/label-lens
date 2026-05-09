@@ -18,7 +18,7 @@ Use `openTmpStore` for any test that needs a `bun:sqlite` database. The temp dir
 ```ts
 import { openTmpStore } from "../util/tmp.ts";
 import { queueRecords } from "../../src/store/queries.ts";
-import { resolveQueue } from "../../src/store/builtin-queues.ts";
+import { resolveQueue } from "../../src/store/queues/registry.ts";
 
 test("scenario", async () => {
   using store = await openTmpStore({ ingest: "tiny.jsonl" });
@@ -56,6 +56,34 @@ const registry = buildRegistry([myCmd]);
 const result = await dispatch(registry, "review", ctx, "my.action");
 expect(result.kind).toBe("ok");
 ```
+
+## Overlays — pure reducer + effects interpreter
+
+Each Overlay (`src/overlay/{picker,note,assistant}.ts`) exposes a pure reducer `(state, OverlayEvent) → { overlay, effects[] }`. Test the reducer string-in / value-out — no db, no renderer. Test the effects interpreter (`src/overlay/effects.ts`) against a real `bun:sqlite` AppContext. Don't drive overlays through the screen for unit coverage; the screen e2e harness exercises the wiring separately.
+
+```ts
+import { reducePicker, openPicker } from "../../src/overlay/picker.ts";
+
+const s0 = openPicker({ recordId: "rec-1", allLabels: ["food", "travel"], predicted: "food" });
+const r = reducePicker(s0, { kind: "commit" });
+expect(r.effects).toContainEqual({
+  kind: "commitDecision",
+  recordId: "rec-1",
+  status: "accepted",
+  finalLabel: "food",
+  prevLabel: null,
+  sourceOfTruth: "human",
+});
+```
+
+```ts
+import { applyEffects } from "../../src/overlay/effects.ts";
+
+applyEffects(app, "pending", [{ kind: "updateNote", recordId, value: "todo" }]);
+expect(currentReview(store.db, recordId)).toBeNull(); // unchanged
+```
+
+Per ADR 0007, never re-derive the "non-undone, non-compensated" predicate inline in tests — query `effective_reviews` (via `currentReview` / `latestReview`) or assert through it.
 
 ## Screens (e2e) — `createTestRenderer` + `mockInput` + `captureCharFrame`
 

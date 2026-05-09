@@ -83,6 +83,25 @@ export const recordTags = sqliteTable(
 );
 
 /**
+ * Every review row that is currently effective — not undone, not compensated.
+ * Single source of truth for "current Review entry" semantics. ADR 0007.
+ */
+export const effectiveReviews = sqliteView("effective_reviews", {
+  id: integer("id").notNull(),
+  recordId: text("record_id").notNull(),
+  status: text("status", {
+    enum: ["accepted", "relabeled", "rejected", "skipped", "undone"],
+  }).notNull(),
+  finalLabel: text("final_label"),
+  prevLabel: text("prev_label"),
+  reviewedAt: text("reviewed_at").notNull(),
+  sourceOfTruth: text("source_of_truth", {
+    enum: ["human", "human+assistant"],
+  }).notNull(),
+  compensatesReviewId: integer("compensates_review_id"),
+}).existing();
+
+/**
  * Every record joined to its primary prediction.
  * Primary = highest confidence; NULL confidence loses to any numeric;
  * ties broken by predictions.id ASC (insertion order). PRD §11.4 + ADR 0001.

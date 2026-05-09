@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { dispatch } from "../../src/actions/dispatch.ts";
 import { defaultRegistry } from "../../src/actions/registry.ts";
-import { type AppContext, createAppContext, reviewContext } from "../../src/app/context.ts";
+import { type AppContext, createAppContext, enterReview } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
+import { applyEffects } from "../../src/overlay/effects.ts";
+import { reduceOverlay } from "../../src/overlay/reduce.ts";
 import type { Db } from "../../src/store/db.ts";
 import { currentReview } from "../../src/store/queries.ts";
 import { hasTag } from "../../src/store/tags.ts";
@@ -16,20 +18,21 @@ const config: LabellensConfig = {
   output: { path: "/tmp/out.jsonl", format: "jsonl" },
 };
 
-function makeApp(db: Db): AppContext {
-  return createAppContext({ db, config, requestRender: () => {}, onQuit: () => {} });
+function makeApp(db: Db, queueId: "pending" | "skipped" = "pending"): AppContext {
+  const app = createAppContext({ db, config, requestRender: () => {}, onQuit: () => {} });
+  enterReview(app, queueId);
+  return app;
 }
 
 describe("record.reject", () => {
   test("writes status='rejected' with prev_label = primary", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const before = ctx.cursor.current()!;
+    const before = app.cursor!.current()!;
     const id = before.id;
     const primary = before.primaryPrediction!.label;
 
-    const result = await dispatch(defaultRegistry(), "review", ctx, "record.reject");
+    const result = await dispatch(defaultRegistry(), "review", app, "record.reject");
     expect(result.kind).toBe("ok");
 
     const cur = currentReview(store.db, id);
@@ -41,12 +44,11 @@ describe("record.reject", () => {
   test("rejected record exits pending queue", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.reject");
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.reject");
     const remaining = store.db.all<{ n: number }>(
       sql`SELECT COUNT(*) AS n FROM records WHERE id = ${id} AND NOT EXISTS (
-        SELECT 1 FROM reviews v WHERE v.record_id = records.id AND v.status != 'undone'
+        SELECT 1 FROM effective_reviews er WHERE er.record_id = records.id
       )`,
     );
     expect(remaining[0]?.n).toBe(0);
@@ -57,9 +59,8 @@ describe("record.relabelByIndex", () => {
   test("'1' resolves to first config label; if it equals predicted, status='accepted'", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    const result = await dispatch(defaultRegistry(), "review", ctx, "record.relabelByIndex.1");
+    const id = app.cursor!.current()!.id;
+    const result = await dispatch(defaultRegistry(), "review", app, "record.relabelByIndex.1");
     expect(result.kind).toBe("ok");
     const cur = currentReview(store.db, id);
     expect(cur?.status).toBe("accepted");
@@ -69,9 +70,8 @@ describe("record.relabelByIndex", () => {
   test("number for non-predicted label writes 'relabeled'", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.relabelByIndex.2");
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.relabelByIndex.2");
     const cur = currentReview(store.db, id);
     expect(cur?.status).toBe("relabeled");
     expect(cur?.final_label).toBe("travel");
@@ -81,63 +81,66 @@ describe("record.relabelByIndex", () => {
   test("out-of-range index flashes error and writes nothing", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.relabelByIndex.9");
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.relabelByIndex.9");
     expect(currentReview(store.db, id)).toBeNull();
     expect(app.flash?.kind).toBe("error");
   });
 });
 
 describe("record.openNote", () => {
-  test("enters note mode for the current record with empty value when unset", async () => {
+  test("opens a note overlay for the current record with empty value when unset", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    await dispatch(defaultRegistry(), "review", ctx, "record.openNote");
-    expect(app.mode).toBe("note");
-    expect(app.notePrompt?.value).toBe("");
-    expect(app.notePrompt?.recordId).toBe(ctx.cursor.current()!.id);
+    await dispatch(defaultRegistry(), "review", app, "record.openNote");
+    expect(app.overlay?.kind).toBe("note");
+    if (app.overlay?.kind === "note") {
+      expect(app.overlay.state.value).toBe("");
+      expect(app.overlay.state.recordId).toBe(app.cursor!.current()!.id);
+    }
   });
 
   test("prefills existing note from records.note", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
+    const id = app.cursor!.current()!.id;
     store.db.run(sql`UPDATE records SET note = 'prior note' WHERE id = ${id}`);
-    ctx.cursor.refresh();
-    await dispatch(defaultRegistry(), "review", ctx, "record.openNote");
-    expect(app.notePrompt?.value).toBe("prior note");
+    app.cursor!.refresh();
+    await dispatch(defaultRegistry(), "review", app, "record.openNote");
+    if (app.overlay?.kind === "note") expect(app.overlay.state.value).toBe("prior note");
+    else throw new Error("expected note overlay");
   });
 });
 
 describe("record.openRelabelPicker", () => {
-  test("enters picker mode with predicted label highlighted", async () => {
+  test("opens a picker overlay with predicted label highlighted", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    await dispatch(defaultRegistry(), "review", ctx, "record.openRelabelPicker");
-    expect(app.mode).toBe("picker");
-    expect(app.picker?.filter).toBe("");
-    expect(app.picker?.candidates.length).toBe(4);
-    expect(app.picker?.candidates[app.picker.highlight]?.label).toBe("food");
-    expect(app.picker?.candidates[app.picker.highlight]?.predicted).toBe(true);
+    await dispatch(defaultRegistry(), "review", app, "record.openRelabelPicker");
+    expect(app.overlay?.kind).toBe("picker");
+    if (app.overlay?.kind === "picker") {
+      const s = app.overlay.state;
+      expect(s.filter).toBe("");
+      expect(s.candidates.length).toBe(4);
+      expect(s.candidates[s.highlight]?.label).toBe("food");
+      expect(s.candidates[s.highlight]?.predicted).toBe(true);
+    }
   });
 });
 
-describe("commitPickerSelection", () => {
-  test("non-predicted label writes 'relabeled' and closes picker", async () => {
+describe("picker overlay commit via reducer + applyEffects", () => {
+  test("non-predicted label writes 'relabeled' and closes overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.openRelabelPicker");
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.openRelabelPicker");
+    if (app.overlay?.kind !== "picker") throw new Error("expected picker");
     // move highlight to "travel" (index 1)
-    app.picker!.highlight = 1;
-    const { commitPickerSelection } = await import("../../src/actions/record/commit-picker.ts");
-    commitPickerSelection(ctx);
-    expect(app.mode).toBe("review");
+    app.overlay = { kind: "picker", state: { ...app.overlay.state, highlight: 1 } };
+    const result = reduceOverlay(app.overlay, { kind: "commit" });
+    app.overlay = result.overlay;
+    applyEffects(app, "pending", result.effects);
+    expect(app.overlay).toBeNull();
     const cur = currentReview(store.db, id);
     expect(cur?.status).toBe("relabeled");
     expect(cur?.final_label).toBe("travel");
@@ -146,28 +149,33 @@ describe("commitPickerSelection", () => {
   test("predicted label writes 'accepted'", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.openRelabelPicker");
-    const { commitPickerSelection } = await import("../../src/actions/record/commit-picker.ts");
-    commitPickerSelection(ctx);
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.openRelabelPicker");
+    if (!app.overlay) throw new Error("expected overlay");
+    const result = reduceOverlay(app.overlay, { kind: "commit" });
+    app.overlay = result.overlay;
+    applyEffects(app, "pending", result.effects);
     const cur = currentReview(store.db, id);
     expect(cur?.status).toBe("accepted");
     expect(cur?.final_label).toBe("food");
   });
 });
 
-describe("commitNote", () => {
+describe("note overlay commit via reducer + applyEffects", () => {
   test("writes records.note and exits overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    const registry = defaultRegistry();
-    await dispatch(registry, "review", ctx, "record.openNote");
-    app.notePrompt!.value = "follow up later";
-    await dispatch(registry, "note", ctx, "record.commitNote");
-    expect(app.mode).toBe("review");
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.openNote");
+    if (app.overlay?.kind !== "note") throw new Error("expected note overlay");
+    app.overlay = {
+      kind: "note",
+      state: { ...app.overlay.state, value: "follow up later" },
+    };
+    const result = reduceOverlay(app.overlay, { kind: "commit" });
+    app.overlay = result.overlay;
+    applyEffects(app, "pending", result.effects);
+    expect(app.overlay).toBeNull();
     const row = store.db.all<{ note: string | null }>(
       sql`SELECT note FROM records WHERE id = ${id}`,
     );
@@ -179,27 +187,25 @@ describe("record.toggleMark", () => {
   test("toggles marked tag without writing a review", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
+    const id = app.cursor!.current()!.id;
 
-    await dispatch(defaultRegistry(), "review", ctx, "record.toggleMark");
+    await dispatch(defaultRegistry(), "review", app, "record.toggleMark");
     expect(hasTag(store.db, id, "marked")).toBe(true);
     expect(currentReview(store.db, id)).toBeNull();
 
-    await dispatch(defaultRegistry(), "review", ctx, "record.toggleMark");
+    await dispatch(defaultRegistry(), "review", app, "record.toggleMark");
     expect(hasTag(store.db, id, "marked")).toBe(false);
   });
 
   test("record stays in pending after toggle (orthogonal to state)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.toggleMark");
-    expect(ctx.cursor.current()?.id).toBe(id);
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.toggleMark");
+    expect(app.cursor!.current()?.id).toBe(id);
   });
 
-  test("triggers a re-render via cursor change", async () => {
+  test("triggers a re-render", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     let renders = 0;
     const app = createAppContext({
@@ -210,9 +216,9 @@ describe("record.toggleMark", () => {
       },
       onQuit: () => {},
     });
-    const ctx = reviewContext(app);
+    enterReview(app, "pending");
     const before = renders;
-    await dispatch(defaultRegistry(), "review", ctx, "record.toggleMark");
+    await dispatch(defaultRegistry(), "review", app, "record.toggleMark");
     expect(renders).toBeGreaterThan(before);
   });
 });
@@ -221,30 +227,27 @@ describe("record.undo", () => {
   test("compensates the most recent review across the dataset", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.accept");
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.accept");
     expect(currentReview(store.db, id)?.status).toBe("accepted");
-    await dispatch(defaultRegistry(), "review", ctx, "record.undo");
+    await dispatch(defaultRegistry(), "review", app, "record.undo");
     expect(currentReview(store.db, id)).toBeNull();
   });
 
   test("seeks cursor to the un-done record", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.accept");
-    expect(ctx.cursor.current()?.id).not.toBe(id);
-    await dispatch(defaultRegistry(), "review", ctx, "record.undo");
-    expect(ctx.cursor.current()?.id).toBe(id);
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.accept");
+    expect(app.cursor!.current()?.id).not.toBe(id);
+    await dispatch(defaultRegistry(), "review", app, "record.undo");
+    expect(app.cursor!.current()?.id).toBe(id);
   });
 
   test("flashes 'Nothing to undo' when no review exists", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    await dispatch(defaultRegistry(), "review", ctx, "record.undo");
+    await dispatch(defaultRegistry(), "review", app, "record.undo");
     expect(app.flash?.kind).toBe("error");
     expect(app.flash?.message).toContain("Nothing to undo");
   });
@@ -252,13 +255,12 @@ describe("record.undo", () => {
   test("second undo flashes 'Nothing to undo' instead of stacking compensations", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
+    const id = app.cursor!.current()!.id;
     const registry = defaultRegistry();
-    await dispatch(registry, "review", ctx, "record.accept");
-    await dispatch(registry, "review", ctx, "record.undo");
+    await dispatch(registry, "review", app, "record.accept");
+    await dispatch(registry, "review", app, "record.undo");
     expect(currentReview(store.db, id)).toBeNull();
-    await dispatch(registry, "review", ctx, "record.undo");
+    await dispatch(registry, "review", app, "record.undo");
     expect(app.flash?.kind).toBe("error");
     expect(app.flash?.message).toContain("Nothing to undo");
     const undoneRows = store.db.all<{ n: number }>(
@@ -272,47 +274,66 @@ describe("queue cycling", () => {
   test("queue.next switches cursor from pending to skipped", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    expect(ctx.cursor.queueId).toBe("pending");
-    await dispatch(defaultRegistry(), "review", ctx, "queue.next");
-    expect(ctx.cursor.queueId).toBe("skipped");
+    expect(app.cursor!.queueId).toBe("pending");
+    await dispatch(defaultRegistry(), "review", app, "queue.next");
+    expect(app.cursor!.queueId).toBe("skipped");
   });
 
   test("queue.next from skipped wraps back to pending", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const app = makeApp(store.db);
-    const ctx = reviewContext(app, "skipped");
-    await dispatch(defaultRegistry(), "review", ctx, "queue.next");
-    expect(ctx.cursor.queueId).toBe("pending");
+    const app = makeApp(store.db, "skipped");
+    await dispatch(defaultRegistry(), "review", app, "queue.next");
+    expect(app.cursor!.queueId).toBe("pending");
   });
 
   test("queue.prev cycles backwards", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    expect(ctx.cursor.queueId).toBe("pending");
-    await dispatch(defaultRegistry(), "review", ctx, "queue.prev");
-    expect(ctx.cursor.queueId).toBe("skipped");
+    expect(app.cursor!.queueId).toBe("pending");
+    await dispatch(defaultRegistry(), "review", app, "queue.prev");
+    expect(app.cursor!.queueId).toBe("skipped");
   });
 
   test("queue.next flashes the queue label", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    await dispatch(defaultRegistry(), "review", ctx, "queue.next");
+    await dispatch(defaultRegistry(), "review", app, "queue.next");
     expect(app.flash?.message).toContain("Skipped");
   });
 
   test("skip then queue-cycle reaches the skipped record", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const skippedId = ctx.cursor.current()!.id;
+    const skippedId = app.cursor!.current()!.id;
     const registry = defaultRegistry();
-    await dispatch(registry, "review", ctx, "record.skip");
-    await dispatch(registry, "review", ctx, "queue.next");
-    expect(ctx.cursor.queueId).toBe("skipped");
-    expect(ctx.cursor.current()?.id).toBe(skippedId);
+    await dispatch(registry, "review", app, "record.skip");
+    await dispatch(registry, "review", app, "queue.next");
+    expect(app.cursor!.queueId).toBe("skipped");
+    expect(app.cursor!.current()?.id).toBe(skippedId);
+  });
+
+  test("skipped cursor refreshes on each queue switch", async () => {
+    // Regression: cached skipped cursor was stale when revisiting after
+    // additional skips landed in pending.
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const registry = defaultRegistry();
+
+    // Visit skipped while empty — Cursor gets cached with []
+    await dispatch(registry, "review", app, "queue.next");
+    expect(app.cursor!.total).toBe(0);
+
+    // Back to pending; skip three records
+    await dispatch(registry, "review", app, "queue.prev");
+    expect(app.cursor!.queueId).toBe("pending");
+    await dispatch(registry, "review", app, "record.skip");
+    await dispatch(registry, "review", app, "record.skip");
+    await dispatch(registry, "review", app, "record.skip");
+
+    // Revisit skipped — should now show all three
+    await dispatch(registry, "review", app, "queue.next");
+    expect(app.cursor!.queueId).toBe("skipped");
+    expect(app.cursor!.total).toBe(3);
   });
 });
 
@@ -320,11 +341,10 @@ describe("record.accept (no prediction)", () => {
   test("flashes error and writes no review when primary prediction is null", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
+    const id = app.cursor!.current()!.id;
     store.db.run(sql`DELETE FROM predictions WHERE record_id = ${id}`);
-    ctx.cursor.refresh();
-    await dispatch(defaultRegistry(), "review", ctx, "record.accept");
+    app.cursor!.refresh();
+    await dispatch(defaultRegistry(), "review", app, "record.accept");
     expect(app.flash?.kind).toBe("error");
     expect(app.flash?.message).toContain("no prediction");
     expect(currentReview(store.db, id)).toBeNull();
@@ -335,10 +355,9 @@ describe("record.skip", () => {
   test("writes status='skipped' and exits pending (ADR 0003)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.skip");
+    const id = app.cursor!.current()!.id;
+    await dispatch(defaultRegistry(), "review", app, "record.skip");
     expect(currentReview(store.db, id)?.status).toBe("skipped");
-    expect(ctx.cursor.current()?.id).not.toBe(id);
+    expect(app.cursor!.current()?.id).not.toBe(id);
   });
 });

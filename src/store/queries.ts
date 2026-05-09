@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, type SQL, sql } from "drizzle-orm";
+import { asc, desc, eq, type SQL, sql } from "drizzle-orm";
 import type { RecordWithPrimaryPrediction, StoredPrediction, StoredReview } from "../types.ts";
 import type { Db, TxOrDb } from "./db.ts";
-import { records, recordsWithPrimary, reviews } from "./schema.ts";
+import { effectiveReviews, records, recordsWithPrimary, reviews } from "./schema.ts";
 
 type ViewRow = typeof recordsWithPrimary.$inferSelect;
 
@@ -55,6 +55,21 @@ export function recordById(db: Db, id: string): RecordWithPrimaryPrediction | nu
   return row ? hydrate(row) : null;
 }
 
+type EffectiveRow = typeof effectiveReviews.$inferSelect;
+
+function effectiveRowToStored(row: EffectiveRow): StoredReview {
+  return {
+    id: row.id,
+    record_id: row.recordId,
+    status: row.status,
+    final_label: row.finalLabel,
+    prev_label: row.prevLabel,
+    reviewed_at: row.reviewedAt,
+    source_of_truth: row.sourceOfTruth,
+    compensates_review_id: row.compensatesReviewId,
+  };
+}
+
 function reviewRowToStored(row: typeof reviews.$inferSelect): StoredReview {
   return {
     id: row.id,
@@ -68,35 +83,23 @@ function reviewRowToStored(row: typeof reviews.$inferSelect): StoredReview {
   };
 }
 
-/**
- * Latest review row for a record that is neither status='undone' nor referenced
- * by an undone-row's compensates_review_id. Returns null when the record has no
- * effective review (pending, or fully undone).
- */
+/** Latest effective review for a record. ADR 0007. */
 export function currentReview(db: TxOrDb, recordId: string): StoredReview | null {
   const row = db
     .select()
-    .from(reviews)
-    .where(
-      and(
-        eq(reviews.recordId, recordId),
-        sql`${reviews.status} != 'undone'`,
-        sql`${reviews.id} NOT IN (
-          SELECT compensates_review_id FROM reviews
-          WHERE compensates_review_id IS NOT NULL
-        )`,
-      ),
-    )
-    .orderBy(desc(reviews.id))
+    .from(effectiveReviews)
+    .where(eq(effectiveReviews.recordId, recordId))
+    .orderBy(desc(effectiveReviews.id))
     .limit(1)
     .get();
-  return row ? reviewRowToStored(row) : null;
+  return row ? effectiveRowToStored(row) : null;
 }
 
 /**
- * Most recent up-to-`limit` review rows excluding rows that have been compensated
- * by a later undo, newest first. Includes undo rows so history shows the user's
- * undo as a distinct event.
+ * Most recent up-to-`limit` review rows excluding rows that have been
+ * compensated by a later undo, newest first. Includes undo rows so history
+ * shows the user's undo as a distinct event. (Intentionally not scoped to
+ * `effective_reviews` — see ADR 0007.)
  */
 export function recentReviews(db: TxOrDb, limit: number): StoredReview[] {
   const rows = db
@@ -125,27 +128,20 @@ export type ProgressCounts = {
 
 /**
  * Per-record bucket counts. Each record falls into exactly one bucket based on
- * its effective review state (latest non-undone, non-compensated review).
- * Records with no effective review go to `pending`. ADR 0003.
+ * its effective review state. Records with no effective review go to `pending`.
+ * ADR 0003 (four-bucket invariant) + ADR 0007 (effective view).
  */
 export function progressCounts(db: TxOrDb): ProgressCounts {
   const total = db.select({ n: sql<number>`COUNT(*)` }).from(records).get()?.n ?? 0;
 
-  const rows = db.all<{ status: string; n: number }>(sql`
-    SELECT effective.status AS status, COUNT(*) AS n FROM (
-      SELECT (
-        SELECT r.status FROM reviews r
-        WHERE r.record_id = records.id
-          AND r.status != 'undone'
-          AND r.id NOT IN (
-            SELECT compensates_review_id FROM reviews
-            WHERE compensates_review_id IS NOT NULL
-          )
-        ORDER BY r.id DESC LIMIT 1
-      ) AS status
-      FROM records
-    ) effective
-    GROUP BY effective.status
+  const rows = db.all<{ status: string | null; n: number }>(sql`
+    SELECT (
+      SELECT er.status FROM effective_reviews er
+      WHERE er.record_id = records.id
+      ORDER BY er.id DESC LIMIT 1
+    ) AS status, COUNT(*) AS n
+    FROM records
+    GROUP BY status
   `);
 
   const counts: ProgressCounts = {
@@ -166,24 +162,10 @@ export function progressCounts(db: TxOrDb): ProgressCounts {
   return counts;
 }
 
-/** Most recent non-undone, non-compensated review across the whole DB (for global undo). */
+/** Most recent effective review across the whole DB. Drives global undo. ADR 0007. */
 export function latestReview(db: TxOrDb): StoredReview | null {
-  const row = db
-    .select()
-    .from(reviews)
-    .where(
-      and(
-        sql`${reviews.status} != 'undone'`,
-        sql`${reviews.id} NOT IN (
-          SELECT compensates_review_id FROM reviews
-          WHERE compensates_review_id IS NOT NULL
-        )`,
-      ),
-    )
-    .orderBy(desc(reviews.id))
-    .limit(1)
-    .get();
-  return row ? reviewRowToStored(row) : null;
+  const row = db.select().from(effectiveReviews).orderBy(desc(effectiveReviews.id)).limit(1).get();
+  return row ? effectiveRowToStored(row) : null;
 }
 
 /**
