@@ -39,12 +39,20 @@ Render primitives wrap OpenTUI components in `src/render/` (4–6 small files) s
 ## Local dev loop
 
 ```sh
-bun run seed              # seeds /tmp/llens-dev with 150 deterministic records + runs init
-cd /tmp/llens-dev
-bun run /Users/somu/Code/label-lens/src/main.ts   # opens TUI
+bun run dev:up        # init /tmp/llens-dev if needed, then launch TUI
+bun run dev:down      # remove /tmp/llens-dev entirely
+bun run dev:status    # show what's in /tmp/llens-dev
 ```
 
-`bun run seed -- --count 1000 --seed 42` for a bigger / different dataset. `LL_DEV_DIR=/tmp/foo bun run seed` for a different dir. The script wipes the target dir before seeding — safe to re-run.
+`dev:up` is idempotent — preserves existing reviews if you launch again. Knobs:
+
+```sh
+bun run dev:up -- --reset                    # wipe + reseed before launching
+bun run dev:up -- --count 1000 --seed 42     # bigger / different dataset (only on first init or --reset)
+LL_DEV_DIR=/tmp/foo bun run dev:up           # alternate dir
+```
+
+Underlying primitive is `bun run seed` (wipes + generates without launching the TUI). Use that when you want to regenerate data without entering the TUI.
 
 To exercise the compiled binary path (parser.worker bundling, real install layout) instead of source:
 
