@@ -36,6 +36,23 @@ Render primitives wrap OpenTUI components in `src/render/` (4–6 small files) s
 - **Heavy CPU work runs in a Bun `Worker`.** Hashing, signal computation, embeddings. Main thread stays responsive.
 - **Streaming JSONL ingest.** Never load the full file into memory.
 
+## Local dev loop
+
+```sh
+bun run seed              # seeds /tmp/llens-dev with 150 deterministic records + runs init
+cd /tmp/llens-dev
+bun run /Users/somu/Code/label-lens/src/main.ts   # opens TUI
+```
+
+`bun run seed -- --count 1000 --seed 42` for a bigger / different dataset. `LL_DEV_DIR=/tmp/foo bun run seed` for a different dir. The script wipes the target dir before seeding — safe to re-run.
+
+To exercise the compiled binary path (parser.worker bundling, real install layout) instead of source:
+
+```sh
+bun run build:bin
+/Users/somu/Code/label-lens/dist/label-lens-darwin-arm64/labellens   # from a seeded dir
+```
+
 ## Testing
 
 - **Keymap engine**: pure unit tests. String-in, action-out. No renderer.

@@ -7,6 +7,7 @@
     "typecheck": { "command": "bun run typecheck" },
     "lint": { "command": "bun run lint" },
     "check": { "command": "bun run typecheck && bunx biome check && bun test" },
-    "build": { "command": "bun run build:bin" }
+    "build": { "command": "bun run build:bin" },
+    "seed": { "command": "bun run seed" }
   }
 }

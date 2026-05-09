@@ -17,6 +17,7 @@
     "lint:fix": "biome check --write",
     "format": "biome format --write",
     "build:bin": "bun run scripts/build-bin.ts",
+    "seed": "bun run scripts/seed-dev.ts",
     "prepare": "lefthook install"
   },
   "engines": {
