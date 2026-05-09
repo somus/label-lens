@@ -124,4 +124,18 @@ describe("review screen slice 2 UI", () => {
     expect(frame).toContain("note>");
     expect(frame).toContain("enter save");
   });
+
+  test("note prompt accepts spaces between words", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { app, mockInput, renderOnce } = await setup(store);
+    mockInput.pressKey("n");
+    await renderOnce();
+    mockInput.pressKey("h");
+    mockInput.pressKey("i");
+    mockInput.pressKey(" ");
+    mockInput.pressKey("y");
+    mockInput.pressKey("o");
+    await renderOnce();
+    expect(app.notePrompt?.value).toBe("hi yo");
+  });
 });

@@ -258,8 +258,8 @@ function handlePickerKey(
     app.picker = pickerReduce(app.picker, { kind: "backspace" });
     return;
   }
-  if (event.name.length === 1) {
-    const ch = event.name;
+  const ch = event.name === "space" ? " " : event.name;
+  if (ch.length === 1) {
     if (/^[1-9]$/.test(ch)) {
       app.picker = pickerReduce(app.picker, { kind: "number", n: Number(ch) });
       return;
@@ -292,10 +292,11 @@ function handleNoteKey(
     };
     return;
   }
-  if (event.name.length === 1 && event.name >= " " && event.name <= "~") {
+  const ch = event.name === "space" ? " " : event.name;
+  if (ch.length === 1 && ch >= " " && ch <= "~") {
     app.notePrompt = {
       ...app.notePrompt,
-      value: app.notePrompt.value + event.name,
+      value: app.notePrompt.value + ch,
     };
   }
 }
