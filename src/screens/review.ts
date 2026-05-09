@@ -10,6 +10,7 @@ import { Box } from "../render/box.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { progressCounts, recentReviews } from "../store/queries.ts";
 import type { QueueId } from "../store/queues/registry.ts";
+import { hasTag } from "../store/tags.ts";
 import type { StoredReview } from "../types.ts";
 
 export type ReviewScreenHandle = {
@@ -43,6 +44,7 @@ export function mountReviewScreen(args: {
     const record = ctx.cursor.current();
     const flash = ctx.flash && ctx.flash.expiresAt > Date.now() ? ctx.flash : null;
     const history = recentReviews(ctx.db, 5);
+    const marked = record ? hasTag(ctx.db, record.id, "marked") : false;
 
     renderer.root.add(
       Box(
@@ -50,7 +52,10 @@ export function mountReviewScreen(args: {
 
         Box(
           { flexDirection: "row", justifyContent: "space-between" },
-          Text({ content: ` LabelLens · ${basename(ctx.config.input.path)}` }),
+          Text({
+            content: ` LabelLens · ${basename(ctx.config.input.path)}${marked ? "   ● marked" : ""}`,
+            attributes: marked ? TextAttributes.BOLD : undefined,
+          }),
           Text({
             content: `Reviewed: ${reviewedTotal} / ${counts.total} · Skipped: ${counts.skipped} · Pending: ${counts.pending}`,
             attributes: TextAttributes.DIM,

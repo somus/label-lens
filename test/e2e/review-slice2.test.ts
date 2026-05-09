@@ -125,6 +125,18 @@ describe("review screen slice 2 UI", () => {
     expect(frame).toContain("enter save");
   });
 
+  test("'m' shows persistent marked badge in header strip", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
+    expect(captureCharFrame()).not.toContain("● marked");
+    mockInput.pressKey("m");
+    await renderOnce();
+    expect(captureCharFrame()).toContain("● marked");
+    mockInput.pressKey("m");
+    await renderOnce();
+    expect(captureCharFrame()).not.toContain("● marked");
+  });
+
   test("note prompt accepts spaces between words", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { app, mockInput, renderOnce } = await setup(store);
