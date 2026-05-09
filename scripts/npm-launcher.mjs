@@ -9,9 +9,11 @@ import { dirname, join } from "node:path";
 
 const require = createRequire(import.meta.url);
 
+// darwin-x64 not shipped — Apple Intel Mac users need to build from source
+// (`bun run build:bin darwin-x64`) until we move off OpenTUI's native libs
+// or a cross-compile path lands.
 const PLATFORM_MAP = {
   "darwin-arm64": "label-lens-darwin-arm64",
-  "darwin-x64": "label-lens-darwin-x64",
   "linux-arm64": "label-lens-linux-arm64",
   "linux-x64": "label-lens-linux-x64",
 };

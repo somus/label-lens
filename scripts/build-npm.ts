@@ -5,9 +5,9 @@ import { join, resolve } from "node:path";
 const ROOT = resolve(import.meta.dir, "..");
 const NPM_DIR = resolve(ROOT, "dist", "npm");
 
+// darwin-x64 omitted — see release.yml comment + ADR (no Intel Mac runner).
 const PLATFORMS = [
   { name: "darwin-arm64", os: "darwin", cpu: "arm64" },
-  { name: "darwin-x64", os: "darwin", cpu: "x64" },
   { name: "linux-arm64", os: "linux", cpu: "arm64" },
   { name: "linux-x64", os: "linux", cpu: "x64" },
 ] as const;
