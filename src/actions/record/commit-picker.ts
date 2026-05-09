@@ -23,7 +23,6 @@ export function commitPickerSelection(ctx: ReviewContext): void {
     status,
     final_label: candidate.label,
     prev_label: status === "relabeled" ? predicted : null,
-    note: null,
     source_of_truth: "human",
   });
   ctx.exitOverlay();

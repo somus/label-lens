@@ -50,7 +50,6 @@ describe("Cursor", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     cursor.refresh();

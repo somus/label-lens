@@ -1,6 +1,5 @@
 import type { CliRenderer } from "@opentui/core";
 import { dispatch } from "../actions/dispatch.ts";
-import { commitNote } from "../actions/record/commit-note.ts";
 import { commitPickerSelection } from "../actions/record/commit-picker.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, reviewContext } from "../app/context.ts";
@@ -93,7 +92,7 @@ export function mountReviewScreen(args: {
           ? Box(
               { flexDirection: "row", marginTop: 1 },
               Text({
-                content: ` note: ${truncate(record.note, 200)}`,
+                content: ` note: ${truncate(record.note, 200)}${record.note.length > 200 ? " (press n for full)" : ""}`,
                 attributes: TextAttributes.DIM,
               }),
             )
@@ -149,7 +148,7 @@ export function mountReviewScreen(args: {
       return;
     }
     if (app.mode === "note") {
-      handleNoteKey(app, ctx, event);
+      handleNoteKey(registry, ctx, app, event);
       renderState();
       return;
     }
@@ -272,8 +271,9 @@ function handlePickerKey(
 }
 
 function handleNoteKey(
-  app: AppContext,
+  registry: CommandRegistry,
   ctx: ReturnType<typeof reviewContext>,
+  app: AppContext,
   event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
 ) {
   if (!app.notePrompt) return;
@@ -282,7 +282,7 @@ function handleNoteKey(
     return;
   }
   if (event.name === "return") {
-    commitNote(ctx);
+    void dispatch(registry, "note", ctx, "record.commitNote");
     return;
   }
   if (event.name === "backspace") {

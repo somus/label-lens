@@ -26,7 +26,6 @@ export function relabelByIndexCommand(n: number): Command<ReviewContext> {
         status,
         final_label: label,
         prev_label: status === "relabeled" ? predicted : null,
-        note: null,
         source_of_truth: "human",
       });
       ctx.cursor.refresh();

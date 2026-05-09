@@ -16,7 +16,6 @@ describe("pending queue under undo semantics", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     expect(queueRecords(store.db, PENDING).find((r) => r.id === id)).toBeUndefined();
@@ -30,7 +29,6 @@ describe("pending queue under undo semantics", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     insertUndoEntry(store.db, id);
@@ -47,7 +45,6 @@ describe("pending queue under undo semantics", () => {
       status: "skipped",
       final_label: null,
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     expect(queueRecords(store.db, PENDING).find((r) => r.id === id)).toBeUndefined();

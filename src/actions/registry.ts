@@ -1,6 +1,7 @@
 import { quit } from "./app/quit.ts";
 import { bindingsFor, buildRegistry, type Command, type CommandRegistry } from "./command.ts";
 import { accept } from "./record/accept.ts";
+import { commitNote } from "./record/commit-note.ts";
 import { next } from "./record/next.ts";
 import { openNote } from "./record/open-note.ts";
 import { openRelabelPicker } from "./record/open-relabel-picker.ts";
@@ -20,6 +21,7 @@ export const ALL_COMMANDS: Command[] = [
   toggleMark as unknown as Command,
   undo as unknown as Command,
   openNote as unknown as Command,
+  commitNote as unknown as Command,
   openRelabelPicker as unknown as Command,
   ...(relabelByIndexCommands as unknown as Command[]),
   quit as unknown as Command,

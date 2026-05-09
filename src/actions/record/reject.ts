@@ -15,7 +15,6 @@ export const reject: Command<ReviewContext> = {
       status: "rejected",
       final_label: null,
       prev_label: record.primaryPrediction?.label ?? null,
-      note: null,
       source_of_truth: "human",
     });
     ctx.cursor.refresh();

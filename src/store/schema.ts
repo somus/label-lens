@@ -53,7 +53,6 @@ export const reviews = sqliteTable(
     }).notNull(),
     finalLabel: text("final_label"),
     prevLabel: text("prev_label"),
-    note: text("note"),
     reviewedAt: text("reviewed_at").notNull(),
     sourceOfTruth: text("source_of_truth", {
       enum: ["human", "human+assistant"],

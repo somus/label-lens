@@ -11,5 +11,6 @@ export const toggleMark: Command<ReviewContext> = {
     const record = ctx.cursor.current();
     if (!record) return;
     toggleTag(ctx.db, record.id, "marked");
+    ctx.cursor.refresh();
   },
 };

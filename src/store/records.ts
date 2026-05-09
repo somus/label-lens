@@ -39,7 +39,6 @@ export function insertReview(
     status: StoredReviewStatus;
     final_label: string | null;
     prev_label: string | null;
-    note: string | null;
     source_of_truth: SourceOfTruth;
   },
 ): void {
@@ -49,7 +48,6 @@ export function insertReview(
       status: args.status,
       finalLabel: args.final_label,
       prevLabel: args.prev_label,
-      note: args.note,
       reviewedAt: new Date().toISOString(),
       sourceOfTruth: args.source_of_truth,
     })

@@ -53,7 +53,6 @@ export type StoredReview = {
   status: ReviewStatus;
   final_label: string | null;
   prev_label: string | null;
-  note: string | null;
   reviewed_at: string;
   source_of_truth: SourceOfTruth;
   compensates_review_id: number | null;

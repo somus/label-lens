@@ -32,8 +32,8 @@ describe("store schema (slice 2 additions)", () => {
     const now = new Date().toISOString();
 
     store.db.run(sql`
-      INSERT INTO reviews (record_id, status, final_label, prev_label, note, reviewed_at, source_of_truth, compensates_review_id)
-      VALUES (${recordId}, 'accepted', 'food', NULL, NULL, ${now}, 'human', NULL)
+      INSERT INTO reviews (record_id, status, final_label, prev_label, reviewed_at, source_of_truth, compensates_review_id)
+      VALUES (${recordId}, 'accepted', 'food', NULL, ${now}, 'human', NULL)
     `);
     const accepted = store.db.all<{ id: number }>(
       sql`SELECT id FROM reviews WHERE record_id = ${recordId} AND status = 'accepted'`,
@@ -41,8 +41,8 @@ describe("store schema (slice 2 additions)", () => {
     const acceptedId = accepted[0]!.id;
 
     store.db.run(sql`
-      INSERT INTO reviews (record_id, status, final_label, prev_label, note, reviewed_at, source_of_truth, compensates_review_id)
-      VALUES (${recordId}, 'undone', NULL, NULL, NULL, ${now}, 'human', ${acceptedId})
+      INSERT INTO reviews (record_id, status, final_label, prev_label, reviewed_at, source_of_truth, compensates_review_id)
+      VALUES (${recordId}, 'undone', NULL, NULL, ${now}, 'human', ${acceptedId})
     `);
 
     const undone = store.db.all<{ status: string; compensates_review_id: number | null }>(

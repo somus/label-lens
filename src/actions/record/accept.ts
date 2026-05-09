@@ -10,12 +10,15 @@ export const accept: Command<ReviewContext> = {
   run: (ctx) => {
     const record = ctx.cursor.current();
     if (!record) return;
+    if (!record.primaryPrediction) {
+      ctx.setFlash("Cannot accept: no prediction", "error");
+      return;
+    }
     insertReview(ctx.db, {
       record_id: record.id,
       status: "accepted",
-      final_label: record.primaryPrediction?.label ?? null,
+      final_label: record.primaryPrediction.label,
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     ctx.cursor.refresh();

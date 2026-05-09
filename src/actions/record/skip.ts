@@ -15,7 +15,6 @@ export const skip: Command<ReviewContext> = {
       status: "skipped",
       final_label: null,
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     ctx.cursor.refresh();

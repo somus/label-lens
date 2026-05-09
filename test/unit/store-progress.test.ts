@@ -31,7 +31,6 @@ describe("progressCounts (ADR 0003 buckets)", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     insertReview(store.db, {
@@ -39,7 +38,6 @@ describe("progressCounts (ADR 0003 buckets)", () => {
       status: "relabeled",
       final_label: "travel",
       prev_label: "food",
-      note: null,
       source_of_truth: "human",
     });
     insertReview(store.db, {
@@ -47,7 +45,6 @@ describe("progressCounts (ADR 0003 buckets)", () => {
       status: "rejected",
       final_label: null,
       prev_label: "food",
-      note: null,
       source_of_truth: "human",
     });
     insertReview(store.db, {
@@ -55,7 +52,6 @@ describe("progressCounts (ADR 0003 buckets)", () => {
       status: "skipped",
       final_label: null,
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
 
@@ -77,7 +73,6 @@ describe("progressCounts (ADR 0003 buckets)", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     expect(progressCounts(store.db).accepted).toBe(1);

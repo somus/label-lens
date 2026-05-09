@@ -15,7 +15,6 @@ describe("recentReviews", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     insertReview(store.db, {
@@ -23,7 +22,6 @@ describe("recentReviews", () => {
       status: "relabeled",
       final_label: "travel",
       prev_label: "food",
-      note: null,
       source_of_truth: "human",
     });
     insertReview(store.db, {
@@ -31,7 +29,6 @@ describe("recentReviews", () => {
       status: "rejected",
       final_label: null,
       prev_label: "food",
-      note: null,
       source_of_truth: "human",
     });
 
@@ -54,7 +51,6 @@ describe("recentReviews", () => {
         status: "accepted",
         final_label: "food",
         prev_label: null,
-        note: null,
         source_of_truth: "human",
       });
     }
@@ -62,7 +58,7 @@ describe("recentReviews", () => {
     expect(recentReviews(store.db, 4).length).toBe(4);
   });
 
-  test("excludes undone and compensated reviews", async () => {
+  test("excludes the compensated review but keeps the undo entry", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
     insertReview(store.db, {
@@ -70,10 +66,12 @@ describe("recentReviews", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     insertUndoEntry(store.db, id);
-    expect(recentReviews(store.db, 5).length).toBe(0);
+    const history = recentReviews(store.db, 5);
+    expect(history.length).toBe(1);
+    expect(history[0]?.status).toBe("undone");
+    expect(history[0]?.prev_label).toBe("food");
   });
 });

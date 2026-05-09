@@ -23,7 +23,6 @@ describe("currentReview / undo", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     const cur = currentReview(store.db, id);
@@ -39,7 +38,6 @@ describe("currentReview / undo", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     insertReview(store.db, {
@@ -47,7 +45,6 @@ describe("currentReview / undo", () => {
       status: "relabeled",
       final_label: "travel",
       prev_label: "food",
-      note: null,
       source_of_truth: "human",
     });
     const cur = currentReview(store.db, id);
@@ -63,7 +60,6 @@ describe("currentReview / undo", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     insertUndoEntry(store.db, id);
@@ -78,7 +74,6 @@ describe("currentReview / undo", () => {
       status: "accepted",
       final_label: "food",
       prev_label: null,
-      note: null,
       source_of_truth: "human",
     });
     insertReview(store.db, {
@@ -86,7 +81,6 @@ describe("currentReview / undo", () => {
       status: "relabeled",
       final_label: "travel",
       prev_label: "food",
-      note: null,
       source_of_truth: "human",
     });
     insertUndoEntry(store.db, id);

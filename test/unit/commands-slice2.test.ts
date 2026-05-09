@@ -163,10 +163,10 @@ describe("commitNote", () => {
     const app = makeApp(store.db);
     const ctx = reviewContext(app);
     const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.openNote");
+    const registry = defaultRegistry();
+    await dispatch(registry, "review", ctx, "record.openNote");
     app.notePrompt!.value = "follow up later";
-    const { commitNote } = await import("../../src/actions/record/commit-note.ts");
-    commitNote(ctx);
+    await dispatch(registry, "note", ctx, "record.commitNote");
     expect(app.mode).toBe("review");
     const row = store.db.all<{ note: string | null }>(
       sql`SELECT note FROM records WHERE id = ${id}`,
@@ -197,6 +197,23 @@ describe("record.toggleMark", () => {
     const id = ctx.cursor.current()!.id;
     await dispatch(defaultRegistry(), "review", ctx, "record.toggleMark");
     expect(ctx.cursor.current()?.id).toBe(id);
+  });
+
+  test("triggers a re-render via cursor change", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    let renders = 0;
+    const app = createAppContext({
+      db: store.db,
+      config,
+      requestRender: () => {
+        renders++;
+      },
+      onQuit: () => {},
+    });
+    const ctx = reviewContext(app);
+    const before = renders;
+    await dispatch(defaultRegistry(), "review", ctx, "record.toggleMark");
+    expect(renders).toBeGreaterThan(before);
   });
 });
 
@@ -230,6 +247,39 @@ describe("record.undo", () => {
     await dispatch(defaultRegistry(), "review", ctx, "record.undo");
     expect(app.flash?.kind).toBe("error");
     expect(app.flash?.message).toContain("Nothing to undo");
+  });
+
+  test("second undo flashes 'Nothing to undo' instead of stacking compensations", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const ctx = reviewContext(app);
+    const id = ctx.cursor.current()!.id;
+    const registry = defaultRegistry();
+    await dispatch(registry, "review", ctx, "record.accept");
+    await dispatch(registry, "review", ctx, "record.undo");
+    expect(currentReview(store.db, id)).toBeNull();
+    await dispatch(registry, "review", ctx, "record.undo");
+    expect(app.flash?.kind).toBe("error");
+    expect(app.flash?.message).toContain("Nothing to undo");
+    const undoneRows = store.db.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM reviews WHERE record_id = ${id} AND status = 'undone'`,
+    );
+    expect(undoneRows[0]?.n).toBe(1);
+  });
+});
+
+describe("record.accept (no prediction)", () => {
+  test("flashes error and writes no review when primary prediction is null", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const ctx = reviewContext(app);
+    const id = ctx.cursor.current()!.id;
+    store.db.run(sql`DELETE FROM predictions WHERE record_id = ${id}`);
+    ctx.cursor.refresh();
+    await dispatch(defaultRegistry(), "review", ctx, "record.accept");
+    expect(app.flash?.kind).toBe("error");
+    expect(app.flash?.message).toContain("no prediction");
+    expect(currentReview(store.db, id)).toBeNull();
   });
 });
 

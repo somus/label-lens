@@ -34,4 +34,10 @@ describe("filterLabels", () => {
       "other",
     ]);
   });
+
+  test("matches non-ASCII labels case-insensitively", () => {
+    expect(filterLabels(["Café", "Düsseldorf", "日本語"], "café")).toEqual(["Café"]);
+    expect(filterLabels(["Café", "Düsseldorf", "日本語"], "DÜS")).toEqual(["Düsseldorf"]);
+    expect(filterLabels(["Café", "Düsseldorf", "日本語"], "日本")).toEqual(["日本語"]);
+  });
 });

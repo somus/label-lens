@@ -62,7 +62,6 @@ function reviewRowToStored(row: typeof reviews.$inferSelect): StoredReview {
     status: row.status,
     final_label: row.finalLabel,
     prev_label: row.prevLabel,
-    note: row.note,
     reviewed_at: row.reviewedAt,
     source_of_truth: row.sourceOfTruth,
     compensates_review_id: row.compensatesReviewId,
@@ -95,21 +94,19 @@ export function currentReview(db: TxOrDb, recordId: string): StoredReview | null
 }
 
 /**
- * Most recent up-to-`limit` review rows that are neither undone nor compensated,
- * newest first. Drives the history strip.
+ * Most recent up-to-`limit` review rows excluding rows that have been compensated
+ * by a later undo, newest first. Includes undo rows so history shows the user's
+ * undo as a distinct event.
  */
 export function recentReviews(db: TxOrDb, limit: number): StoredReview[] {
   const rows = db
     .select()
     .from(reviews)
     .where(
-      and(
-        sql`${reviews.status} != 'undone'`,
-        sql`${reviews.id} NOT IN (
-          SELECT compensates_review_id FROM reviews
-          WHERE compensates_review_id IS NOT NULL
-        )`,
-      ),
+      sql`${reviews.id} NOT IN (
+        SELECT compensates_review_id FROM reviews
+        WHERE compensates_review_id IS NOT NULL
+      )`,
     )
     .orderBy(desc(reviews.id))
     .limit(limit)
@@ -203,7 +200,6 @@ export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
       status: "undone",
       finalLabel: null,
       prevLabel: target.final_label,
-      note: null,
       reviewedAt: new Date().toISOString(),
       sourceOfTruth: "human",
       compensatesReviewId: target.id,
