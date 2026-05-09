@@ -1,0 +1,10 @@
+{"text": "Lunch at Zomato Bangalore", "prediction": "food", "confidence": 0.92, "source": "llm:gpt-4"}
+{"text": "Uber ride to airport", "prediction": "travel", "confidence": 0.88, "source": "llm:gpt-4"}
+{"text": "Amazon order #12345", "prediction": "shopping", "confidence": 0.74, "source": "llm:gpt-4"}
+{"text": "Netflix monthly", "prediction": "utility", "confidence": 0.41, "source": "llm:gpt-4"}
+{"text": "Salary credit October", "prediction": "salary", "confidence": 0.99, "source": "llm:gpt-4"}
+{"text": "Rent transfer to landlord", "prediction": "rent", "confidence": 0.96, "source": "llm:gpt-4"}
+{"text": "Coffee at Blue Tokai", "predictions": [{"label": "food", "confidence": 0.81, "source": "llm:gpt-4"}, {"label": "shopping", "confidence": 0.45, "source": "regex.simple"}]}
+{"text": "ATM withdrawal", "context_before": "POS purchase Big Bazaar", "context_after": "Transfer to savings", "prediction": "other", "confidence": 0.22, "source": "llm:gpt-4"}
+{"text": "Refund from Swiggy", "prediction": "food", "source": "regex.simple"}
+{"text": "Senior Engineer at Acme", "context_before": "EXPERIENCE", "context_after": "Led platform team", "predictions": [{"label": "ENTRY_START", "confidence": 0.71, "source": "rule.entry_boundary"}], "issues": [{"type": "label_issue", "score": 0.6}]}

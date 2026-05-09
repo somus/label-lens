@@ -1,0 +1,20 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome
+      glob: "*.{ts,tsx,js,json,md}"
+      run: bunx biome check --write --no-errors-on-unmatched --staged {staged_files}
+      stage_fixed: true
+
+    - name: typecheck
+      glob: "*.{ts,tsx}"
+      run: bun run typecheck
+
+    - name: test
+      glob: "*.{ts,tsx}"
+      run: bun test
+
+pre-push:
+  jobs:
+    - name: full-check
+      run: bun run typecheck && bunx biome check && bun test

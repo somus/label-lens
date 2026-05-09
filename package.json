@@ -1,0 +1,34 @@
+{
+  "name": "label-lens",
+  "version": "0.0.0",
+  "description": "Terminal-first review tool for noisy text training data.",
+  "module": "src/main.ts",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "labellens": "src/main.ts"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/main.ts",
+    "start": "bun run src/main.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "format": "biome format --write",
+    "prepare": "lefthook install"
+  },
+  "engines": {
+    "bun": ">=1.3.11"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
+    "@types/bun": "latest",
+    "lefthook": "^2.1.6",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.2.1",
+    "@sinclair/typebox": "^0.34.0"
+  }
+}
