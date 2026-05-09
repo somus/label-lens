@@ -1,5 +1,6 @@
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
+import type { Overlay } from "../overlay/types.ts";
 import type { Db } from "../store/db.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 
@@ -11,24 +12,6 @@ export type FlashMessage = {
   expiresAt: number;
 };
 
-export type AppMode = "review" | "picker" | "note";
-
-export type PickerCandidate = { label: string; predicted: boolean };
-
-export type PickerState = {
-  recordId: string;
-  allLabels: string[];
-  predicted: string | null;
-  filter: string;
-  candidates: PickerCandidate[];
-  highlight: number;
-};
-
-export type NotePromptState = {
-  recordId: string;
-  value: string;
-};
-
 export type AppContext = {
   db: Db;
   config: LabellensConfig;
@@ -38,12 +21,9 @@ export type AppContext = {
   clearFlash(): void;
   requestRender(): void;
   onQuit(): void;
-  mode: AppMode;
-  picker: PickerState | null;
-  notePrompt: NotePromptState | null;
-  enterPicker(state: PickerState): void;
-  enterNote(state: NotePromptState): void;
-  exitOverlay(): void;
+  overlay: Overlay | null;
+  openOverlay(o: Overlay): void;
+  closeOverlay(): void;
 };
 
 export type ReviewContext = AppContext & {
@@ -62,9 +42,7 @@ export function createAppContext(args: {
     db: args.db,
     config: args.config,
     flash: null,
-    mode: "review",
-    picker: null,
-    notePrompt: null,
+    overlay: null,
     requestRender: args.requestRender,
     onQuit: args.onQuit,
     getCursor(queueId) {
@@ -84,22 +62,12 @@ export function createAppContext(args: {
       ctx.flash = null;
       ctx.requestRender();
     },
-    enterPicker(state) {
-      ctx.mode = "picker";
-      ctx.picker = state;
-      ctx.notePrompt = null;
+    openOverlay(o) {
+      ctx.overlay = o;
       ctx.requestRender();
     },
-    enterNote(state) {
-      ctx.mode = "note";
-      ctx.notePrompt = state;
-      ctx.picker = null;
-      ctx.requestRender();
-    },
-    exitOverlay() {
-      ctx.mode = "review";
-      ctx.picker = null;
-      ctx.notePrompt = null;
+    closeOverlay() {
+      ctx.overlay = null;
       ctx.requestRender();
     },
   };

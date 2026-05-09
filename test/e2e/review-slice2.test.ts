@@ -91,7 +91,7 @@ describe("review screen slice 2 UI", () => {
     const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
     mockInput.pressKey("r");
     await renderOnce();
-    expect(app.mode).toBe("picker");
+    expect(app.overlay?.kind).toBe("picker");
     const frame = captureCharFrame();
     expect(frame).toContain("relabel>");
     expect(frame).toContain("food");
@@ -107,9 +107,15 @@ describe("review screen slice 2 UI", () => {
     await renderOnce();
     mockInput.pressKey("t");
     await renderOnce();
-    expect(app.mode).toBe("picker");
-    expect(app.picker?.filter).toBe("t");
-    expect(app.picker?.candidates.map((c) => c.label)).toEqual(["travel", "utility", "other"]);
+    expect(app.overlay?.kind).toBe("picker");
+    if (app.overlay?.kind === "picker") {
+      expect(app.overlay.state.filter).toBe("t");
+      expect(app.overlay.state.candidates.map((c) => c.label)).toEqual([
+        "travel",
+        "utility",
+        "other",
+      ]);
+    }
     const frame = captureCharFrame();
     expect(frame).toContain("relabel> t");
   });
@@ -119,7 +125,7 @@ describe("review screen slice 2 UI", () => {
     const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
     mockInput.pressKey("n");
     await renderOnce();
-    expect(app.mode).toBe("note");
+    expect(app.overlay?.kind).toBe("note");
     const frame = captureCharFrame();
     expect(frame).toContain("note>");
     expect(frame).toContain("enter save");

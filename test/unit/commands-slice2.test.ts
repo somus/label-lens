@@ -90,14 +90,16 @@ describe("record.relabelByIndex", () => {
 });
 
 describe("record.openNote", () => {
-  test("enters note mode for the current record with empty value when unset", async () => {
+  test("opens a note overlay for the current record with empty value when unset", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
     const ctx = reviewContext(app);
     await dispatch(defaultRegistry(), "review", ctx, "record.openNote");
-    expect(app.mode).toBe("note");
-    expect(app.notePrompt?.value).toBe("");
-    expect(app.notePrompt?.recordId).toBe(ctx.cursor.current()!.id);
+    expect(app.overlay?.kind).toBe("note");
+    if (app.overlay?.kind === "note") {
+      expect(app.overlay.state.value).toBe("");
+      expect(app.overlay.state.recordId).toBe(ctx.cursor.current()!.id);
+    }
   });
 
   test("prefills existing note from records.note", async () => {
@@ -108,70 +110,25 @@ describe("record.openNote", () => {
     store.db.run(sql`UPDATE records SET note = 'prior note' WHERE id = ${id}`);
     ctx.cursor.refresh();
     await dispatch(defaultRegistry(), "review", ctx, "record.openNote");
-    expect(app.notePrompt?.value).toBe("prior note");
+    if (app.overlay?.kind === "note") expect(app.overlay.state.value).toBe("prior note");
+    else throw new Error("expected note overlay");
   });
 });
 
 describe("record.openRelabelPicker", () => {
-  test("enters picker mode with predicted label highlighted", async () => {
+  test("opens a picker overlay with predicted label highlighted", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
     const ctx = reviewContext(app);
     await dispatch(defaultRegistry(), "review", ctx, "record.openRelabelPicker");
-    expect(app.mode).toBe("picker");
-    expect(app.picker?.filter).toBe("");
-    expect(app.picker?.candidates.length).toBe(4);
-    expect(app.picker?.candidates[app.picker.highlight]?.label).toBe("food");
-    expect(app.picker?.candidates[app.picker.highlight]?.predicted).toBe(true);
-  });
-});
-
-describe("commitPickerSelection", () => {
-  test("non-predicted label writes 'relabeled' and closes picker", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.openRelabelPicker");
-    // move highlight to "travel" (index 1)
-    app.picker!.highlight = 1;
-    const { commitPickerSelection } = await import("../../src/actions/record/commit-picker.ts");
-    commitPickerSelection(ctx);
-    expect(app.mode).toBe("review");
-    const cur = currentReview(store.db, id);
-    expect(cur?.status).toBe("relabeled");
-    expect(cur?.final_label).toBe("travel");
-  });
-
-  test("predicted label writes 'accepted'", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.openRelabelPicker");
-    const { commitPickerSelection } = await import("../../src/actions/record/commit-picker.ts");
-    commitPickerSelection(ctx);
-    const cur = currentReview(store.db, id);
-    expect(cur?.status).toBe("accepted");
-    expect(cur?.final_label).toBe("food");
-  });
-});
-
-describe("commitNote", () => {
-  test("writes records.note and exits overlay", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const app = makeApp(store.db);
-    const ctx = reviewContext(app);
-    const id = ctx.cursor.current()!.id;
-    await dispatch(defaultRegistry(), "review", ctx, "record.openNote");
-    app.notePrompt!.value = "follow up later";
-    const { commitNote } = await import("../../src/actions/record/commit-note.ts");
-    commitNote(ctx);
-    expect(app.mode).toBe("review");
-    const row = store.db.all<{ note: string | null }>(
-      sql`SELECT note FROM records WHERE id = ${id}`,
-    );
-    expect(row[0]?.note).toBe("follow up later");
+    expect(app.overlay?.kind).toBe("picker");
+    if (app.overlay?.kind === "picker") {
+      const s = app.overlay.state;
+      expect(s.filter).toBe("");
+      expect(s.candidates.length).toBe(4);
+      expect(s.candidates[s.highlight]?.label).toBe("food");
+      expect(s.candidates[s.highlight]?.predicted).toBe(true);
+    }
   });
 });
 

@@ -2,7 +2,7 @@ import { quit } from "./app/quit.ts";
 import { bindingsFor, buildRegistry, type Command, type CommandRegistry } from "./command.ts";
 import { accept } from "./record/accept.ts";
 import { next } from "./record/next.ts";
-import { openNote } from "./record/open-note.ts";
+import { openNoteCommand } from "./record/open-note.ts";
 import { openRelabelPicker } from "./record/open-relabel-picker.ts";
 import { prev } from "./record/prev.ts";
 import { reject } from "./record/reject.ts";
@@ -19,7 +19,7 @@ export const ALL_COMMANDS: Command[] = [
   skip as unknown as Command,
   toggleMark as unknown as Command,
   undo as unknown as Command,
-  openNote as unknown as Command,
+  openNoteCommand as unknown as Command,
   openRelabelPicker as unknown as Command,
   ...(relabelByIndexCommands as unknown as Command[]),
   quit as unknown as Command,

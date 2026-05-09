@@ -1,12 +1,12 @@
 import type { CliRenderer } from "@opentui/core";
 import { dispatch } from "../actions/dispatch.ts";
-import { commitNote } from "../actions/record/commit-note.ts";
-import { commitPickerSelection } from "../actions/record/commit-picker.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, reviewContext } from "../app/context.ts";
 import { labelName } from "../config/config.ts";
 import { resolve } from "../keymap/engine.ts";
-import { pickerReduce } from "../picker/reducer.ts";
+import { applyEffects } from "../overlay/effects.ts";
+import { reduceOverlay } from "../overlay/reduce.ts";
+import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { Box } from "../render/box.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { progressCounts, recentReviews } from "../store/queries.ts";
@@ -34,7 +34,8 @@ export function mountReviewScreen(args: {
 }): ReviewScreenHandle {
   const { renderer, app } = args;
   const registry = args.registry ?? defaultRegistry();
-  const ctx = reviewContext(app, args.initialQueueId ?? "pending");
+  const queueId = args.initialQueueId ?? "pending";
+  const ctx = reviewContext(app, queueId);
   const bindings = bindingsFor([...registry.values()]);
 
   const renderState = () => {
@@ -111,11 +112,7 @@ export function mountReviewScreen(args: {
             )
           : Box({}),
 
-        ctx.mode === "picker" && ctx.picker
-          ? pickerOverlay(ctx.picker.filter, ctx.picker.candidates, ctx.picker.highlight)
-          : Box({}),
-
-        ctx.mode === "note" && ctx.notePrompt ? noteOverlay(ctx.notePrompt.value) : Box({}),
+        ctx.overlay ? renderOverlay(ctx.overlay) : Box({}),
 
         Box({ flexGrow: 1 }),
 
@@ -143,13 +140,10 @@ export function mountReviewScreen(args: {
   ctx.requestRender = renderState;
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
-    if (app.mode === "picker") {
-      handlePickerKey(app, ctx, event);
-      renderState();
-      return;
-    }
-    if (app.mode === "note") {
-      handleNoteKey(app, ctx, event);
+    if (app.overlay) {
+      const result = reduceOverlay(app.overlay, { kind: "key", event });
+      app.overlay = result.overlay;
+      applyEffects(app, queueId, result.effects);
       renderState();
       return;
     }
@@ -174,19 +168,62 @@ export function mountReviewScreen(args: {
 }
 
 function labelListBox(
-  labels: ReturnType<typeof labelName> extends string ? unknown[] : never,
+  labels: Parameters<typeof labelName>[0][],
   predicted: string | null,
-) {
+): ReturnType<typeof Box> {
   return Box(
     { flexDirection: "column", marginTop: 1 },
-    ...(labels as unknown[]).slice(0, 9).map((entry, idx) => {
-      const name = labelName(entry as Parameters<typeof labelName>[0]);
+    ...labels.slice(0, 9).map((entry, idx) => {
+      const name = labelName(entry);
       const isPredicted = name === predicted;
       const marker = isPredicted ? " >" : "  ";
       return Text({
         content: ` ${idx + 1} ${name}${marker}`,
         attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.DIM,
       });
+    }),
+  );
+}
+
+function renderOverlay(overlay: Overlay): ReturnType<typeof Box> {
+  switch (overlay.kind) {
+    case "picker":
+      return renderPicker(overlay.state);
+    case "note":
+      return renderNote(overlay.state);
+    case "assistant":
+      // Placeholder until slice 11.
+      return Box(
+        { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+        Text({ content: " assistant overlay (slice 11)" }),
+      );
+  }
+}
+
+function renderPicker(state: PickerState): ReturnType<typeof Box> {
+  return Box(
+    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    Text({ content: ` relabel> ${state.filter}_` }),
+    ...state.candidates.slice(0, 9).map((c: PickerCandidate, i) =>
+      Text({
+        content: ` ${i + 1} ${c.label}${c.predicted ? " >" : ""}${i === state.highlight ? "  <-" : ""}`,
+        attributes: i === state.highlight ? TextAttributes.BOLD : TextAttributes.DIM,
+      }),
+    ),
+    Text({
+      content: " enter commit · esc cancel",
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function renderNote(state: NoteState): ReturnType<typeof Box> {
+  return Box(
+    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    Text({ content: ` note> ${state.value}_` }),
+    Text({
+      content: " enter save · esc cancel",
+      attributes: TextAttributes.DIM,
     }),
   );
 }
@@ -199,105 +236,6 @@ function formatHistory(history: StoredReview[]): string {
       return `${shortId(h.record_id)} ${sym} ${lbl}`;
     })
     .join("  ·  ");
-}
-
-function pickerOverlay(
-  filter: string,
-  candidates: { label: string; predicted: boolean }[],
-  highlight: number,
-) {
-  return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
-    Text({ content: ` relabel> ${filter}_` }),
-    ...candidates.slice(0, 9).map((c, i) =>
-      Text({
-        content: ` ${i + 1} ${c.label}${c.predicted ? " >" : ""}${i === highlight ? "  <-" : ""}`,
-        attributes: i === highlight ? TextAttributes.BOLD : TextAttributes.DIM,
-      }),
-    ),
-    Text({
-      content: " enter commit · esc cancel",
-      attributes: TextAttributes.DIM,
-    }),
-  );
-}
-
-function noteOverlay(value: string) {
-  return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
-    Text({ content: ` note> ${value}_` }),
-    Text({
-      content: " enter save · esc cancel",
-      attributes: TextAttributes.DIM,
-    }),
-  );
-}
-
-function handlePickerKey(
-  app: AppContext,
-  ctx: ReturnType<typeof reviewContext>,
-  event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
-) {
-  if (!app.picker) return;
-  if (event.name === "escape") {
-    ctx.exitOverlay();
-    return;
-  }
-  if (event.name === "return") {
-    commitPickerSelection(ctx);
-    return;
-  }
-  if (event.name === "up") {
-    app.picker = pickerReduce(app.picker, { kind: "up" });
-    return;
-  }
-  if (event.name === "down") {
-    app.picker = pickerReduce(app.picker, { kind: "down" });
-    return;
-  }
-  if (event.name === "backspace") {
-    app.picker = pickerReduce(app.picker, { kind: "backspace" });
-    return;
-  }
-  if (event.name.length === 1) {
-    const ch = event.name;
-    if (/^[1-9]$/.test(ch)) {
-      app.picker = pickerReduce(app.picker, { kind: "number", n: Number(ch) });
-      return;
-    }
-    if (/^[\w \-_]$/i.test(ch)) {
-      app.picker = pickerReduce(app.picker, { kind: "char", char: ch });
-    }
-  }
-}
-
-function handleNoteKey(
-  app: AppContext,
-  ctx: ReturnType<typeof reviewContext>,
-  event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
-) {
-  if (!app.notePrompt) return;
-  if (event.name === "escape") {
-    ctx.exitOverlay();
-    return;
-  }
-  if (event.name === "return") {
-    commitNote(ctx);
-    return;
-  }
-  if (event.name === "backspace") {
-    app.notePrompt = {
-      ...app.notePrompt,
-      value: app.notePrompt.value.slice(0, -1),
-    };
-    return;
-  }
-  if (event.name.length === 1 && event.name >= " " && event.name <= "~") {
-    app.notePrompt = {
-      ...app.notePrompt,
-      value: app.notePrompt.value + event.name,
-    };
-  }
 }
 
 function shortId(id: string): string {

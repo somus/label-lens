@@ -1,7 +1,8 @@
 import type { ReviewContext } from "../../app/context.ts";
+import { openNote } from "../../overlay/note.ts";
 import type { Command } from "../command.ts";
 
-export const openNote: Command<ReviewContext> = {
+export const openNoteCommand: Command<ReviewContext> = {
   name: "record.openNote",
   scope: "review",
   binding: "n",
@@ -9,9 +10,7 @@ export const openNote: Command<ReviewContext> = {
   run: (ctx) => {
     const record = ctx.cursor.current();
     if (!record) return;
-    ctx.enterNote({
-      recordId: record.id,
-      value: record.note ?? "",
-    });
+    const state = openNote({ recordId: record.id, initial: record.note ?? "" });
+    ctx.openOverlay({ kind: "note", state });
   },
 };

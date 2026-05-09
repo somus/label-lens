@@ -1,14 +1,6 @@
 export type Action = string;
 
-export type Scope =
-  | "global"
-  | "review"
-  | "queue"
-  | "stats"
-  | "palette"
-  | "assistant"
-  | "picker"
-  | "note";
+export type Scope = "global" | "review" | "queue" | "stats" | "palette";
 
 export type Binding = {
   key: string;

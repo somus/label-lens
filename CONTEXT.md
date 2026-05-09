@@ -49,6 +49,10 @@ A SQL-backed filter over records. Built-in: `pending`, `low-confidence`, `disagr
 The reviewer's position within a **Queue** — index into the ordered list of pending records the queue resolves to. One Cursor per Queue, persisted at app scope so screen switches and queue switches preserve focus. Reset when the queue is invalidated (re-ingest, re-prioritize, label set change).
 _Avoid_: Position, pointer, head (overloaded with linked-list pointers).
 
+**Overlay**:
+A modal sub-surface that captures keypresses while open and commits an action when it closes. Three adapters: relabel **Picker** (`r`), **Note** prompt (`n`), **Assistant** panel (`i`, slice 11). Each Overlay owns its state, accepts a uniform `OverlayEvent` (key, stream token, cancel, commit), and emits data **Effects** (`close`, `commitDecision`, `updateNote`, `markAssistantViewed`) the screen interprets against the AppContext. While an Overlay is open the review-scope keymap is dormant — raw key events flow to the Overlay reducer.
+_Avoid_: Modal, dialog, popup. "Panel" is reserved for the assistant's internal panel structure.
+
 ## Relationships
 
 - A **Record** carries zero or more **Predictions** and zero or more **Issues**.
@@ -57,6 +61,7 @@ _Avoid_: Position, pointer, head (overloaded with linked-list pointers).
 - A **Record** may carry zero or more **Tags**, independently of its **Review state**.
 - A **Queue** is a filter over **Records** (sometimes joined to **Review entries** for correction queries).
 - **Stats screen** rows are navigable filters: every aggregation compiles to a **Queue**.
+- An open **Overlay** suspends the review-scope keymap; raw key events flow to the Overlay reducer until it closes. Opening the **Assistant** Overlay marks the current Record's **Source of truth** as `human+assistant` (ADR 0004).
 
 ## Example dialogue
 
