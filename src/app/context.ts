@@ -58,6 +58,7 @@ export function createAppContext(args: {
   onQuit: () => void;
 }): AppContext {
   const cursors = new Map<QueueId, Cursor>();
+  let flashTimer: ReturnType<typeof setTimeout> | null = null;
   const ctx: AppContext = {
     db: args.db,
     config: args.config,
@@ -78,9 +79,21 @@ export function createAppContext(args: {
     },
     setFlash(message, kind, ttlMs = 3000) {
       ctx.flash = { kind, message, expiresAt: Date.now() + ttlMs };
+      if (flashTimer) clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => {
+        flashTimer = null;
+        if (ctx.flash && ctx.flash.expiresAt <= Date.now()) {
+          ctx.flash = null;
+          ctx.requestRender();
+        }
+      }, ttlMs + 10);
       ctx.requestRender();
     },
     clearFlash() {
+      if (flashTimer) {
+        clearTimeout(flashTimer);
+        flashTimer = null;
+      }
       ctx.flash = null;
       ctx.requestRender();
     },
