@@ -1,37 +1,20 @@
-import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
-import type { FieldMap } from "../../src/config/inference.ts";
 import { openCursor } from "../../src/cursor/cursor.ts";
-import { ingestFile } from "../../src/ingest/ingest.ts";
 import { insertReview } from "../../src/store/records.ts";
-import { applySchema } from "../../src/store/schema.ts";
-
-const FIELDS: FieldMap = {
-  text: "text",
-  prediction: "prediction",
-  confidence: "confidence",
-  source: "source",
-  context_before: "context_before",
-  context_after: "context_after",
-};
-
-async function freshCursor() {
-  const db = new Database(":memory:");
-  applySchema(db);
-  await ingestFile(db, "test/fixtures/tiny.jsonl", FIELDS);
-  return { db, cursor: openCursor(db, "pending") };
-}
+import { openTmpStore } from "../util/tmp.ts";
 
 describe("Cursor", () => {
   test("starts at the first pending record", async () => {
-    const { cursor } = await freshCursor();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
     expect(cursor.total).toBe(10);
     expect(cursor.position).toBe(0);
     expect(cursor.current()?.text).toBe("Lunch at Zomato Bangalore");
   });
 
   test("next/prev moves within bounds", async () => {
-    const { cursor } = await freshCursor();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
     cursor.next();
     expect(cursor.position).toBe(1);
     cursor.prev();
@@ -41,7 +24,8 @@ describe("Cursor", () => {
   });
 
   test("emits change event on movement", async () => {
-    const { cursor } = await freshCursor();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
     let changed = 0;
     cursor.on("change", () => {
       changed++;
@@ -53,14 +37,15 @@ describe("Cursor", () => {
   });
 
   test("refresh keeps focus on the same record id when possible", async () => {
-    const { db, cursor } = await freshCursor();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
     cursor.next();
     cursor.next();
     const focused = cursor.current()!;
     cursor.refresh();
     expect(cursor.current()?.id).toBe(focused.id);
 
-    insertReview(db, {
+    insertReview(store.db, {
       record_id: focused.id,
       status: "accepted",
       final_label: "food",
@@ -74,7 +59,8 @@ describe("Cursor", () => {
   });
 
   test("seek finds a record by id", async () => {
-    const { cursor } = await freshCursor();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
     const target = cursor.current()!;
     cursor.next();
     cursor.next();
@@ -84,7 +70,8 @@ describe("Cursor", () => {
   });
 
   test("seekIndex clamps to bounds", async () => {
-    const { cursor } = await freshCursor();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
     cursor.seekIndex(999);
     expect(cursor.position).toBe(9);
     cursor.seekIndex(-5);

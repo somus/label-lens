@@ -55,13 +55,16 @@ bun run build:bin
 
 ## Testing
 
-- **Keymap engine**: pure unit tests. String-in, action-out. No renderer.
-- **Storage layer**: integration tests against a real `bun:sqlite` (no mocks).
-- **Screens (e2e)**: drive the actual screen with `@opentui/core/testing` — `createTestRenderer({ width, height })` returns `{ renderer, mockInput, renderOnce, captureCharFrame }`. Mount the screen on the test renderer, press keys via `mockInput.pressKey('a')`, await `renderOnce()`, then assert against `captureCharFrame()` (rendered text without ANSI) and direct DB queries. See `test/e2e/review.test.ts` for the pattern.
-- **Quit injection**: screens that exit the process accept an `onQuit` callback. Tests pass a no-op so the test process doesn't die.
-- **Rendering at multiple capability levels**: snapshot at truecolor, 256, 16, mono.
-- **Performance**: shared fixtures (issue #14); perf harness (issue #15).
-- **SSH path matters** — manually verify any rendering changes over a real SSH session before declaring a slice done. The test renderer doesn't simulate transport loss.
+See **`test/AGENTS.md`** for the full guide (tmp-store helper, snapshot conventions, screen e2e harness, what NOT to mock).
+
+Quick reference:
+- **Keymap engine** — pure unit tests. String-in, action-out.
+- **Storage** — `using store = await openTmpStore({ ingest: "tiny.jsonl" })` (`test/util/tmp.ts`). Real `bun:sqlite`, never mocked. Auto-cleanup via TC39 `using`.
+- **Dispatch** — build a `Command` registry, dispatch against `createAppContext`. Errors flash to `ctx.flash`; assert against that, not try/catch.
+- **Screens (e2e)** — `createTestRenderer` + `mockInput.pressKey` + `captureCharFrame`. Pair `toMatchSnapshot()` (full layout regression) with `toContain(...)` (key invariants). Update intentionally with `bun test --update-snapshots`.
+- **Quit injection** — screens accept `onQuit` callback so tests don't `process.exit`.
+- **Performance** — shared fixtures (#14), envelope harness (#15), >20% regression fails CI.
+- **SSH path** — manually verify rendering over real SSH before declaring a slice done; the test renderer doesn't simulate transport loss.
 
 ## Worktrees (paseo)
 

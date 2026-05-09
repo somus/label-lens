@@ -1,0 +1,113 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`review screen e2e initial render: progress strip + first record + primary prediction 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl                                                            0 / 10   q quit 
+                                                                                                    
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │                                                                                                │ 
+ │ Lunch at Zomato Bangalore                                                                      │ 
+ │                                                                                                │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+                                                                                                    
+  src llm:gpt-4   →   food  (92%)                                                                   
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  a accept    j next    k prev    q quit                                                            
+                                                                                                    
+"
+`;
+
+exports[`review screen e2e pressing 'a' writes an accepted review row and advances counter 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl                                                            1 / 10   q quit 
+                                                                                                    
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │                                                                                                │ 
+ │ Uber ride to airport                                                                           │ 
+ │                                                                                                │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+                                                                                                    
+  src llm:gpt-4   →   travel  (88%)                                                                 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  a accept    j next    k prev    q quit                                                            
+                                                                                                    
+"
+`;
+
+exports[`review screen e2e pressing 'j' moves to the next record without writing a review 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl                                                            0 / 10   q quit 
+                                                                                                    
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │                                                                                                │ 
+ │ Uber ride to airport                                                                           │ 
+ │                                                                                                │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
+                                                                                                    
+  src llm:gpt-4   →   travel  (88%)                                                                 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  a accept    j next    k prev    q quit                                                            
+                                                                                                    
+"
+`;
+
+exports[`review screen e2e pressing 'a' across all records empties pending and shows completion 1`] = `
+"                                                                                                    
+  LabelLens · tiny.jsonl                                                           10 / 10   q quit 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+   All records reviewed. Press q to quit.                                                           
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  a accept    j next    k prev    q quit                                                            
+                                                                                                    
+"
+`;
