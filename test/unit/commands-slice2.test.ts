@@ -19,7 +19,7 @@ const config: LabellensConfig = {
   output: { path: "/tmp/out.jsonl", format: "jsonl" },
 };
 
-function makeApp(db: Db, queueId: "pending" | "skipped" = "pending"): AppContext {
+function makeApp(db: Db, queueId: string = "pending"): AppContext {
   const app = createAppContext({
     db,
     config,
@@ -287,19 +287,19 @@ describe("queue cycling", () => {
     expect(app.cursor!.queueId).toBe("skipped");
   });
 
-  test("queue.next from skipped wraps back to pending", async () => {
+  test("queue.next from the last queue wraps back to pending", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const app = makeApp(store.db, "skipped");
+    const app = makeApp(store.db, "marked");
     await dispatch(defaultRegistry(), "review", app, "queue.next");
     expect(app.cursor!.queueId).toBe("pending");
   });
 
-  test("queue.prev cycles backwards", async () => {
+  test("queue.prev cycles backwards through the cycle order", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
     expect(app.cursor!.queueId).toBe("pending");
     await dispatch(defaultRegistry(), "review", app, "queue.prev");
-    expect(app.cursor!.queueId).toBe("skipped");
+    expect(app.cursor!.queueId).toBe("marked");
   });
 
   test("queue.next flashes the queue label", async () => {

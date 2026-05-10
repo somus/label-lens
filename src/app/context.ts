@@ -38,6 +38,12 @@ export type AppContext = {
   docView: DocViewState | null;
   openDocView(state: DocViewState): void;
   closeDocView(): void;
+  /**
+   * Set by the orchestrator (cli/run.ts) so review-scope commands can pop the
+   * Queue screen. Unset in tests; the corresponding command flashes "Queue
+   * screen unavailable" rather than crashing.
+   */
+  openQueueScreen?: () => void;
 };
 
 export function createAppContext(args: {

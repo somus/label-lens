@@ -1,7 +1,11 @@
 import type { FieldMap } from "../config/inference.ts";
 import type { Db } from "../store/db.ts";
-import { insertRecord, type RecordPredictionInput } from "../store/records.ts";
-import type { InputPrediction, InputRecord } from "../types.ts";
+import {
+  insertRecord,
+  type RecordIssueInput,
+  type RecordPredictionInput,
+} from "../store/records.ts";
+import type { InputIssue, InputPrediction, InputRecord } from "../types.ts";
 import { contentHashId } from "./id.ts";
 import { streamJsonl } from "./jsonl.ts";
 
@@ -19,6 +23,7 @@ type PendingRecord = {
   contextAfter: string | null;
   raw: string;
   predictions: RecordPredictionInput[];
+  issues: RecordIssueInput[];
 };
 
 export async function ingestFile(
@@ -55,6 +60,7 @@ export async function ingestFile(
     const input = mapInput(obj, fields, text);
     const id = input.id ?? contentHashId(input.text, input.context_before, input.context_after);
     const predictions = input.predictions ?? [];
+    const issuesIn = input.issues ?? [];
 
     buffer.push({
       id,
@@ -70,6 +76,10 @@ export async function ingestFile(
         source: p.source,
         reason: p.reason ?? null,
         raw: JSON.stringify(p),
+      })),
+      issues: issuesIn.map((i) => ({
+        type: i.type,
+        score: typeof i.score === "number" ? i.score : null,
       })),
     });
     ingested++;
@@ -93,6 +103,11 @@ function mapInput(obj: Record<string, unknown>, fields: FieldMap, text: string):
   if (fields.context_after) {
     const v = obj[fields.context_after];
     if (typeof v === "string") out.context_after = v;
+  }
+
+  const explicitIssues = obj.issues;
+  if (Array.isArray(explicitIssues)) {
+    out.issues = explicitIssues as InputIssue[];
   }
 
   const explicitPredictions = obj.predictions;

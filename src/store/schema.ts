@@ -38,7 +38,23 @@ export const predictions = sqliteTable(
     index("idx_predictions_record").on(t.recordId),
     index("idx_predictions_source").on(t.source),
     index("idx_predictions_conf").on(t.confidence),
+    index("idx_predictions_reason").on(t.reason),
   ],
+);
+
+export const issues = sqliteTable(
+  "issues",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    recordId: text("record_id")
+      .notNull()
+      .references(() => records.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    score: real("score"),
+    source: text("source"),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_issues_type").on(t.type), index("idx_issues_record").on(t.recordId)],
 );
 
 export const reviews = sqliteTable(

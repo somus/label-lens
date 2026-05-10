@@ -64,8 +64,13 @@ bun run dev:status    # show what's in /tmp/llens-dev
 ```sh
 bun run dev:up -- --reset                    # wipe + reseed before launching
 bun run dev:up -- --count 1000 --seed 42     # bigger / different dataset (only on first init or --reset)
+bun run dev:up -- --with-marks 5             # pre-tag N records as marked (default 5)
+bun run dev:up -- --with-reviews 8           # pre-insert N reviews — half accepted, half relabeled (default 8)
+bun run dev:up -- --no-prefill               # skip the marks + reviews prefill entirely
 LL_DEV_DIR=/tmp/foo bun run dev:up           # alternate dir
 ```
+
+Prefill seeds non-empty `marked`, `by-correction:*`, and `by-source:*` queues so a fresh dev launch exercises every queue without typing.
 
 Underlying primitive is `bun run seed` (wipes + generates without launching the TUI). Use that when you want to regenerate data without entering the TUI.
 

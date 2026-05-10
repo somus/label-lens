@@ -25,6 +25,32 @@ describe("store schema (slice 2 additions)", () => {
     expect(byName.get("compensates_review_id")?.notnull).toBe(0);
   });
 
+  test("issues table exists with expected columns", async () => {
+    using store = await openTmpStore();
+    const cols = store.db.all<ColRow>(sql`PRAGMA table_info(issues)`);
+    const byName = new Map(cols.map((c) => [c.name, c]));
+
+    expect(byName.has("id")).toBe(true);
+    expect(byName.has("record_id")).toBe(true);
+    expect(byName.has("type")).toBe(true);
+    expect(byName.has("score")).toBe(true);
+    expect(byName.has("source")).toBe(true);
+    expect(byName.has("created_at")).toBe(true);
+    expect(byName.get("record_id")?.notnull).toBe(1);
+    expect(byName.get("type")?.notnull).toBe(1);
+  });
+
+  test("indexes exist for queue lookups", async () => {
+    using store = await openTmpStore();
+    const idx = store.db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'index'`,
+    );
+    const names = new Set(idx.map((r) => r.name));
+    expect(names.has("idx_issues_type")).toBe(true);
+    expect(names.has("idx_issues_record")).toBe(true);
+    expect(names.has("idx_predictions_reason")).toBe(true);
+  });
+
   test("reviews status accepts 'undone'", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const recordRows = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`);

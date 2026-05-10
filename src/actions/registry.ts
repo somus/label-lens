@@ -2,6 +2,8 @@ import { quit } from "./app/quit.ts";
 import { bindingsFor, buildRegistry, type Command, type CommandRegistry } from "./command.ts";
 import { DOC_VIEW_COMMANDS } from "./doc/doc-view-commands.ts";
 import { nextQueue, prevQueue } from "./queue/cycle-queue.ts";
+import { openQueueScreen } from "./queue/open-screen.ts";
+import { queueSwitchCommands } from "./queue/switch.ts";
 import { accept, reject, relabelByIndexCommands, skip } from "./record/decisions.ts";
 import { next } from "./record/next.ts";
 import { openNoteCommand } from "./record/open-note.ts";
@@ -24,6 +26,8 @@ export const ALL_COMMANDS: Command[] = [
   ...relabelByIndexCommands,
   nextQueue,
   prevQueue,
+  openQueueScreen,
+  ...queueSwitchCommands,
   showDoc,
   ...DOC_VIEW_COMMANDS,
   quit,
