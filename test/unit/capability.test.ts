@@ -3,6 +3,7 @@ import {
   applyDisplayOverrides,
   bootstrapDisplay,
   detectCapability,
+  pickLayout,
   resolveDisplay,
 } from "../../src/render/capability.ts";
 
@@ -85,7 +86,13 @@ describe("resolveDisplay", () => {
       detectedTheme: "dark",
       config: undefined,
     });
-    expect(r).toEqual({ color: "truecolor", banding: true, theme: "dark", candidatePin: 0.4 });
+    expect(r).toEqual({
+      color: "truecolor",
+      banding: true,
+      theme: "dark",
+      candidatePin: 0.4,
+      layout: "auto",
+    });
   });
 
   test("falls back to light when detectedTheme is null", () => {
@@ -137,6 +144,33 @@ describe("resolveDisplay", () => {
         config: { candidatePin: -0.5 },
       }).candidatePin,
     ).toBe(0.05);
+  });
+
+  test("default layout is 'auto' when no config", () => {
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "truecolor" },
+        detectedTheme: "light",
+        config: undefined,
+      }).layout,
+    ).toBe("auto");
+  });
+
+  test("display.layout override survives resolution", () => {
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "truecolor" },
+        detectedTheme: "light",
+        config: { layout: "split" },
+      }).layout,
+    ).toBe("split");
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "truecolor" },
+        detectedTheme: "light",
+        config: { layout: "stack" },
+      }).layout,
+    ).toBe("stack");
   });
 });
 
@@ -208,5 +242,28 @@ describe("bootstrapDisplay", () => {
       config: undefined,
     });
     expect(calls[0]).toBe(200);
+  });
+});
+
+describe("pickLayout", () => {
+  test("auto + width 200 → split", () => {
+    expect(pickLayout("auto", 200)).toBe("split");
+  });
+
+  test("auto + width 100 → stack", () => {
+    expect(pickLayout("auto", 100)).toBe("stack");
+  });
+
+  test("auto + boundary: 160 → split, 159 → stack", () => {
+    expect(pickLayout("auto", 160)).toBe("split");
+    expect(pickLayout("auto", 159)).toBe("stack");
+  });
+
+  test("forced 'stack' overrides any width", () => {
+    expect(pickLayout("stack", 999)).toBe("stack");
+  });
+
+  test("forced 'split' overrides narrow width", () => {
+    expect(pickLayout("split", 80)).toBe("split");
   });
 });

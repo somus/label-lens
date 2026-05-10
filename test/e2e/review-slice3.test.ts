@@ -7,6 +7,7 @@ import type { LabellensConfig } from "../../src/config/config.ts";
 import { ingestFile } from "../../src/ingest/ingest.ts";
 import type { ResolvedDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
+import { displayFor } from "../util/display.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore, tmpdir } from "../util/tmp.ts";
 
 function makeConfig(): LabellensConfig {
@@ -18,37 +19,16 @@ function makeConfig(): LabellensConfig {
   };
 }
 
-const TRUECOLOR_LIGHT: ResolvedDisplay = {
+const TRUECOLOR_LIGHT: ResolvedDisplay = displayFor({ color: "truecolor", banding: true });
+const SIXTEEN_LIGHT: ResolvedDisplay = displayFor({ color: "16" });
+const MONO_LIGHT: ResolvedDisplay = displayFor({ color: "mono" });
+const TWO_FIFTY_SIX_LIGHT: ResolvedDisplay = displayFor({ color: "256", banding: true });
+const TRUECOLOR_DARK: ResolvedDisplay = displayFor({
   color: "truecolor",
   banding: true,
-  theme: "light",
-  candidatePin: 0.4,
-};
-
-const SIXTEEN_LIGHT: ResolvedDisplay = {
-  color: "16",
-  banding: false,
-  theme: "light",
-  candidatePin: 0.4,
-};
-
-const MONO_LIGHT: ResolvedDisplay = {
-  color: "mono",
-  banding: false,
-  theme: "light",
-  candidatePin: 0.4,
-};
-
-const TWO_FIFTY_SIX_LIGHT: ResolvedDisplay = {
-  color: "256",
-  banding: true,
-  theme: "light",
-  candidatePin: 0.4,
-};
-
-const TRUECOLOR_DARK: ResolvedDisplay = { ...TRUECOLOR_LIGHT, theme: "dark" };
-
-const TRUECOLOR_NO_BANDING: ResolvedDisplay = { ...TRUECOLOR_LIGHT, banding: false };
+  theme: "dark",
+});
+const TRUECOLOR_NO_BANDING: ResolvedDisplay = displayFor({ color: "truecolor" });
 
 async function setup(
   store: TmpStore,

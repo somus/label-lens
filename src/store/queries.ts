@@ -117,6 +117,28 @@ export function recentReviews(db: TxOrDb, limit: number): StoredReview[] {
   return rows.map(reviewRowToStored);
 }
 
+export type HistoryEntry = StoredReview & { recordText: string };
+
+export function recentReviewsWithText(db: TxOrDb, limit: number): HistoryEntry[] {
+  const rows = db
+    .select({
+      review: reviews,
+      recordText: records.text,
+    })
+    .from(reviews)
+    .innerJoin(records, eq(reviews.recordId, records.id))
+    .where(
+      sql`${reviews.id} NOT IN (
+        SELECT compensates_review_id FROM reviews
+        WHERE compensates_review_id IS NOT NULL
+      )`,
+    )
+    .orderBy(desc(reviews.id))
+    .limit(limit)
+    .all();
+  return rows.map((r) => ({ ...reviewRowToStored(r.review), recordText: r.recordText }));
+}
+
 export type ProgressCounts = {
   total: number;
   accepted: number;

@@ -1,24 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { BandedRecord, focusBoxStyle, leftEdgeMarker } from "../../src/render/banded-record.ts";
 import type { ResolvedDisplay } from "../../src/render/capability.ts";
+import { displayFor } from "../util/display.ts";
 
-const truecolorLight: ResolvedDisplay = {
+const truecolorLight: ResolvedDisplay = displayFor({ color: "truecolor", banding: true });
+const truecolorDark: ResolvedDisplay = displayFor({
   color: "truecolor",
   banding: true,
-  theme: "light",
-  candidatePin: 0.4,
-};
-
-const truecolorDark: ResolvedDisplay = { ...truecolorLight, theme: "dark" };
-
-const sixteenLight: ResolvedDisplay = {
-  color: "16",
-  banding: false,
-  theme: "light",
-  candidatePin: 0.4,
-};
-
-const monoLight: ResolvedDisplay = { ...sixteenLight, color: "mono" };
+  theme: "dark",
+});
+const sixteenLight: ResolvedDisplay = displayFor({ color: "16" });
+const monoLight: ResolvedDisplay = displayFor({ color: "mono" });
 
 describe("focusBoxStyle", () => {
   test("truecolor / 256 → rounded", () => {
