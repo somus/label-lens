@@ -92,6 +92,27 @@ describe("where: parser", () => {
     expect(matched.length).toBe(1);
   });
 
+  test("column-vs-column comparison: final_label != prev_label", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    insertReview(store.db, {
+      record_id: id,
+      status: "relabeled",
+      final_label: "travel",
+      prev_label: "food",
+      source_of_truth: "human",
+    });
+    const rows = queueRecords(
+      store.db,
+      resolveQueue("where:final_label != prev_label and prev_label = 'food'").query,
+    );
+    expect(rows.map((r) => r.id)).toEqual([id]);
+  });
+
+  test("rejects issue_type on the rhs of a column-vs-column comparison", () => {
+    expect(() => resolveQueue("where:status = issue_type")).toThrow(WhereParseError);
+  });
+
   test("rejects unknown column", () => {
     expect(() => resolveQueue("where:foo = 'bar'")).toThrow(WhereParseError);
     expect(() => resolveQueue("where:foo = 'bar'")).toThrow(/unknown column foo/);

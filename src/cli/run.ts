@@ -8,6 +8,7 @@ import { ingestFile } from "../ingest/ingest.ts";
 import { bootstrapDisplay } from "../render/capability.ts";
 import { mountQueueScreen } from "../screens/queue.ts";
 import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts";
+import { mountStatsScreen } from "../screens/stats.ts";
 import { runSignals } from "../signals/run.ts";
 import { openDb } from "../store/db.ts";
 
@@ -76,6 +77,24 @@ export async function runReview(): Promise<void> {
       },
       onCancel: () => {
         queueHandle.destroy();
+        mountReview(app.queueId ?? "pending");
+      },
+    });
+  };
+
+  app.openStatsScreen = () => {
+    reviewHandle?.destroy();
+    reviewHandle = null;
+    const statsHandle = mountStatsScreen({
+      renderer,
+      app,
+      onDrill: (id) => {
+        statsHandle.destroy();
+        switchQueue(app, id);
+        mountReview(id);
+      },
+      onCancel: () => {
+        statsHandle.destroy();
         mountReview(app.queueId ?? "pending");
       },
     });
