@@ -61,21 +61,14 @@ function frameLines(frame: string): string[] {
 }
 
 describe("slice 3.1: responsive split layout at width >= 160", () => {
-  test("auto + width 200: exactly one focus box, anchored in the center column", async () => {
+  test("auto + width 200: exactly one focus box", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store, TRUECOLOR_AUTO, { width: 200, height: 24 });
     const frame = captureCharFrame();
     expect((frame.match(/╭/g) ?? []).length).toBe(1);
-    const lines = frameLines(frame);
-    const cornerRow = lines.find((l) => l.includes("╭"))!;
-    const cornerCol = cornerRow.indexOf("╭");
-    // Center column starts roughly 1/3 in (left col is ~1/3 of 200) and ends
-    // roughly 2/3 in. Allow generous slack for borders/padding.
-    expect(cornerCol).toBeGreaterThan(40);
-    expect(cornerCol).toBeLessThan(140);
   });
 
-  test("auto + width 200: prev records appear in left column without focus box", async () => {
+  test("auto + width 200: prev records appear ABOVE the focus box (vertical band)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
       width: 200,
@@ -86,18 +79,17 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
       await renderOnce();
     }
     const frame = captureCharFrame();
-    // Earlier records show as left-column context.
-    expect(frame).toContain("Lunch at Zomato Bangalore");
+    // Earlier records show as vertical context above focus.
     expect(frame).toContain("Uber ride to airport");
-    // Currently focused record: Salary credit October (index 4).
+    // Currently focused: Salary credit October (index 4).
     expect(frame).toContain("Salary credit October");
-    // Only one focus box.
     expect((frame.match(/╭/g) ?? []).length).toBe(1);
-    // Lunch sits to the left of the focus box.
     const lines = frameLines(frame);
-    const lunchRow = lines.find((l) => l.includes("Lunch at Zomato Bangalore"))!;
-    const cornerLine = lines.find((l) => l.includes("╭"))!;
-    expect(lunchRow.indexOf("Lunch")).toBeLessThan(cornerLine.indexOf("╭"));
+    const uberRow = lines.findIndex((l) => l.includes("Uber ride to airport"));
+    const cornerRow = lines.findIndex((l) => l.includes("╭"));
+    expect(uberRow).toBeGreaterThan(-1);
+    expect(cornerRow).toBeGreaterThan(-1);
+    expect(uberRow).toBeLessThan(cornerRow);
   });
 
   test("auto + width 200: history strip + label list render in right column", async () => {
@@ -115,14 +107,16 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     expect(frame).toContain("1 food");
     expect(frame).toContain("2 travel");
     expect(frame).toContain("3 other");
-    // Right column is to the right of the focus box.
+    // Right column metadata sits in the right ~third of the frame.
     const lines = frameLines(frame);
-    const cornerLine = lines.find((l) => l.includes("╭"))!;
     const histLine = lines.find((l) => l.includes("history:"))!;
-    expect(histLine.indexOf("history:")).toBeGreaterThan(cornerLine.indexOf("╭") + 4);
+    const labelLine = lines.find((l) => l.includes("1 food"))!;
+    // Split right column starts roughly 2/3 of width. At 200 cols, expect col >= 100.
+    expect(histLine.indexOf("history:")).toBeGreaterThan(100);
+    expect(labelLine.indexOf("1 food")).toBeGreaterThan(100);
   });
 
-  test("auto + width 200: focused record's top corner sits near pin row in center column", async () => {
+  test("auto + width 200: focused record's top corner sits near pin row", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
       width: 200,
@@ -136,50 +130,38 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     const lines = frameLines(frame);
     const topCornerRow = lines.findIndex((l) => l.includes("╭"));
     expect(topCornerRow).toBeGreaterThan(-1);
-    // Same envelope as stack pin test — header + spacer ≈3 rows, band region
-    // ≈17 rows on a 24-row screen, pin = 0.4 → ≈ row 9, ±2 slack.
+    // 24-row terminal, pin = 0.4. Header + spacer ≈3 rows, band region
+    // ≈17 rows; focused-record top corner ≈ row 3 + floor(17 × 0.4) = 9. ±2.
     expect(topCornerRow).toBeGreaterThanOrEqual(7);
     expect(topCornerRow).toBeLessThanOrEqual(11);
   });
 
-  test("display.layout = 'stack' forces stack at width 200", async () => {
+  test("display.layout = 'stack' at width 200: label list at LEFT (no right column)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_FORCE_STACK, {
+    const { captureCharFrame } = await setup(store, TRUECOLOR_FORCE_STACK, {
       width: 200,
       height: 24,
     });
-    for (let i = 0; i < 2; i++) {
-      mockInput.pressKey("j");
-      await renderOnce();
-    }
     const frame = captureCharFrame();
     const lines = frameLines(frame);
-    // In stack, prev records appear ABOVE the focus box, never to its left.
-    const lunchRow = lines.findIndex((l) => l.includes("Lunch at Zomato Bangalore"));
-    const cornerRow = lines.findIndex((l) => l.includes("╭"));
-    expect(lunchRow).toBeGreaterThan(-1);
-    expect(cornerRow).toBeGreaterThan(-1);
-    expect(lunchRow).toBeLessThan(cornerRow);
+    // Stack: label list sits at far left of frame, not in a right column.
+    const labelLine = lines.find((l) => l.includes("1 food"))!;
+    expect(labelLine).toBeDefined();
+    expect(labelLine.indexOf("1 food")).toBeLessThan(20);
   });
 
-  test("display.layout = 'split' forces split at width 100", async () => {
+  test("display.layout = 'split' at width 100: label list at RIGHT third", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_FORCE_SPLIT, {
+    const { captureCharFrame } = await setup(store, TRUECOLOR_FORCE_SPLIT, {
       width: 100,
       height: 24,
     });
-    for (let i = 0; i < 2; i++) {
-      mockInput.pressKey("j");
-      await renderOnce();
-    }
     const frame = captureCharFrame();
     const lines = frameLines(frame);
-    const lunchLine = lines.find((l) => l.includes("Lunch at Zomato Bangalore"));
-    const cornerLine = lines.find((l) => l.includes("╭"));
-    expect(lunchLine).toBeDefined();
-    expect(cornerLine).toBeDefined();
-    // Split: lunch on the same/earlier rows as corner, but to its left.
-    expect(lunchLine!.indexOf("Lunch")).toBeLessThan(cornerLine!.indexOf("╭"));
+    // Split: label list sits in the right ~third of frame; at 100 cols, expect col >= 50.
+    const labelLine = lines.find((l) => l.includes("1 food"))!;
+    expect(labelLine).toBeDefined();
+    expect(labelLine.indexOf("1 food")).toBeGreaterThan(50);
   });
 
   test("split: empty queue renders 'All records reviewed' with no focus box", async () => {
