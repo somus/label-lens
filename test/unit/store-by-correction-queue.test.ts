@@ -55,4 +55,20 @@ describe("by-correction queue factory", () => {
   test("rejects malformed by-correction id", async () => {
     expect(() => resolveQueue("by-correction:food")).toThrow();
   });
+
+  test("colon-namespaced from-label parses via last-colon split", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    insertReview(store.db, {
+      record_id: id,
+      status: "relabeled",
+      final_label: "ham",
+      prev_label: "policy:spam",
+      source_of_truth: "human",
+    });
+    const def = resolveQueue("by-correction:policy:spam:ham");
+    expect(def.label).toBe("Correction: policy:spam → ham");
+    const rows = queueRecords(store.db, def.query);
+    expect(rows.find((r) => r.id === id)).toBeDefined();
+  });
 });

@@ -105,4 +105,36 @@ describe("where: parser", () => {
   test("rejects empty expression", () => {
     expect(() => resolveQueue("where:")).toThrow(WhereParseError);
   });
+
+  test("status = 'pending' matches untouched records", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const all = queueRecords(store.db, resolveQueue("where:status = 'pending'").query);
+    expect(all.length).toBe(10);
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    insertReview(store.db, {
+      record_id: id,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    const after = queueRecords(store.db, resolveQueue("where:status = 'pending'").query);
+    expect(after.find((r) => r.id === id)).toBeUndefined();
+    expect(after.length).toBe(9);
+  });
+
+  test("status != 'skipped' keeps pending records (NULL coerced)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    insertReview(store.db, {
+      record_id: id,
+      status: "skipped",
+      final_label: null,
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    const rows = queueRecords(store.db, resolveQueue("where:status != 'skipped'").query);
+    expect(rows.length).toBe(9);
+    expect(rows.find((r) => r.id === id)).toBeUndefined();
+  });
 });

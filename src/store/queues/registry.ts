@@ -55,14 +55,14 @@ export function resolveQueue(id: QueueId): QueueDefinition {
       case "by-issue":
         return byIssue(rest);
       case "by-correction": {
-        const sep = rest.indexOf(":");
+        // Split on the LAST colon so colon-namespaced from-labels survive
+        // (e.g. `by-correction:policy:spam:ham` → from='policy:spam',
+        // to='ham'). Asymmetric on purpose: the to-label cannot contain a
+        // colon. PRD §10.3 examples never use colons in labels, and stats
+        // drilldown emits simple flat label names.
+        const sep = rest.lastIndexOf(":");
         if (sep < 1) throw new Error("by-correction needs <from>:<to>");
-        const from = rest.slice(0, sep);
-        const to = rest.slice(sep + 1);
-        if (to.includes(":")) {
-          throw new Error(`by-correction: unexpected extra colon in "${to}"`);
-        }
-        return byCorrection(from, to);
+        return byCorrection(rest.slice(0, sep), rest.slice(sep + 1));
       }
     }
   }

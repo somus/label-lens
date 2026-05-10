@@ -30,12 +30,21 @@ type ColumnDef = {
 
 const COLUMNS: Record<string, ColumnDef> = {
   status: {
+    // Untouched records have no row in `effective_reviews`; the bare subquery
+    // would return NULL and `NULL = 'pending'` is NULL (not true) under SQL
+    // three-valued logic, so `where:status = 'pending'` would match nothing
+    // and `where:status != 'skipped'` would silently drop pending rows.
+    // PRD §10.2 lists `pending` as a first-class state — COALESCE the
+    // subquery to `'pending'` so status filters behave per spec.
     operand: () => ({
       kind: "sql",
-      sql: sql`(
-        SELECT er.status FROM effective_reviews er
-        WHERE er.record_id = ${recordsWithPrimary.id}
-        ORDER BY er.id DESC LIMIT 1
+      sql: sql`COALESCE(
+        (
+          SELECT er.status FROM effective_reviews er
+          WHERE er.record_id = ${recordsWithPrimary.id}
+          ORDER BY er.id DESC LIMIT 1
+        ),
+        'pending'
       )`,
     }),
   },

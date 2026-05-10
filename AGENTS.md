@@ -58,7 +58,7 @@ Queues are SQL queries over indexed columns; switching is a cursor swap, not a r
 - `by-reason:<r>` — `primary_reason = <r>`.
 - `by-label:<l>` — effective `final_label` if reviewed, else `primary_label`. Reviewer-set labels take precedence.
 - `by-issue:<t>` — `EXISTS (issues WHERE type = <t>)`.
-- `by-correction:<from>:<to>` — latest effective review flipped `<from>` → `<to>`. Drilldown target for stats. Exactly two args required; extra colons throw.
+- `by-correction:<from>:<to>` — latest effective review flipped `<from>` → `<to>`. Drilldown target for stats. Split on the **last** colon, so colon-namespaced from-labels survive (`by-correction:policy:spam:ham` → from=`policy:spam`, to=`ham`). The to-label cannot itself contain a colon.
 
 **Power-user `where:<expr>`:**
 
