@@ -4,6 +4,7 @@ import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import type { ResolvedDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
+import { displayFor } from "../util/display.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
 function makeConfig(): LabellensConfig {
@@ -15,16 +16,24 @@ function makeConfig(): LabellensConfig {
   };
 }
 
-const TRUECOLOR_AUTO: ResolvedDisplay = {
+const TRUECOLOR_AUTO: ResolvedDisplay = displayFor({ color: "truecolor", banding: true });
+const TRUECOLOR_FORCE_STACK: ResolvedDisplay = displayFor({
   color: "truecolor",
   banding: true,
-  theme: "light",
-  candidatePin: 0.4,
-  layout: "auto",
-};
-
-const TRUECOLOR_FORCE_STACK: ResolvedDisplay = { ...TRUECOLOR_AUTO, layout: "stack" };
-const TRUECOLOR_FORCE_SPLIT: ResolvedDisplay = { ...TRUECOLOR_AUTO, layout: "split" };
+  layout: "stack",
+});
+const TRUECOLOR_FORCE_SPLIT: ResolvedDisplay = displayFor({
+  color: "truecolor",
+  banding: true,
+  layout: "split",
+});
+const TWO_FIFTY_SIX_LIGHT: ResolvedDisplay = displayFor({ color: "256", banding: true });
+const SIXTEEN_LIGHT: ResolvedDisplay = displayFor({ color: "16" });
+const TRUECOLOR_DARK: ResolvedDisplay = displayFor({
+  color: "truecolor",
+  banding: true,
+  theme: "dark",
+});
 
 async function setup(
   store: TmpStore,
@@ -173,9 +182,60 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     expect(lunchLine!.indexOf("Lunch")).toBeLessThan(cornerLine!.indexOf("╭"));
   });
 
-  test("snapshot: split layout at 200x24 with tiny.jsonl", async () => {
+  test("split: empty queue renders 'All records reviewed' with no focus box", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
+      width: 200,
+      height: 24,
+    });
+    for (let i = 0; i < 10; i++) {
+      mockInput.pressKey("a");
+      await renderOnce();
+    }
+    const frame = captureCharFrame();
+    expect(frame).toContain("All records reviewed");
+    expect((frame.match(/╭/g) ?? []).length).toBe(0);
+  });
+
+  test("split: picker overlay opens via 'r' and renders prompt visibly", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
+      width: 200,
+      height: 24,
+    });
+    mockInput.pressKey("r");
+    await renderOnce();
+    const frame = captureCharFrame();
+    expect(frame).toContain("relabel>");
+  });
+
+  test("snapshot: split layout at 200x24, truecolor light", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store, TRUECOLOR_AUTO, { width: 200, height: 24 });
+    const frame = captureCharFrame();
+    expect(frame).toMatchSnapshot();
+  });
+
+  test("snapshot: split layout at 200x24, 256-color light", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { captureCharFrame } = await setup(store, TWO_FIFTY_SIX_LIGHT, {
+      width: 200,
+      height: 24,
+    });
+    const frame = captureCharFrame();
+    expect(frame).toMatchSnapshot();
+  });
+
+  test("snapshot: split layout at 200x24, 16-color light (markers)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { captureCharFrame } = await setup(store, SIXTEEN_LIGHT, { width: 200, height: 24 });
+    const frame = captureCharFrame();
+    expect(frame).toMatchSnapshot();
+  });
+
+  test("snapshot: split layout at 200x24, truecolor dark", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { captureCharFrame } = await setup(store, TRUECOLOR_DARK, { width: 200, height: 24 });
     const frame = captureCharFrame();
     expect(frame).toMatchSnapshot();
   });

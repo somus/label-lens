@@ -1,6 +1,90 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24 with tiny.jsonl 1`] = `
+exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, truecolor light 1`] = `
+"                                                                                                                                                                                                        
+  LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                      src llm:gpt-4   →   food  (92%)                                   
+                                                                                                                                                                                                        
+                                                                                                                                      1 food >                                                          
+                                                                                                                                      2 travel                                                          
+                                                                                                                                      3 other                                                           
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                   ╭────────────────────────────────────────────────────────────────╮                                                                   
+                                                                   │ Lunch at Zomato Bangalore                                      │                                                                   
+                                                                   ╰────────────────────────────────────────────────────────────────╯                                                                   
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit                                                                          
+                                                                                                                                                                                                        
+"
+`;
+
+exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, 256-color light 1`] = `
+"                                                                                                                                                                                                        
+  LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                      src llm:gpt-4   →   food  (92%)                                   
+                                                                                                                                                                                                        
+                                                                                                                                      1 food >                                                          
+                                                                                                                                      2 travel                                                          
+                                                                                                                                      3 other                                                           
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                   ╭────────────────────────────────────────────────────────────────╮                                                                   
+                                                                   │ Lunch at Zomato Bangalore                                      │                                                                   
+                                                                   ╰────────────────────────────────────────────────────────────────╯                                                                   
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit                                                                          
+                                                                                                                                                                                                        
+"
+`;
+
+exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, 16-color light (markers) 1`] = `
+"                                                                                                                                                                                                        
+  LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                      src llm:gpt-4   →   food  (92%)                                   
+                                                                                                                                                                                                        
+                                                                                                                                      1 food >                                                          
+                                                                                                                                      2 travel                                                          
+                                                                                                                                      3 other                                                           
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                   ┌────────────────────────────────────────────────────────────────┐                                                                   
+                                                                   │ ▶ Lunch at Zomato Bangalore                                    │                                                                   
+                                                                   └────────────────────────────────────────────────────────────────┘                                                                   
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit                                                                          
+                                                                                                                                                                                                        
+"
+`;
+
+exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, truecolor dark 1`] = `
 "                                                                                                                                                                                                        
   LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                                                                                                                         

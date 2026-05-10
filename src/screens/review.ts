@@ -150,12 +150,16 @@ export function mountReviewScreen(args: {
     void dispatch(registry, "review", app, action);
   };
 
+  const onResize = () => renderState();
+
   renderer.keyInput.on("keypress", onKey);
+  renderer.on("resize", onResize);
   renderState();
 
   return {
     destroy: () => {
       renderer.keyInput.off("keypress", onKey);
+      renderer.off("resize", onResize);
     },
   };
 }
@@ -207,19 +211,11 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
     ),
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
-      focused
-        ? centerColumnFocused(focused, focusedAbsolute, display)
-        : Box(
-            { flexGrow: 1, padding: 2 },
-            Text({
-              content: "All records reviewed. Press q to quit.",
-              attributes: TextAttributes.DIM,
-            }),
-          ),
+      focused ? centerColumnFocused(focused, focusedAbsolute, display) : centerColumnEmpty(display),
     ),
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
-      historyLine(history),
+      historyLine(history, { marginTop: 1 }),
       predictionLine(record),
       record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
       noteLine(record),
@@ -284,14 +280,45 @@ function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof
   );
 }
 
-function historyLine(history: StoredReview[]): ReturnType<typeof Box> {
+function historyLine(
+  history: StoredReview[],
+  opts: { marginTop?: number } = {},
+): ReturnType<typeof Box> {
   if (history.length === 0) return Box({});
   return Box(
-    { flexDirection: "row" },
+    { flexDirection: "row", marginTop: opts.marginTop ?? 0 },
     Text({
       content: ` history: ${formatHistory(history)}`,
       attributes: TextAttributes.DIM,
     }),
+  );
+}
+
+function centerColumnEmpty(display: ResolvedDisplay): ReturnType<typeof Box> {
+  const pin = display.candidatePin;
+  return Box(
+    { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+    Box({
+      flexDirection: "column",
+      flexBasis: 0,
+      flexGrow: pin,
+      flexShrink: 0,
+      overflow: "hidden",
+    }),
+    Box(
+      {
+        flexDirection: "column",
+        flexBasis: 0,
+        flexGrow: 1 - pin,
+        flexShrink: 1,
+        overflow: "hidden",
+        padding: 2,
+      },
+      Text({
+        content: "All records reviewed. Press q to quit.",
+        attributes: TextAttributes.DIM,
+      }),
+    ),
   );
 }
 
