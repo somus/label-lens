@@ -47,9 +47,18 @@ export function mountReviewScreen(args: {
   const bindings = bindingsFor([...registry.values()]);
 
   const chord = createChordResolver(bindings);
+  let lastDocViewActive = false;
+  let lastOverlayActive = false;
 
   const renderState = () => {
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
+    const docViewActive = app.docView !== null;
+    const overlayActive = app.overlay !== null;
+    if (docViewActive !== lastDocViewActive || overlayActive !== lastOverlayActive) {
+      chord.reset();
+      lastDocViewActive = docViewActive;
+      lastOverlayActive = overlayActive;
+    }
     if (app.docView) {
       renderer.root.add(renderDocView(app, renderer.terminalHeight));
       return;

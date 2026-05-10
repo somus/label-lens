@@ -39,4 +39,24 @@ describe("createChordResolver", () => {
     expect(r.feed("doc-view", { name: "g" }, 60)).toBeNull();
     expect(r.feed("doc-view", { name: "g" }, 70)).toBe("doc.top");
   });
+
+  test("pending chord beats a global single-key binding on the second key", () => {
+    const r = createChordResolver(
+      [
+        { key: "g q", action: "doc.bottom", scope: "review" },
+        { key: "q", action: "app.quit", scope: "global" },
+      ],
+      { windowMs: 200 },
+    );
+    expect(r.feed("review", { name: "g" }, 0)).toBeNull();
+    expect(r.feed("review", { name: "q" }, 50)).toBe("doc.bottom");
+  });
+
+  test("reset() drops pending first-key buffer", () => {
+    const r = createChordResolver(BINDINGS, { windowMs: 200 });
+    r.feed("review", { name: "g" }, 0);
+    r.reset();
+    // Without reset, the next 'd' would resolve to record.show-doc.
+    expect(r.feed("review", { name: "d" }, 50)).toBeNull();
+  });
 });

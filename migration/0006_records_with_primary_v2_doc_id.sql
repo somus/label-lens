@@ -1,6 +1,10 @@
 -- records_with_primary v2: adds document_id column derived from raw JSON
 -- (meta.document_id falling back to meta.doc). Drives doc-grouping for the
 -- boundary task (PRD §14.1, slice 4).
+--
+-- Assumption: no other views depend on records_with_primary. If a future
+-- migration adds a derived view, drop it before dropping this one (sqlite
+-- raises if a dependent view exists at DROP time).
 DROP VIEW IF EXISTS `records_with_primary`;
 --> statement-breakpoint
 CREATE VIEW IF NOT EXISTS `records_with_primary` AS

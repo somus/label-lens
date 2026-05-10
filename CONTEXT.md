@@ -61,6 +61,8 @@ _Avoid_: Position, pointer, head (overloaded with linked-list pointers).
 A logical group of related records sharing a `document_id`. Resolved per **Boundary task** from the configured `boundary.documentField` (top-level), then `meta.document_id`, then `meta.doc`. Used to group records into the **Doc view** escape hatch and to derive same-doc context.
 _Avoid_: File, source, group (overloaded).
 
+> Slice 4 only indexes the default path (`document_id` top-level, `meta.document_id`, `meta.doc`) on the `records_with_primary` view. If `boundary.documentField` names a field outside that set, **Doc view** will appear empty even though `resolveDocumentId` returns a value. Tracking generalizing the view for arbitrary fields as a follow-up.
+
 **Context strip**:
 Banded `±N` rows of preceding and following text rendered around the focus box on the review screen for the **Boundary task**. `N = boundary.contextLines` (default 3). Lines come from the focused record's `context_before` / `context_after` strings, split on newline (last N before, first N after). Context rows render dimmer than queue siblings and have no focus box.
 _Avoid_: Window, surroundings.

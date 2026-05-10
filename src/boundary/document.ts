@@ -1,6 +1,24 @@
 import type { LabellensConfig } from "../config/config.ts";
 import type { RecordWithPrimaryPrediction } from "../types.ts";
 
+/**
+ * Resolve the document_id for a record under a boundary-task config.
+ *
+ * Resolution order:
+ *  1. If `boundary.documentField === "document_id"` (the default), trust the
+ *     view-derived `record.document_id`. The `records_with_primary` view
+ *     already coalesces `$.document_id` → `$.meta.document_id` → `$.meta.doc`.
+ *  2. Otherwise, parse `record.raw` JSON and look for the configured
+ *     top-level field; fall back to `meta.document_id`, then `meta.doc`.
+ *
+ * Returns `null` when the task is not boundary, the boundary block is missing,
+ * or no field resolves to a non-empty string.
+ *
+ * Note (slice 4): the view only indexes the default path. A custom
+ * `documentField` resolves correctly per-record here, but `recordsInDoc` will
+ * not find peer records by that custom value because the view's `document_id`
+ * column does not include the custom JSON path. See CONTEXT.md.
+ */
 export function resolveDocumentId(
   record: RecordWithPrimaryPrediction | null,
   config: LabellensConfig,

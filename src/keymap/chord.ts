@@ -13,6 +13,11 @@ type ParsedBinding = {
 
 export type ChordResolver = {
   feed(scope: Scope, event: KeyEvent, nowMs?: number): Action | null;
+  /** Drop any pending first-key buffer. Call when the active scope changes
+   *  for reasons other than the buffered first keystroke (e.g. an overlay
+   *  opens, a queue switch fires) so a stale chord-start can't combine with
+   *  a fresh second key in a different scope. */
+  reset(): void;
 };
 
 function parseBindings(bindings: Binding[]): { single: Binding[]; chords: ParsedBinding[] } {
@@ -72,6 +77,9 @@ export function createChordResolver(
       }
 
       return resolve(single, scope, event);
+    },
+    reset() {
+      pending = null;
     },
   };
 }
