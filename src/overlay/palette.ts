@@ -54,18 +54,65 @@ function packed(state: PaletteState): Overlay {
   return { kind: "palette", state };
 }
 
+function cycleHistory(state: PaletteState, direction: -1 | 1): ReduceResult {
+  if (state.history.length === 0) return { overlay: packed(state), effects: [] };
+  const inHistory = state.historyIdx !== null;
+  if (direction === -1) {
+    const nextIdx = inHistory ? Math.max(state.historyIdx! - 1, 0) : state.history.length - 1;
+    const recalled = state.history[nextIdx]!;
+    return {
+      overlay: packed({
+        ...state,
+        historyIdx: nextIdx,
+        filter: recalled,
+        entries: filteredEntries(state.allEntries, recalled),
+        highlight: 0,
+      }),
+      effects: [],
+    };
+  }
+  if (!inHistory) return { overlay: packed(state), effects: [] };
+  const nextIdx = state.historyIdx! + 1;
+  if (nextIdx >= state.history.length) {
+    return {
+      overlay: packed({
+        ...state,
+        historyIdx: null,
+        filter: "",
+        entries: filteredEntries(state.allEntries, ""),
+        highlight: 0,
+      }),
+      effects: [],
+    };
+  }
+  const recalled = state.history[nextIdx]!;
+  return {
+    overlay: packed({
+      ...state,
+      historyIdx: nextIdx,
+      filter: recalled,
+      entries: filteredEntries(state.allEntries, recalled),
+      highlight: 0,
+    }),
+    effects: [],
+  };
+}
+
 function commit(state: PaletteState): ReduceResult {
   const entry = state.entries[state.highlight];
   if (!entry) return { overlay: packed(state), effects: [] };
   const sp = state.filter.indexOf(" ");
   const argRaw = sp === -1 ? "" : state.filter.slice(sp + 1).trim();
   const argument = argRaw.length === 0 ? undefined : argRaw;
+  // Close BEFORE dispatch: a palette command may itself open a new overlay
+  // (e.g. `:guidelines` → guidelines overlay) and a trailing `close` would
+  // clobber it.
   return {
     overlay: null,
     effects: [
-      { kind: "runCommand", commandName: entry.commandName, argument },
-      { kind: "pushPaletteHistory", entry: state.filter },
       { kind: "close" },
+      { kind: "pushPaletteHistory", entry: state.filter },
+      { kind: "runCommand", commandName: entry.commandName, argument },
     ],
   };
 }
@@ -97,23 +144,12 @@ export function reducePalette(state: PaletteState, event: OverlayEvent): ReduceR
       effects: [],
     };
   }
+  // ctrl+p / ctrl+n cycle session history; arrow keys are reserved for
+  // entry-list navigation so the palette behaves like fzf / readline.
+  if (event.event.ctrl && (name === "p" || name === "n")) {
+    return cycleHistory(state, name === "p" ? -1 : 1);
+  }
   if (name === "up") {
-    const inHistory = state.historyIdx !== null;
-    const enterHistory = !inHistory && state.filter.length === 0 && state.history.length > 0;
-    if (inHistory || enterHistory) {
-      const nextIdx = inHistory ? Math.max(state.historyIdx! - 1, 0) : state.history.length - 1;
-      const recalled = state.history[nextIdx]!;
-      return {
-        overlay: packed({
-          ...state,
-          historyIdx: nextIdx,
-          filter: recalled,
-          entries: filteredEntries(state.allEntries, recalled),
-          highlight: 0,
-        }),
-        effects: [],
-      };
-    }
     if (state.entries.length === 0) return { overlay: packed(state), effects: [] };
     return {
       overlay: packed({ ...state, highlight: Math.max(state.highlight - 1, 0) }),

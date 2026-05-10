@@ -83,54 +83,74 @@ describe("reducePalette navigation", () => {
     expect(s.highlight).toBe(0);
   });
 
-  test("up with non-empty filter never enters history mode", () => {
+  test("up with non-empty filter still navigates highlight, not history", () => {
     let s = openPalette({ commands: cmds, history: ["queue pending"] });
     s = reducePalette(s, key("q")).overlay!.state as PaletteState;
     s = reducePalette(s, key("up")).overlay!.state as PaletteState;
     expect(s.historyIdx).toBeNull();
     expect(s.filter).toBe("q");
   });
+
+  test("up at empty filter does NOT enter history (history is ctrl+p only)", () => {
+    let s = openPalette({ commands: cmds, history: ["marked", "queue pending"] });
+    s = reducePalette(s, key("up")).overlay!.state as PaletteState;
+    expect(s.historyIdx).toBeNull();
+    expect(s.filter).toBe("");
+  });
 });
 
-describe("reducePalette history", () => {
+function ctrlKey(name: string) {
+  return { kind: "key" as const, event: { name, ctrl: true } };
+}
+
+describe("reducePalette history (ctrl+p / ctrl+n)", () => {
   const hist = ["queue pending", "by-source llm", "marked"];
 
-  test("empty-filter up enters history at most-recent entry", () => {
+  test("ctrl+p at empty filter enters history at most-recent entry", () => {
     let s = openPalette({ commands: cmds, history: hist });
-    s = reducePalette(s, key("up")).overlay!.state as PaletteState;
+    s = reducePalette(s, ctrlKey("p")).overlay!.state as PaletteState;
     expect(s.historyIdx).toBe(hist.length - 1);
     expect(s.filter).toBe("marked");
   });
 
-  test("subsequent up walks backwards through history", () => {
+  test("subsequent ctrl+p walks backwards through history", () => {
     let s = openPalette({ commands: cmds, history: hist });
-    s = reducePalette(s, key("up")).overlay!.state as PaletteState;
-    s = reducePalette(s, key("up")).overlay!.state as PaletteState;
+    s = reducePalette(s, ctrlKey("p")).overlay!.state as PaletteState;
+    s = reducePalette(s, ctrlKey("p")).overlay!.state as PaletteState;
     expect(s.historyIdx).toBe(1);
     expect(s.filter).toBe("by-source llm");
   });
 
-  test("up at oldest history entry stays put", () => {
+  test("ctrl+p at oldest history entry stays put", () => {
     let s = openPalette({ commands: cmds, history: hist });
     for (let i = 0; i < 10; i++) {
-      s = reducePalette(s, key("up")).overlay!.state as PaletteState;
+      s = reducePalette(s, ctrlKey("p")).overlay!.state as PaletteState;
     }
     expect(s.historyIdx).toBe(0);
     expect(s.filter).toBe("queue pending");
   });
 
+  test("ctrl+n past newest exits history mode and clears filter", () => {
+    let s = openPalette({ commands: cmds, history: hist });
+    s = reducePalette(s, ctrlKey("p")).overlay!.state as PaletteState;
+    expect(s.filter).toBe("marked");
+    s = reducePalette(s, ctrlKey("n")).overlay!.state as PaletteState;
+    expect(s.historyIdx).toBeNull();
+    expect(s.filter).toBe("");
+  });
+
   test("typing while in history mode exits history and treats filter as fresh", () => {
     let s = openPalette({ commands: cmds, history: hist });
-    s = reducePalette(s, key("up")).overlay!.state as PaletteState;
+    s = reducePalette(s, ctrlKey("p")).overlay!.state as PaletteState;
     expect(s.filter).toBe("marked");
     s = reducePalette(s, key("x")).overlay!.state as PaletteState;
     expect(s.historyIdx).toBeNull();
     expect(s.filter).toBe("markedx");
   });
 
-  test("empty history with up is a no-op", () => {
+  test("ctrl+p with empty history is a no-op", () => {
     let s = openPalette({ commands: cmds, history: [] });
-    s = reducePalette(s, key("up")).overlay!.state as PaletteState;
+    s = reducePalette(s, ctrlKey("p")).overlay!.state as PaletteState;
     expect(s.historyIdx).toBeNull();
     expect(s.filter).toBe("");
   });
@@ -143,9 +163,9 @@ describe("reducePalette commit", () => {
     const r = reducePalette(s, { kind: "commit" });
     expect(r.overlay).toBeNull();
     expect(r.effects).toEqual([
-      { kind: "runCommand", commandName: "palette.queue", argument: undefined },
-      { kind: "pushPaletteHistory", entry: "q" },
       { kind: "close" },
+      { kind: "pushPaletteHistory", entry: "q" },
+      { kind: "runCommand", commandName: "palette.queue", argument: undefined },
     ]);
   });
 
@@ -168,7 +188,8 @@ describe("reducePalette commit", () => {
       s = reducePalette(s, k).overlay!.state as PaletteState;
     }
     const r = reducePalette(s, { kind: "commit" });
-    expect(r.effects[0]).toEqual({
+    const runCmd = r.effects.find((e) => e.kind === "runCommand");
+    expect(runCmd).toEqual({
       kind: "runCommand",
       commandName: "palette.queue",
       argument: "low-confidence",
@@ -185,7 +206,8 @@ describe("reducePalette commit", () => {
       s = reducePalette(s, key(ch)).overlay!.state as PaletteState;
     }
     const r = reducePalette(s, { kind: "commit" });
-    expect(r.effects[0]).toEqual({
+    const runCmd = r.effects.find((e) => e.kind === "runCommand");
+    expect(runCmd).toEqual({
       kind: "runCommand",
       commandName: "palette.by-source",
       argument: "llm:gpt-4",

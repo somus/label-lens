@@ -472,7 +472,10 @@ function renderPalette(state: PaletteState): ReturnType<typeof Box> {
         attributes: i === state.highlight ? TextAttributes.BOLD : TextAttributes.DIM,
       }),
     ),
-    Text({ content: " enter run · esc cancel", attributes: TextAttributes.DIM }),
+    Text({
+      content: " enter run · ↑/↓ navigate · ctrl+p/n history · esc cancel",
+      attributes: TextAttributes.DIM,
+    }),
   );
 }
 
