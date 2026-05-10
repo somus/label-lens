@@ -9,7 +9,7 @@ import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
-import type { ResolvedDisplay } from "../render/capability.ts";
+import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { progressCounts, recentReviews } from "../store/queries.ts";
 import { type QueueId, resolveQueue } from "../store/queues/registry.ts";
@@ -51,8 +51,15 @@ export function mountReviewScreen(args: {
     const counts = progressCounts(app.db);
     const reviewedTotal = counts.accepted + counts.relabeled + counts.rejected;
     const bandRows = Math.max(8, renderer.terminalHeight - NON_BAND_ROWS);
-    const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
-    const nextN = Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - app.display.candidatePin)));
+    const mode = pickLayout(app.display.layout, renderer.terminalWidth);
+    const prevN =
+      mode === "split"
+        ? Math.max(MIN_WINDOW, bandRows)
+        : Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
+    const nextN =
+      mode === "split"
+        ? 0
+        : Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - app.display.candidatePin)));
     const window = cursor?.window(prevN, nextN) ?? {
       records: [],
       focusedIndex: -1,
@@ -85,45 +92,21 @@ export function mountReviewScreen(args: {
 
         Box({ height: 1 }),
 
-        bandRegion(window.records, window.focusedIndex, window.startIndex, app.display),
-
-        record?.primaryPrediction
-          ? Box(
-              { flexDirection: "row", marginTop: 1 },
-              Text({
-                content: ` src ${record.primaryPrediction.source}   →   ${record.primaryPrediction.label}${
-                  record.primaryPrediction.confidence !== null
-                    ? `  (${Math.round(record.primaryPrediction.confidence * 100)}%)`
-                    : ""
-                }`,
-                attributes: TextAttributes.DIM,
-              }),
-            )
-          : Box({}),
-
-        record ? labelListBox(app.config.labels, record.primaryPrediction?.label ?? null) : Box({}),
-
-        record?.note
-          ? Box(
-              { flexDirection: "row", marginTop: 1 },
-              Text({
-                content: ` note: ${truncate(record.note, 200)}${record.note.length > 200 ? " (press n for full)" : ""}`,
-                attributes: TextAttributes.DIM,
-              }),
-            )
-          : Box({}),
-
-        Box({ height: 1 }),
-
-        history.length > 0
-          ? Box(
-              { flexDirection: "row" },
-              Text({
-                content: ` history: ${formatHistory(history)}`,
-                attributes: TextAttributes.DIM,
-              }),
-            )
-          : Box({}),
+        mode === "split"
+          ? splitBody({
+              window,
+              record,
+              labels: app.config.labels,
+              history,
+              display: app.display,
+            })
+          : stackBody({
+              window,
+              record,
+              labels: app.config.labels,
+              history,
+              display: app.display,
+            }),
 
         app.overlay ? renderOverlay(app.overlay) : Box({}),
 
@@ -175,6 +158,141 @@ export function mountReviewScreen(args: {
       renderer.keyInput.off("keypress", onKey);
     },
   };
+}
+
+type BodyArgs = {
+  window: { records: RecordWithPrimaryPrediction[]; focusedIndex: number; startIndex: number };
+  record: RecordWithPrimaryPrediction | null;
+  labels: Parameters<typeof labelName>[0][];
+  history: StoredReview[];
+  display: ResolvedDisplay;
+};
+
+function stackBody(args: BodyArgs): ReturnType<typeof Box> {
+  const { window, record, labels, history, display } = args;
+  return Box(
+    { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+    bandRegion(window.records, window.focusedIndex, window.startIndex, display),
+    predictionLine(record),
+    record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
+    noteLine(record),
+    Box({ height: 1 }),
+    historyLine(history),
+  );
+}
+
+function splitBody(args: BodyArgs): ReturnType<typeof Box> {
+  const { window, record, labels, history, display } = args;
+  const before = window.records.slice(0, Math.max(0, window.focusedIndex));
+  const focused = window.focusedIndex >= 0 ? (window.records[window.focusedIndex] ?? null) : null;
+  const focusedAbsolute = window.startIndex + Math.max(0, window.focusedIndex);
+  return Box(
+    { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
+    Box(
+      {
+        flexDirection: "column",
+        flexBasis: 0,
+        flexGrow: 1,
+        overflow: "hidden",
+        justifyContent: "flex-end",
+      },
+      ...before.map((r, i) =>
+        BandedRecord({
+          text: r.text,
+          isFocused: false,
+          bandSlot: slotFor(window.startIndex + i),
+          display,
+        }),
+      ),
+    ),
+    Box(
+      { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
+      focused
+        ? centerColumnFocused(focused, focusedAbsolute, display)
+        : Box(
+            { flexGrow: 1, padding: 2 },
+            Text({
+              content: "All records reviewed. Press q to quit.",
+              attributes: TextAttributes.DIM,
+            }),
+          ),
+    ),
+    Box(
+      { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
+      historyLine(history),
+      predictionLine(record),
+      record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
+      noteLine(record),
+    ),
+  );
+}
+
+function centerColumnFocused(
+  focused: RecordWithPrimaryPrediction,
+  focusedAbsolute: number,
+  display: ResolvedDisplay,
+): ReturnType<typeof Box> {
+  const pin = display.candidatePin;
+  return Box(
+    { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+    Box({
+      flexDirection: "column",
+      flexBasis: 0,
+      flexGrow: pin,
+      flexShrink: 0,
+      overflow: "hidden",
+    }),
+    Box(
+      {
+        flexDirection: "column",
+        flexBasis: 0,
+        flexGrow: 1 - pin,
+        flexShrink: 1,
+        overflow: "hidden",
+      },
+      BandedRecord({
+        text: focused.text,
+        isFocused: true,
+        bandSlot: slotFor(focusedAbsolute),
+        display,
+      }),
+    ),
+  );
+}
+
+function predictionLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
+  if (!record?.primaryPrediction) return Box({});
+  const p = record.primaryPrediction;
+  const conf = p.confidence !== null ? `  (${Math.round(p.confidence * 100)}%)` : "";
+  return Box(
+    { flexDirection: "row", marginTop: 1 },
+    Text({
+      content: ` src ${p.source}   →   ${p.label}${conf}`,
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
+  if (!record?.note) return Box({});
+  return Box(
+    { flexDirection: "row", marginTop: 1 },
+    Text({
+      content: ` note: ${truncate(record.note, 200)}${record.note.length > 200 ? " (press n for full)" : ""}`,
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function historyLine(history: StoredReview[]): ReturnType<typeof Box> {
+  if (history.length === 0) return Box({});
+  return Box(
+    { flexDirection: "row" },
+    Text({
+      content: ` history: ${formatHistory(history)}`,
+      attributes: TextAttributes.DIM,
+    }),
+  );
 }
 
 function bandRegion(

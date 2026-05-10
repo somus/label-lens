@@ -7,6 +7,7 @@ export type DisplayConfig = {
   banding?: "on" | "off" | "auto";
   theme?: "light" | "dark" | "auto";
   candidatePin?: number;
+  layout?: "auto" | "stack" | "split";
 };
 
 export type LabellensConfig = {
@@ -49,6 +50,7 @@ export function defaultConfig(args: {
       banding: "auto",
       theme: "auto",
       candidatePin: 0.4,
+      layout: "auto",
     },
   };
 }

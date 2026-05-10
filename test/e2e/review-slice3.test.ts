@@ -23,6 +23,7 @@ const TRUECOLOR_LIGHT: ResolvedDisplay = {
   banding: true,
   theme: "light",
   candidatePin: 0.4,
+  layout: "auto",
 };
 
 const SIXTEEN_LIGHT: ResolvedDisplay = {
@@ -30,6 +31,7 @@ const SIXTEEN_LIGHT: ResolvedDisplay = {
   banding: false,
   theme: "light",
   candidatePin: 0.4,
+  layout: "auto",
 };
 
 const MONO_LIGHT: ResolvedDisplay = {
@@ -37,6 +39,7 @@ const MONO_LIGHT: ResolvedDisplay = {
   banding: false,
   theme: "light",
   candidatePin: 0.4,
+  layout: "auto",
 };
 
 const TWO_FIFTY_SIX_LIGHT: ResolvedDisplay = {
@@ -44,6 +47,7 @@ const TWO_FIFTY_SIX_LIGHT: ResolvedDisplay = {
   banding: true,
   theme: "light",
   candidatePin: 0.4,
+  layout: "auto",
 };
 
 const TRUECOLOR_DARK: ResolvedDisplay = { ...TRUECOLOR_LIGHT, theme: "dark" };

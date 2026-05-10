@@ -12,12 +12,23 @@ export type Capability = {
   color: CapabilityColor;
 };
 
+export type Layout = "auto" | "stack" | "split";
+
 export type ResolvedDisplay = {
   color: CapabilityColor;
   banding: boolean;
   theme: "light" | "dark";
   candidatePin: number;
+  layout: Layout;
 };
+
+const SPLIT_MIN_WIDTH = 160;
+
+export function pickLayout(layout: Layout, terminalWidth: number): "stack" | "split" {
+  if (layout === "stack") return "stack";
+  if (layout === "split") return "split";
+  return terminalWidth >= SPLIT_MIN_WIDTH ? "split" : "stack";
+}
 
 export function detectCapability(env: CapabilityEnv): Capability {
   if (env.NO_COLOR !== undefined && env.NO_COLOR !== "") return { color: "mono" };
@@ -56,7 +67,8 @@ export function resolveDisplay(args: {
     themeOverride && themeOverride !== "auto" ? themeOverride : (args.detectedTheme ?? "light");
   const pin = args.config?.candidatePin ?? 0.4;
   const candidatePin = Math.max(0.05, Math.min(0.95, pin));
-  return { color, banding, theme, candidatePin };
+  const layout: Layout = args.config?.layout ?? "auto";
+  return { color, banding, theme, candidatePin, layout };
 }
 
 export type ThemeProbe = {
@@ -65,7 +77,13 @@ export type ThemeProbe = {
 
 /** Lowest-common-denominator display. Test-only — production paths must call `bootstrapDisplay`. */
 export function defaultDisplay(): ResolvedDisplay {
-  return { color: "mono", banding: false, theme: "light", candidatePin: 0.4 };
+  return {
+    color: "mono",
+    banding: false,
+    theme: "light",
+    candidatePin: 0.4,
+    layout: "auto",
+  };
 }
 
 export async function bootstrapDisplay(args: {

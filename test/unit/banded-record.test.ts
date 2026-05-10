@@ -7,6 +7,7 @@ const truecolorLight: ResolvedDisplay = {
   banding: true,
   theme: "light",
   candidatePin: 0.4,
+  layout: "auto",
 };
 
 const truecolorDark: ResolvedDisplay = { ...truecolorLight, theme: "dark" };
@@ -16,6 +17,7 @@ const sixteenLight: ResolvedDisplay = {
   banding: false,
   theme: "light",
   candidatePin: 0.4,
+  layout: "auto",
 };
 
 const monoLight: ResolvedDisplay = { ...sixteenLight, color: "mono" };
