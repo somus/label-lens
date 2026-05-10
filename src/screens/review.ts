@@ -11,7 +11,7 @@ import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Text, TextAttributes } from "../render/text.ts";
-import { progressCounts, recentReviews } from "../store/queries.ts";
+import { type HistoryEntry, progressCounts, recentReviewsWithText } from "../store/queries.ts";
 import { type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import { hasTag } from "../store/tags.ts";
 import type { RecordWithPrimaryPrediction, StoredReview } from "../types.ts";
@@ -61,7 +61,7 @@ export function mountReviewScreen(args: {
     };
     const record = cursor?.current() ?? null;
     const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
-    const history = recentReviews(app.db, 5);
+    const history = recentReviewsWithText(app.db, 5);
     const marked = record ? hasTag(app.db, record.id, "marked") : false;
     const queueLabel = resolveQueue(queueId).label;
     const queueTotal = cursor?.total ?? 0;
@@ -162,7 +162,7 @@ type BodyArgs = {
   window: { records: RecordWithPrimaryPrediction[]; focusedIndex: number; startIndex: number };
   record: RecordWithPrimaryPrediction | null;
   labels: Parameters<typeof labelName>[0][];
-  history: StoredReview[];
+  history: HistoryEntry[];
   display: ResolvedDisplay;
 };
 
@@ -175,7 +175,7 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
     noteLine(record),
     Box({ height: 1 }),
-    historyLine(history),
+    historyBlock(history),
   );
 }
 
@@ -201,7 +201,7 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
           flexShrink: 1,
           overflow: "hidden",
         },
-        historyLine(history),
+        historyBlock(history),
         predictionLine(record),
         record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
         noteLine(record),
@@ -234,15 +234,22 @@ function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof
   );
 }
 
-function historyLine(history: StoredReview[]): ReturnType<typeof Box> {
+function historyBlock(history: HistoryEntry[]): ReturnType<typeof Box> {
   if (history.length === 0) return Box({});
   return Box(
-    { flexDirection: "row" },
-    Text({
-      content: ` history: ${formatHistory(history)}`,
-      attributes: TextAttributes.DIM,
-    }),
+    { flexDirection: "column" },
+    Text({ content: " history:", attributes: TextAttributes.DIM }),
+    ...history.map((h) =>
+      Text({
+        content: ` ${STATUS_SYMBOL[h.status] ?? "?"} ${labelOrDash(h.final_label ?? h.prev_label)}  ${truncate(h.recordText, 32)}`,
+        attributes: TextAttributes.DIM,
+      }),
+    ),
   );
+}
+
+function labelOrDash(s: string | null): string {
+  return s ?? "—";
 }
 
 function bandRegion(
@@ -375,20 +382,6 @@ function renderNote(state: NoteState): ReturnType<typeof Box> {
       attributes: TextAttributes.DIM,
     }),
   );
-}
-
-function formatHistory(history: StoredReview[]): string {
-  return history
-    .map((h) => {
-      const sym = STATUS_SYMBOL[h.status] ?? "?";
-      const lbl = h.final_label ?? h.prev_label ?? "";
-      return `${shortId(h.record_id)} ${sym} ${lbl}`;
-    })
-    .join("  ·  ");
-}
-
-function shortId(id: string): string {
-  return id.slice(0, 6);
 }
 
 function truncate(s: string, n: number): string {

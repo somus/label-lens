@@ -41,7 +41,6 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   │ Amazon order #12345                                                                             
   │ Netflix monthly                                                                                 
-  │ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   travel  (88%)                                                                 
                                                                                                     
@@ -49,7 +48,8 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
   2 travel >                                                                                        
   3 other                                                                                           
                                                                                                     
-  history: 21b86d + food                                                                            
+  history:                                                                                          
+  + food  Lunch at Zomato Bangalore                                                                 
   a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
  queue   ] next queue   q quit                                                                      
                                                                                                     
@@ -100,12 +100,12 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-  history: fee815 + ENTRY_START  ·  411293 + food  ·  7c11c2 + other  ·  f207ce + food  ·  bf0403   
- + rent                                                                                             
+  history:                                                                                          
+  + ENTRY_START  Senior Engineer at Acme                                                            
+  + food  Refund from Swiggy                                                                        
+  + other  ATM withdrawal                                                                           
+  + food  Coffee at Blue Tokai                                                                      
+  + rent  Rent transfer to landlord                                                                 
   a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev    
  queue   ] next queue   q quit                                                                      
                                                                                                     
