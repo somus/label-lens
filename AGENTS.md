@@ -101,6 +101,7 @@ bun run dev:up -- --reset                    # wipe + reseed before launching
 bun run dev:up -- --count 1000 --seed 42     # bigger / different dataset (only on first init or --reset)
 bun run dev:up -- --with-marks 5             # pre-tag N records as marked (default 5)
 bun run dev:up -- --with-reviews 8           # pre-insert N reviews — half accepted, half relabeled (default 8)
+bun run dev:up -- --with-duplicates 3        # inject an exact-duplicate cluster of N records (default 3, 0 disables; needs --count >= 50)
 bun run dev:up -- --no-prefill               # skip the marks + reviews prefill entirely
 LL_DEV_DIR=/tmp/foo bun run dev:up           # alternate dir
 ```

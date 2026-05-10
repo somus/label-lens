@@ -1,4 +1,5 @@
 import type { CliRenderer } from "@opentui/core";
+import { sql } from "drizzle-orm";
 import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, enterReview } from "../app/context.ts";
@@ -16,11 +17,21 @@ import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { Markdown } from "../render/markdown.ts";
 import { Text, TextAttributes } from "../render/text.ts";
+import type { Db } from "../store/db.ts";
+import { issuesForRecord, type StoredIssue } from "../store/issues.ts";
 import { type HistoryEntry, progressCounts, recentReviewsWithText } from "../store/queries.ts";
 import { type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import { hasTag } from "../store/tags.ts";
 import type { RecordWithPrimaryPrediction, StoredReview } from "../types.ts";
 import { renderDocView } from "./doc-view.ts";
+
+function countPredictions(db: Db, recordId: string): number {
+  return (
+    db.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM predictions WHERE record_id = ${recordId}`,
+    )[0]?.n ?? 0
+  );
+}
 
 export type ReviewScreenHandle = {
   destroy: () => void;
@@ -88,6 +99,8 @@ export function mountReviewScreen(args: {
     const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
     const history = recentReviewsWithText(app.db, 5);
     const marked = record ? hasTag(app.db, record.id, "marked") : false;
+    const issues = record ? issuesForRecord(app.db, record.id) : [];
+    const predictionCount = record ? countPredictions(app.db, record.id) : 0;
     const queueLabel = resolveQueue(queueId).label;
     const queueTotal = cursor?.total ?? 0;
     const queuePosition = queueTotal === 0 ? 0 : (cursor?.position ?? 0) + 1;
@@ -119,6 +132,9 @@ export function mountReviewScreen(args: {
               history,
               display: app.display,
               contextStrip: contextStripFor(app, record),
+              issues,
+              totalRecords: counts.total,
+              predictionCount,
             })
           : stackBody({
               window,
@@ -127,6 +143,9 @@ export function mountReviewScreen(args: {
               contextStrip: contextStripFor(app, record),
               history,
               display: app.display,
+              issues,
+              totalRecords: counts.total,
+              predictionCount,
             }),
 
         app.overlay ? renderOverlay(app.overlay) : Box({}),
@@ -196,6 +215,9 @@ type BodyArgs = {
   history: HistoryEntry[];
   display: ResolvedDisplay;
   contextStrip: ContextStrip | null;
+  issues: StoredIssue[];
+  totalRecords: number;
+  predictionCount: number;
 };
 
 function contextStripFor(
@@ -211,11 +233,22 @@ function contextStripFor(
 }
 
 function stackBody(args: BodyArgs): ReturnType<typeof Box> {
-  const { window, record, labels, history, display, contextStrip } = args;
+  const {
+    window,
+    record,
+    labels,
+    history,
+    display,
+    contextStrip,
+    issues,
+    totalRecords,
+    predictionCount,
+  } = args;
   return Box(
     { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
     bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
     predictionLine(record),
+    issueBadges(issues, totalRecords, predictionCount),
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
     noteLine(record),
     Box({ height: 1 }),
@@ -224,7 +257,17 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
 }
 
 function splitBody(args: BodyArgs): ReturnType<typeof Box> {
-  const { window, record, labels, history, display, contextStrip } = args;
+  const {
+    window,
+    record,
+    labels,
+    history,
+    display,
+    contextStrip,
+    issues,
+    totalRecords,
+    predictionCount,
+  } = args;
   const pin = display.candidatePin;
   return Box(
     { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
@@ -247,11 +290,52 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
         },
         historyBlock(history),
         predictionLine(record),
+        issueBadges(issues, totalRecords, predictionCount),
         record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
         noteLine(record),
       ),
     ),
   );
+}
+
+function issueBadges(
+  issues: StoredIssue[],
+  totalRecords: number,
+  predictionCount: number,
+): ReturnType<typeof Box> {
+  if (issues.length === 0) return Box({});
+  // Stable order so snapshots are deterministic regardless of insert order.
+  const sorted = [...issues].sort((a, b) => a.type.localeCompare(b.type));
+  return Box(
+    { flexDirection: "column", marginTop: 1 },
+    ...sorted.map((i) =>
+      Text({
+        content: ` ! ${badgeCopy(i, totalRecords, predictionCount)}`,
+        attributes: TextAttributes.DIM,
+      }),
+    ),
+  );
+}
+
+function badgeCopy(issue: StoredIssue, totalRecords: number, predictionCount: number): string {
+  const score = issue.score ?? 0;
+  switch (issue.type) {
+    case "low_confidence": {
+      const confPct = Math.round((1 - score) * 100);
+      return `Model is uncertain (confidence ${confPct}%)`;
+    }
+    case "source_disagreement": {
+      const n = Math.max(predictionCount, 2);
+      const agreed = Math.max(1, Math.round((1 - score) * n));
+      return `Sources disagree on this record (${agreed}/${n} sources agreed)`;
+    }
+    case "exact_duplicate": {
+      const groupSize = Math.max(2, Math.round(score * totalRecords));
+      return `Identical text appears ${groupSize} times in this dataset`;
+    }
+    default:
+      return `${issue.type}${score ? ` (${score.toFixed(2)})` : ""}`;
+  }
 }
 
 function predictionLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
