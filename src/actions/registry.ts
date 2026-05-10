@@ -1,6 +1,22 @@
 import { quit } from "./app/quit.ts";
 import { bindingsFor, buildRegistry, type Command, type CommandRegistry } from "./command.ts";
 import { DOC_VIEW_COMMANDS } from "./doc/doc-view-commands.ts";
+import { guidelinesShow } from "./guidelines/show.ts";
+import { helpShow } from "./help/show.ts";
+import { paletteGuidelines } from "./palette/guidelines.ts";
+import { paletteHelp } from "./palette/help.ts";
+import { paletteOpen } from "./palette/open.ts";
+import {
+  paletteByCorrection,
+  paletteByIssue,
+  paletteByLabel,
+  paletteByReason,
+  paletteBySource,
+  paletteMarked,
+  paletteQueue,
+  paletteWhere,
+} from "./palette/queue.ts";
+import { paletteAssistant, paletteExport, paletteReload, paletteStats } from "./palette/stubs.ts";
 import { nextQueue, prevQueue } from "./queue/cycle-queue.ts";
 import { openQueueScreen } from "./queue/open-screen.ts";
 import { queueSwitchCommands } from "./queue/switch.ts";
@@ -30,6 +46,23 @@ export const ALL_COMMANDS: Command[] = [
   ...queueSwitchCommands,
   showDoc,
   ...DOC_VIEW_COMMANDS,
+  paletteOpen,
+  helpShow,
+  guidelinesShow,
+  paletteQueue,
+  paletteBySource,
+  paletteByReason,
+  paletteByLabel,
+  paletteByIssue,
+  paletteByCorrection,
+  paletteWhere,
+  paletteMarked,
+  paletteGuidelines,
+  paletteHelp,
+  paletteStats,
+  paletteExport,
+  paletteAssistant,
+  paletteReload,
   quit,
 ];
 

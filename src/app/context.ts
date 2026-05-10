@@ -1,3 +1,4 @@
+import type { CommandRegistry } from "../actions/command.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import type { Overlay } from "../overlay/types.ts";
@@ -52,7 +53,19 @@ export type AppContext = {
    * screen unavailable" rather than crashing.
    */
   openQueueScreen?: () => void;
+  paletteHistory: string[];
+  pushPaletteHistory(entry: string): void;
+  /**
+   * Set by the screen at mount so palette/help commands can read the active
+   * registry without each command importing the global one. Unset in unit
+   * tests that drive a single Command directly.
+   */
+  commandRegistry?: CommandRegistry;
+  /** Active scope for palette + help filtering (review / queue / stats). */
+  activeScope?: import("../keymap/engine.ts").Scope;
 };
+
+export const PALETTE_HISTORY_LIMIT = 50;
 
 export function createAppContext(args: {
   db: Db;
@@ -128,6 +141,17 @@ export function createAppContext(args: {
     closeOverlay() {
       ctx.overlay = null;
       ctx.requestRender();
+    },
+    paletteHistory: [],
+    pushPaletteHistory(entry) {
+      const trimmed = entry.trim();
+      if (trimmed.length === 0) return;
+      const existing = ctx.paletteHistory.indexOf(trimmed);
+      if (existing !== -1) ctx.paletteHistory.splice(existing, 1);
+      ctx.paletteHistory.push(trimmed);
+      if (ctx.paletteHistory.length > PALETTE_HISTORY_LIMIT) {
+        ctx.paletteHistory.splice(0, ctx.paletteHistory.length - PALETTE_HISTORY_LIMIT);
+      }
     },
   };
   return ctx;

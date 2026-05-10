@@ -107,6 +107,24 @@ describe("dispatch", () => {
     expect(ctx.flash?.message).toContain("expected boom");
   });
 
+  test("forwards optional argument to Command.run", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ctx = makeCtx(store.db);
+    let received: string | undefined = "untouched";
+    const cmd: Command = {
+      name: "echo",
+      scope: "global",
+      run: (_c, arg) => {
+        received = arg;
+      },
+    };
+    const registry = buildRegistry([cmd]);
+    await dispatch(registry, "review", ctx, "echo", "hello");
+    expect(received).toBe("hello");
+    await dispatch(registry, "review", ctx, "echo");
+    expect(received).toBeUndefined();
+  });
+
   test("awaits async run", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ctx = makeCtx(store.db);

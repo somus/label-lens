@@ -76,6 +76,19 @@ describe("createChordResolver", () => {
     expect(r.feed("doc-view", { name: "g" }, 50)).toBe("doc.top");
   });
 
+  test("g g (review-scope guidelines) and g d (review-scope doc-jump) coexist", () => {
+    const bindings: Binding[] = [
+      { key: "g g", action: "guidelines.show", scope: "global" },
+      { key: "g d", action: "record.show-doc", scope: "review" },
+    ];
+    const a = createChordResolver(bindings, { windowMs: 200 });
+    expect(a.feed("review", { name: "g" }, 0)).toBeNull();
+    expect(a.feed("review", { name: "g" }, 50)).toBe("guidelines.show");
+    const b = createChordResolver(bindings, { windowMs: 200 });
+    expect(b.feed("review", { name: "g" }, 0)).toBeNull();
+    expect(b.feed("review", { name: "d" }, 50)).toBe("record.show-doc");
+  });
+
   test("reset() drops pending first-key buffer", () => {
     const r = createChordResolver(BINDINGS, { windowMs: 200 });
     r.feed("review", { name: "g" }, 0);

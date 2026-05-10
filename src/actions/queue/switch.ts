@@ -22,25 +22,26 @@ export function switchQueue(ctx: AppContext, queueId: QueueId): void {
   ctx.requestRender();
 }
 
-const STATIC_QUEUES: { id: QueueId; palette: string }[] = [
-  { id: "pending", palette: "Switch queue: Pending" },
-  { id: "skipped", palette: "Switch queue: Skipped" },
-  { id: "low-confidence", palette: "Switch queue: Low confidence" },
-  { id: "disagreements", palette: "Switch queue: Disagreements" },
-  { id: "flagged", palette: "Switch queue: Flagged" },
-  { id: "marked", palette: "Switch queue: Marked" },
+const STATIC_QUEUES: QueueId[] = [
+  "pending",
+  "skipped",
+  "low-confidence",
+  "disagreements",
+  "flagged",
+  "marked",
 ];
 
-function switchCommand(id: QueueId, palette: string): Command {
+// Palette-discoverable switching is the parametric `palette.queue` command
+// (e.g., `:queue pending`). These per-queue commands stay in the registry
+// for direct dispatch by name (cli/run.ts and tests reference them) but no
+// longer surface in the palette overlay.
+function switchCommand(id: QueueId): Command {
   return {
     name: `queue.switch.${id}`,
     scope: "global",
-    palette,
     enabled: () => true,
     run: (ctx) => switchQueue(ctx, id),
   };
 }
 
-export const queueSwitchCommands: Command[] = STATIC_QUEUES.map((q) =>
-  switchCommand(q.id, q.palette),
-);
+export const queueSwitchCommands: Command[] = STATIC_QUEUES.map(switchCommand);

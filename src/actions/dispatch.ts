@@ -13,6 +13,7 @@ export async function dispatch(
   scope: Scope,
   ctx: ActionContext,
   actionName: string,
+  argument?: string,
 ): Promise<DispatchResult> {
   const cmd = registry.get(actionName);
   if (!cmd) return { kind: "unknown", action: actionName };
@@ -28,7 +29,7 @@ export async function dispatch(
     return { kind: "disabled", action: actionName };
   }
   try {
-    await cmd.run(ctx);
+    await cmd.run(ctx, argument);
     return { kind: "ok", action: actionName };
   } catch (err) {
     ctx.setFlash(formatError(actionName, err), "error");

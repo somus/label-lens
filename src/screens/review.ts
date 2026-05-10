@@ -5,12 +5,16 @@ import { type AppContext, enterReview } from "../app/context.ts";
 import { labelName } from "../config/config.ts";
 import { createChordResolver } from "../keymap/chord.ts";
 import { applyEffects } from "../overlay/effects.ts";
+import type { GuidelinesState } from "../overlay/guidelines.ts";
+import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
+import type { PaletteState } from "../overlay/palette.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { splitContextLines } from "../render/context-strip.ts";
+import { Markdown } from "../render/markdown.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { type HistoryEntry, progressCounts, recentReviewsWithText } from "../store/queries.ts";
 import { type QueueId, resolveQueue } from "../store/queues/registry.ts";
@@ -44,9 +48,13 @@ export function mountReviewScreen(args: {
   const registry = args.registry ?? defaultRegistry();
   const initialQueueId = args.initialQueueId ?? "pending";
   enterReview(app, initialQueueId);
+  app.commandRegistry = registry;
+  app.activeScope = "review";
   const bindings = bindingsFor([...registry.values()]);
 
   const chord = createChordResolver(bindings);
+  const dispatchCommand = (name: string, argument?: string): Promise<void> =>
+    dispatch(registry, app.activeScope ?? "review", app, name, argument).then(() => undefined);
   let lastDocViewActive = false;
   let lastOverlayActive = false;
 
@@ -134,7 +142,7 @@ export function mountReviewScreen(args: {
           : Box(
               { flexDirection: "row" },
               Text({
-                content: ` a accept   r relabel   x reject   s skip   m ${marked ? "unmark" : "mark"}   n note   u undo   j next   k prev${app.config.task === "boundary" ? "   gd doc" : ""}   [ prev queue   ] next queue   q quit`,
+                content: ` a accept · r relabel · x reject · s skip · m ${marked ? "unmark" : "mark"} · n note · u undo · j/k next/prev${app.config.task === "boundary" ? " · gd doc" : ""} · [/] queue · : cmd · ? help · gg guide · q quit`,
                 attributes: TextAttributes.DIM,
               }),
             ),
@@ -149,11 +157,12 @@ export function mountReviewScreen(args: {
       const result = reduceOverlay(app.overlay, { kind: "key", event });
       app.overlay = result.overlay;
       const queueId = app.queueId ?? initialQueueId;
-      applyEffects(app, queueId, result.effects);
+      applyEffects(app, queueId, result.effects, dispatchCommand);
       renderState();
       return;
     }
     const scope = app.docView ? "doc-view" : "review";
+    app.activeScope = scope;
     const action = chord.feed(scope, {
       name: event.name,
       ctrl: event.ctrl,
@@ -411,7 +420,76 @@ function renderOverlay(overlay: Overlay): ReturnType<typeof Box> {
         { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
         Text({ content: " assistant overlay (slice 11)" }),
       );
+    case "palette":
+      return renderPalette(overlay.state);
+    case "help":
+      return renderHelp(overlay.state);
+    case "guidelines":
+      return renderGuidelines(overlay.state);
   }
+}
+
+function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
+  // Slice the markdown source by line so the reducer's scroll counter
+  // actually drives what the user sees. MarkdownRenderable doesn't expose
+  // a viewport; line-slice keeps it simple and matches the up/down=1,
+  // pgup/pgdn=10 model.
+  const lines = state.content.split("\n");
+  const total = lines.length;
+  const start = Math.min(state.scroll, Math.max(total - 1, 0));
+  const sliced = lines.slice(start).join("\n");
+  const moreAbove = start > 0;
+  const titleSuffix = total > 1 ? `   line ${start + 1}/${total}` : "";
+  return Box(
+    {
+      flexDirection: "column",
+      borderStyle: "rounded",
+      padding: 1,
+      marginTop: 1,
+      flexGrow: 1,
+    },
+    Text({ content: ` ${state.title}${titleSuffix}${moreAbove ? "   ↑ above" : ""}` }),
+    Markdown({ content: sliced }),
+    Text({
+      content: " ↑/↓ scroll · pgup/pgdn page · esc close",
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function renderHelp(state: HelpState): ReturnType<typeof Box> {
+  const visible = state.entries.slice(state.scroll, state.scroll + HELP_PAGE);
+  const more = state.entries.length - state.scroll - visible.length;
+  return Box(
+    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    Text({
+      content: ` help · ${state.scope} · ${state.entries.length} commands${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
+    }),
+    ...visible.map((e) =>
+      Text({
+        content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
+        attributes: TextAttributes.DIM,
+      }),
+    ),
+    Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
+  );
+}
+
+function renderPalette(state: PaletteState): ReturnType<typeof Box> {
+  return Box(
+    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    Text({ content: ` :${state.filter}_` }),
+    ...state.entries.slice(0, 12).map((e, i) =>
+      Text({
+        content: ` ${e.palette}${i === state.highlight ? "  <-" : ""}`,
+        attributes: i === state.highlight ? TextAttributes.BOLD : TextAttributes.DIM,
+      }),
+    ),
+    Text({
+      content: " enter run · ↑/↓ navigate · ctrl+p/n history · esc cancel",
+      attributes: TextAttributes.DIM,
+    }),
+  );
 }
 
 function renderPicker(state: PickerState): ReturnType<typeof Box> {
