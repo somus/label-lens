@@ -41,10 +41,15 @@ export function renderDocView(app: AppContext, terminalHeight: number): ReturnTy
     );
   }
   const viewport = viewportHeight(terminalHeight);
-  const scrollTop = Math.max(
-    0,
-    Math.min(app.docView.scrollTop, Math.max(0, lines.rows.length - viewport)),
-  );
+  const maxScroll = Math.max(0, lines.rows.length - viewport);
+  const scrollTop = Math.max(0, Math.min(app.docView.scrollTop, maxScroll));
+  // Normalize stored state so subsequent commands see the same upper bound
+  // the renderer enforces. Without this, jumping to bottom (G) leaves
+  // scrollTop > maxScroll and page-up/k presses appear to do nothing until
+  // the value drops below maxScroll.
+  if (scrollTop !== app.docView.scrollTop) {
+    app.docView.scrollTop = scrollTop;
+  }
   const visible = lines.rows.slice(scrollTop, scrollTop + viewport);
   const display = app.display;
 

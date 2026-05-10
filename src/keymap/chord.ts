@@ -1,4 +1,11 @@
-import { type Action, type Binding, type KeyEvent, resolve, type Scope } from "./engine.ts";
+import {
+  type Action,
+  type Binding,
+  eventMatchesKey,
+  type KeyEvent,
+  resolve,
+  type Scope,
+} from "./engine.ts";
 
 export type ChordOptions = {
   windowMs?: number;
@@ -25,8 +32,9 @@ function parseBindings(bindings: Binding[]): { single: Binding[]; chords: Parsed
   const chords: ParsedBinding[] = [];
   for (const b of bindings) {
     if (b.key.includes(" ")) {
+      // Keep raw modifier-aware tokens (e.g. "ctrl+g", "g", "shift+g").
       chords.push({
-        parts: b.key.split(" ").map((s) => s.toLowerCase()),
+        parts: b.key.split(" "),
         action: b.action,
         scope: b.scope,
       });
@@ -37,10 +45,6 @@ function parseBindings(bindings: Binding[]): { single: Binding[]; chords: Parsed
   return { single, chords };
 }
 
-function eventKey(event: KeyEvent): string {
-  return event.name.toLowerCase();
-}
-
 export function createChordResolver(
   bindings: Binding[],
   options: ChordOptions = {},
@@ -49,30 +53,35 @@ export function createChordResolver(
   const clock = options.now ?? (() => Date.now());
   const { single, chords } = parseBindings(bindings);
 
-  let pending: { firstKey: string; scope: Scope; at: number } | null = null;
+  let pending: { firstPart: string; event: KeyEvent; scope: Scope; at: number } | null = null;
 
-  function chordCandidates(scope: Scope, firstKey: string): ParsedBinding[] {
+  function chordCandidatesByFirstKey(scope: Scope, event: KeyEvent): ParsedBinding[] {
     return chords.filter(
-      (c) => (c.scope === scope || c.scope === "global") && c.parts[0] === firstKey,
+      (c) => (c.scope === scope || c.scope === "global") && eventMatchesKey(event, c.parts[0]!),
     );
   }
 
   return {
     feed(scope, event, nowMs) {
       const at = nowMs ?? clock();
-      const key = eventKey(event);
 
       if (pending && at - pending.at <= windowMs && pending.scope === scope) {
-        const matches = chordCandidates(scope, pending.firstKey).filter((c) => c.parts[1] === key);
+        const candidates = chords.filter(
+          (c) =>
+            (c.scope === scope || c.scope === "global") &&
+            c.parts[0] === pending!.firstPart &&
+            eventMatchesKey(event, c.parts[1]!),
+        );
         pending = null;
-        if (matches.length > 0) return matches[0]!.action;
+        if (candidates.length > 0) return candidates[0]!.action;
         return resolve(single, scope, event);
       }
 
       pending = null;
-      const couldStartChord = chordCandidates(scope, key).length > 0;
-      if (couldStartChord) {
-        pending = { firstKey: key, scope, at };
+      const candidates = chordCandidatesByFirstKey(scope, event);
+      if (candidates.length > 0) {
+        // The first key matched a chord prefix; buffer it.
+        pending = { firstPart: candidates[0]!.parts[0]!, event, scope, at };
         return null;
       }
 

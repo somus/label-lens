@@ -52,6 +52,30 @@ describe("createChordResolver", () => {
     expect(r.feed("review", { name: "q" }, 50)).toBe("doc.bottom");
   });
 
+  test("shift+g passes through to single-key resolver even when 'g g' chord exists", () => {
+    const r = createChordResolver(
+      [
+        { key: "g g", action: "doc.top", scope: "doc-view" },
+        { key: "shift+g", action: "doc.bottom", scope: "doc-view" },
+      ],
+      { windowMs: 200 },
+    );
+    // Pressing G (shift+g) must NOT enter the 'g g' chord buffer.
+    expect(r.feed("doc-view", { name: "g", shift: true }, 0)).toBe("doc.bottom");
+  });
+
+  test("plain 'g' still enters the chord buffer when 'g g' chord exists", () => {
+    const r = createChordResolver(
+      [
+        { key: "g g", action: "doc.top", scope: "doc-view" },
+        { key: "shift+g", action: "doc.bottom", scope: "doc-view" },
+      ],
+      { windowMs: 200 },
+    );
+    expect(r.feed("doc-view", { name: "g" }, 0)).toBeNull();
+    expect(r.feed("doc-view", { name: "g" }, 50)).toBe("doc.top");
+  });
+
   test("reset() drops pending first-key buffer", () => {
     const r = createChordResolver(BINDINGS, { windowMs: 200 });
     r.feed("review", { name: "g" }, 0);

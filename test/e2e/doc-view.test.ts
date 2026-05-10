@@ -114,6 +114,54 @@ describe("doc-view screen via g d", () => {
     expect(captureCharFrame()).toContain("DOC1_LINE_2");
   });
 
+  test("G (bottom) then k normalizes scrollTop so up-keys respond immediately", async () => {
+    // Build a doc large enough that bottom-clamp differs from rows.length-1.
+    const dir = mkdtempSync(join(osTmpdir(), "ll-docview-large-"));
+    const inputPath = join(dir, "data.jsonl");
+    const dbPath = join(dir, "state.db");
+    const rows: Record<string, unknown>[] = [];
+    for (let i = 0; i < 50; i++) {
+      rows.push({ text: `LINE_${String(i).padStart(2, "0")}`, meta: { document_id: "doc-x" } });
+    }
+    await Bun.write(inputPath, `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`);
+    const db = openDb(dbPath);
+    await ingestFile(db, inputPath, DEFAULT_FIELDS);
+
+    const { renderer, mockInput, renderOnce } = await createTestRenderer({
+      width: 80,
+      height: 20,
+    });
+    const app = createAppContext({
+      db,
+      config: boundaryConfig(inputPath),
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    mountReviewScreen({ renderer, app });
+    await renderOnce();
+
+    // open doc view
+    mockInput.pressKey("g");
+    await renderOnce();
+    mockInput.pressKey("d");
+    await renderOnce();
+    expect(app.docView).not.toBeNull();
+
+    // jump to bottom: docBottom sets scrollTop = rows.length - 1 = 49.
+    // After renderDocView normalizes, scrollTop must equal maxScroll
+    // (rows.length - viewport) which is < 49.
+    mockInput.pressKey("G", { shift: true });
+    await renderOnce();
+    expect(app.docView!.scrollTop).toBeLessThan(49);
+    const bottomScroll = app.docView!.scrollTop;
+
+    // pressing k once must immediately reduce scrollTop (no dead zone).
+    mockInput.pressKey("k");
+    await renderOnce();
+    expect(app.docView!.scrollTop).toBe(bottomScroll - 1);
+  });
+
   test("g d is disabled when record has no document_id; flash shown", async () => {
     const dir = mkdtempSync(join(osTmpdir(), "ll-docview-noid-"));
     const inputPath = join(dir, "data.jsonl");

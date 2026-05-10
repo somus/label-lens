@@ -15,7 +15,7 @@ export type KeyEvent = {
   meta?: boolean;
 };
 
-function eventMatchesKey(event: KeyEvent, key: string): boolean {
+export function eventMatchesKey(event: KeyEvent, key: string): boolean {
   const parts = key.toLowerCase().split("+");
   const wantCtrl = parts.includes("ctrl");
   const wantShift = parts.includes("shift");
