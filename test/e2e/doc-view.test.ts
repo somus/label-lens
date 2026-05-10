@@ -143,5 +143,9 @@ describe("doc-view screen via g d", () => {
 
     expect(app.docView).toBeNull();
     expect(app.flash?.message).toContain("Doc-view unavailable");
+
+    // Cancel the flash's pending setTimeout so it cannot fire after the test
+    // returns and call renderState against a GC'd db.
+    app.clearFlash();
   });
 });
