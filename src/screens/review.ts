@@ -52,10 +52,7 @@ export function mountReviewScreen(args: {
     const reviewedTotal = counts.accepted + counts.relabeled + counts.rejected;
     const bandRows = Math.max(8, renderer.terminalHeight - NON_BAND_ROWS);
     const mode = pickLayout(app.display.layout, renderer.terminalWidth);
-    const prevN =
-      mode === "split"
-        ? Math.max(MIN_WINDOW, bandRows)
-        : Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
+    const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
     const nextN =
       mode === "split"
         ? 0
@@ -190,35 +187,54 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
   const before = window.records.slice(0, Math.max(0, window.focusedIndex));
   const focused = window.focusedIndex >= 0 ? (window.records[window.focusedIndex] ?? null) : null;
   const focusedAbsolute = window.startIndex + Math.max(0, window.focusedIndex);
+  const pin = display.candidatePin;
   return Box(
     { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
+    // Left column: prev-context records hug the pin row from above.
     Box(
-      {
-        flexDirection: "column",
-        flexBasis: 0,
-        flexGrow: 1,
-        overflow: "hidden",
-        justifyContent: "flex-end",
-      },
-      ...before.map((r, i) =>
-        BandedRecord({
-          text: r.text,
-          isFocused: false,
-          bandSlot: slotFor(window.startIndex + i),
-          display,
-        }),
+      { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
+      Box(
+        {
+          flexDirection: "column",
+          flexBasis: 0,
+          flexGrow: pin,
+          flexShrink: 0,
+          overflow: "hidden",
+          justifyContent: "flex-end",
+        },
+        ...before.map((r, i) =>
+          BandedRecord({
+            text: r.text,
+            isFocused: false,
+            bandSlot: slotFor(window.startIndex + i),
+            display,
+          }),
+        ),
       ),
+      Box({ flexBasis: 0, flexGrow: 1 - pin }),
     ),
+    // Center column: focused record + focus box, viewport-pinned.
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
       focused ? centerColumnFocused(focused, focusedAbsolute, display) : centerColumnEmpty(display),
     ),
+    // Right column: history + metadata + label list, top-aligned to the pin row.
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
-      historyLine(history, { marginTop: 1 }),
-      predictionLine(record),
-      record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
-      noteLine(record),
+      Box({ flexBasis: 0, flexGrow: pin }),
+      Box(
+        {
+          flexDirection: "column",
+          flexBasis: 0,
+          flexGrow: 1 - pin,
+          flexShrink: 1,
+          overflow: "hidden",
+        },
+        historyLine(history),
+        predictionLine(record),
+        record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
+        noteLine(record),
+      ),
     ),
   );
 }

@@ -5,19 +5,19 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-                                                                                                                                      src llm:gpt-4   →   food  (92%)                                   
                                                                                                                                                                                                         
-                                                                                                                                      1 food >                                                          
-                                                                                                                                      2 travel                                                          
-                                                                                                                                      3 other                                                           
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                    ╭────────────────────────────────────────────────────────────────╮                                                                   
-                                                                   │ Lunch at Zomato Bangalore                                      │                                                                   
+                                                                   │ Lunch at Zomato Bangalore                                      │ src llm:gpt-4   →   food  (92%)                                   
                                                                    ╰────────────────────────────────────────────────────────────────╯                                                                   
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
+                                                                                                                                      1 food >                                                          
+                                                                                                                                      2 travel                                                          
+                                                                                                                                      3 other                                                           
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -33,19 +33,19 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-                                                                                                                                      src llm:gpt-4   →   food  (92%)                                   
                                                                                                                                                                                                         
-                                                                                                                                      1 food >                                                          
-                                                                                                                                      2 travel                                                          
-                                                                                                                                      3 other                                                           
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                    ╭────────────────────────────────────────────────────────────────╮                                                                   
-                                                                   │ Lunch at Zomato Bangalore                                      │                                                                   
+                                                                   │ Lunch at Zomato Bangalore                                      │ src llm:gpt-4   →   food  (92%)                                   
                                                                    ╰────────────────────────────────────────────────────────────────╯                                                                   
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
+                                                                                                                                      1 food >                                                          
+                                                                                                                                      2 travel                                                          
+                                                                                                                                      3 other                                                           
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -61,19 +61,19 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-                                                                                                                                      src llm:gpt-4   →   food  (92%)                                   
                                                                                                                                                                                                         
-                                                                                                                                      1 food >                                                          
-                                                                                                                                      2 travel                                                          
-                                                                                                                                      3 other                                                           
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                    ┌────────────────────────────────────────────────────────────────┐                                                                   
-                                                                   │ ▶ Lunch at Zomato Bangalore                                    │                                                                   
+                                                                   │ ▶ Lunch at Zomato Bangalore                                    │ src llm:gpt-4   →   food  (92%)                                   
                                                                    └────────────────────────────────────────────────────────────────┘                                                                   
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
+                                                                                                                                      1 food >                                                          
+                                                                                                                                      2 travel                                                          
+                                                                                                                                      3 other                                                           
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -89,19 +89,19 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-                                                                                                                                      src llm:gpt-4   →   food  (92%)                                   
                                                                                                                                                                                                         
-                                                                                                                                      1 food >                                                          
-                                                                                                                                      2 travel                                                          
-                                                                                                                                      3 other                                                           
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                    ╭────────────────────────────────────────────────────────────────╮                                                                   
-                                                                   │ Lunch at Zomato Bangalore                                      │                                                                   
+                                                                   │ Lunch at Zomato Bangalore                                      │ src llm:gpt-4   →   food  (92%)                                   
                                                                    ╰────────────────────────────────────────────────────────────────╯                                                                   
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
+                                                                                                                                      1 food >                                                          
+                                                                                                                                      2 travel                                                          
+                                                                                                                                      3 other                                                           
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
