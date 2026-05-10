@@ -1,0 +1,4 @@
+{"text": "Recurring rent payment", "context_before": "ctx A", "prediction": "rent", "confidence": 0.92, "source": "llm:gpt-4"}
+{"text": "  recurring   RENT payment ", "context_before": "ctx B", "prediction": "rent", "confidence": 0.91, "source": "llm:gpt-4"}
+{"text": "Recurring rent payment", "context_before": "ctx C", "prediction": "rent", "confidence": 0.93, "source": "llm:gpt-4"}
+{"text": "Unique row, no duplicate", "prediction": "other", "confidence": 0.88, "source": "llm:gpt-4"}

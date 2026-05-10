@@ -101,11 +101,14 @@ bun run dev:up -- --reset                    # wipe + reseed before launching
 bun run dev:up -- --count 1000 --seed 42     # bigger / different dataset (only on first init or --reset)
 bun run dev:up -- --with-marks 5             # pre-tag N records as marked (default 5)
 bun run dev:up -- --with-reviews 8           # pre-insert N reviews — half accepted, half relabeled (default 8)
+bun run dev:up -- --with-duplicates 3        # inject an exact-duplicate cluster of N records (default 3, 0 disables; needs --count >= 50)
 bun run dev:up -- --no-prefill               # skip the marks + reviews prefill entirely
 LL_DEV_DIR=/tmp/foo bun run dev:up           # alternate dir
 ```
 
 Prefill seeds non-empty `marked`, `by-correction:*`, and `by-source:*` queues so a fresh dev launch exercises every queue without typing.
+
+Signals (`flagged`, `by-issue:low_confidence`, `by-issue:source_disagreement`, `by-issue:exact_duplicate`) are computed synchronously after ingest in `src/cli/run.ts` (and in `seed-dev`). The TUI does not launch until the signals pass completes; budget is <30s for 10K records (PRD §16.1, issue #10). The Bun Worker shell in `src/signals/worker.ts` exists for future re-ingest paths where the TUI is already mounted.
 
 Underlying primitive is `bun run seed` (wipes + generates without launching the TUI). Use that when you want to regenerate data without entering the TUI.
 

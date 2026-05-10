@@ -18,6 +18,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { LabellensConfig } from "../src/config/config.ts";
 import { ingestFile } from "../src/ingest/ingest.ts";
+import { runSignals } from "../src/signals/run.ts";
 import { openDb } from "../src/store/db.ts";
 import { insertReview } from "../src/store/records.ts";
 import { toggleTag } from "../src/store/tags.ts";
@@ -29,6 +30,7 @@ type GenOptions = {
   task: Task;
   withMarks: number;
   withReviews: number;
+  withDuplicates: number;
   noPrefill: boolean;
 };
 
@@ -39,6 +41,7 @@ function parseArgs(): GenOptions {
     task: "classification",
     withMarks: 5,
     withReviews: 8,
+    withDuplicates: 3,
     noPrefill: false,
   };
   for (let i = 2; i < process.argv.length; i++) {
@@ -47,6 +50,7 @@ function parseArgs(): GenOptions {
     else if (arg === "--seed") out.seed = Number(process.argv[++i]);
     else if (arg === "--with-marks") out.withMarks = Number(process.argv[++i]);
     else if (arg === "--with-reviews") out.withReviews = Number(process.argv[++i]);
+    else if (arg === "--with-duplicates") out.withDuplicates = Number(process.argv[++i]);
     else if (arg === "--no-prefill") out.noPrefill = true;
     else if (arg === "--task") {
       const v = process.argv[++i];
@@ -65,6 +69,9 @@ function parseArgs(): GenOptions {
   }
   if (!Number.isFinite(out.withReviews) || out.withReviews < 0) {
     throw new Error("--with-reviews must be a non-negative integer");
+  }
+  if (!Number.isFinite(out.withDuplicates) || out.withDuplicates < 0) {
+    throw new Error("--with-duplicates must be a non-negative integer");
   }
   return out;
 }
@@ -175,6 +182,27 @@ function generateClassification(opts: GenOptions): GeneratedRecord[] {
     }
 
     records.push(record);
+  }
+
+  if (opts.withDuplicates >= 2 && opts.count >= 50) {
+    const dupText = "Recurring monthly subscription INR499";
+    const dupRows: GeneratedRecord[] = [];
+    for (let i = 0; i < opts.withDuplicates; i++) {
+      dupRows.push({
+        text: dupText,
+        context_before: `dup-cluster-${i}`,
+        predictions: [
+          { label: "utility", confidence: round(0.6 + rand() * 0.3, 2), source: "llm:gpt-4" },
+        ],
+      });
+    }
+    // Prepend so the schema-inference sample (first 100 records, see
+    // src/config/inference.ts) picks up the `context_before` field —
+    // otherwise inferSchema would omit it from the field map and ingest
+    // would collapse all dup rows to one content-hash ID (ADR 0001).
+    // The cluster also stays well below the >50% context-density threshold
+    // that would flip inferSchema's recommendedTask to 'boundary'.
+    records.unshift(...dupRows);
   }
 
   return records;
@@ -383,6 +411,8 @@ async function main(): Promise<void> {
   try {
     const ingestResult = await ingestFile(db, dataPath, config.input.fields);
     console.log(`Ingested ${ingestResult.ingested}, skipped ${ingestResult.skipped}.`);
+    const signals = runSignals(db);
+    console.log(`Signals: wrote ${signals.written} issue rows.`);
     if (!opts.noPrefill && (opts.withMarks > 0 || opts.withReviews > 0)) {
       prefillStateOpen(db, opts);
     }

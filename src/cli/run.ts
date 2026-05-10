@@ -8,6 +8,7 @@ import { ingestFile } from "../ingest/ingest.ts";
 import { bootstrapDisplay } from "../render/capability.ts";
 import { mountQueueScreen } from "../screens/queue.ts";
 import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts";
+import { runSignals } from "../signals/run.ts";
 import { openDb } from "../store/db.ts";
 
 export async function runReview(): Promise<void> {
@@ -30,6 +31,10 @@ export async function runReview(): Promise<void> {
     console.error(`Ingesting ${inputPath}...`);
     const result = await ingestFile(db, inputPath, config.input.fields);
     console.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
+
+    console.error("Computing prioritization signals...");
+    const signals = runSignals(db);
+    console.error(`  wrote ${signals.written} issue rows`);
   }
 
   const renderer = await createCliRenderer({ exitOnCtrlC: true });
