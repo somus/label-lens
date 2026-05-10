@@ -6,7 +6,7 @@ import { labelName } from "../config/config.ts";
 import { createChordResolver } from "../keymap/chord.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import type { GuidelinesState } from "../overlay/guidelines.ts";
-import type { HelpState } from "../overlay/help.ts";
+import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
@@ -443,8 +443,6 @@ function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
   );
 }
-
-const HELP_PAGE = 30;
 
 function renderHelp(state: HelpState): ReturnType<typeof Box> {
   const visible = state.entries.slice(state.scroll, state.scroll + HELP_PAGE);

@@ -2,6 +2,8 @@ import type { Command } from "../actions/command.ts";
 import type { Scope } from "../keymap/engine.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
+export const HELP_PAGE = 30;
+
 export type HelpEntry = {
   category: string;
   binding: string;
@@ -57,11 +59,22 @@ export function reduceHelp(state: HelpState, event: OverlayEvent): ReduceResult 
     return { overlay: null, effects: [{ kind: "close" }] };
   }
   if (name === "down") {
+    const max = Math.max(state.entries.length - HELP_PAGE, 0);
     return {
-      overlay: packed({
-        ...state,
-        scroll: Math.min(state.scroll + 1, Math.max(state.entries.length - 1, 0)),
-      }),
+      overlay: packed({ ...state, scroll: Math.min(state.scroll + 1, max) }),
+      effects: [],
+    };
+  }
+  if (name === "pagedown") {
+    const max = Math.max(state.entries.length - HELP_PAGE, 0);
+    return {
+      overlay: packed({ ...state, scroll: Math.min(state.scroll + HELP_PAGE, max) }),
+      effects: [],
+    };
+  }
+  if (name === "pageup") {
+    return {
+      overlay: packed({ ...state, scroll: Math.max(state.scroll - HELP_PAGE, 0) }),
       effects: [],
     };
   }

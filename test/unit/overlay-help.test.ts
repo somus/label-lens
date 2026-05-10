@@ -73,12 +73,23 @@ function key(name: string) {
 }
 
 describe("reduceHelp", () => {
-  test("Down increments scroll, Up decrements, clamped at 0", () => {
-    let s = openHelp({ commands: cmds, scope: "review" });
+  test("Down clamped to entries.length - HELP_PAGE; Up to 0", () => {
+    const many: Command[] = Array.from({ length: 50 }, (_, i) => ({
+      name: `record.x${i.toString().padStart(2, "0")}`,
+      scope: "review" as const,
+      binding: String.fromCharCode(97 + (i % 26)),
+      run: noop,
+    }));
+    let s = openHelp({ commands: many, scope: "review" });
     s = reduceHelp(s, key("down")).overlay!.state as HelpState;
     expect(s.scroll).toBe(1);
-    s = reduceHelp(s, key("up")).overlay!.state as HelpState;
-    s = reduceHelp(s, key("up")).overlay!.state as HelpState;
+    for (let i = 0; i < 100; i++) {
+      s = reduceHelp(s, key("down")).overlay!.state as HelpState;
+    }
+    expect(s.scroll).toBe(50 - 30);
+    for (let i = 0; i < 100; i++) {
+      s = reduceHelp(s, key("up")).overlay!.state as HelpState;
+    }
     expect(s.scroll).toBe(0);
   });
 
