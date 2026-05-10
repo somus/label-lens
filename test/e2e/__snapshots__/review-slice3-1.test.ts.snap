@@ -23,7 +23,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   Coffee at Blue Tokai                                                                                                                                                                                  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit                                                                          
+  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · : cmd · ? help · gg guide · q quit                                                                  
                                                                                                                                                                                                         
 "
 `;
@@ -51,7 +51,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   Coffee at Blue Tokai                                                                                                                                                                                  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit                                                                          
+  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · : cmd · ? help · gg guide · q quit                                                                  
                                                                                                                                                                                                         
 "
 `;
@@ -79,7 +79,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   │ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit                                                                          
+  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · : cmd · ? help · gg guide · q quit                                                                  
                                                                                                                                                                                                         
 "
 `;
@@ -107,7 +107,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   Coffee at Blue Tokai                                                                                                                                                                                  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept   r relabel   x reject   s skip   m mark   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit                                                                          
+  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · : cmd · ? help · gg guide · q quit                                                                  
                                                                                                                                                                                                         
 "
 `;

@@ -142,7 +142,7 @@ export function mountReviewScreen(args: {
           : Box(
               { flexDirection: "row" },
               Text({
-                content: ` a accept   r relabel   x reject   s skip   m ${marked ? "unmark" : "mark"}   n note   u undo   j next   k prev${app.config.task === "boundary" ? "   gd doc" : ""}   [ prev queue   ] next queue   q quit`,
+                content: ` a accept · r relabel · x reject · s skip · m ${marked ? "unmark" : "mark"} · n note · u undo · j/k next/prev${app.config.task === "boundary" ? " · gd doc" : ""} · [/] queue · : cmd · ? help · gg guide · q quit`,
                 attributes: TextAttributes.DIM,
               }),
             ),
@@ -444,11 +444,16 @@ function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
   );
 }
 
+const HELP_PAGE = 30;
+
 function renderHelp(state: HelpState): ReturnType<typeof Box> {
-  const visible = state.entries.slice(state.scroll, state.scroll + 16);
+  const visible = state.entries.slice(state.scroll, state.scroll + HELP_PAGE);
+  const more = state.entries.length - state.scroll - visible.length;
   return Box(
     { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
-    Text({ content: ` help · ${state.scope}` }),
+    Text({
+      content: ` help · ${state.scope} · ${state.entries.length} commands${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
+    }),
     ...visible.map((e) =>
       Text({
         content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
