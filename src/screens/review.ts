@@ -325,9 +325,13 @@ function badgeCopy(issue: StoredIssue, totalRecords: number, predictionCount: nu
       return `Model is uncertain (confidence ${confPct}%)`;
     }
     case "source_disagreement": {
-      const n = Math.max(predictionCount, 2);
+      // disagreementScore() only returns non-null for n >= 2, so a
+      // source_disagreement issue implies the record had at least 2
+      // predictions when signals ran. Trust the invariant.
+      const n = predictionCount;
       const agreed = Math.max(1, Math.round((1 - score) * n));
-      return `Sources disagree on this record (${agreed}/${n} sources agreed)`;
+      const sourcesWord = n === 1 ? "source" : "sources";
+      return `Sources disagree on this record (${agreed}/${n} ${sourcesWord} agreed)`;
     }
     case "exact_duplicate": {
       const groupSize = Math.max(2, Math.round(score * totalRecords));

@@ -1,3 +1,18 @@
+/**
+ * Compute the three MVP prioritization signals from PRD §10.4 and write them
+ * to the `issues` table with `source = "computed"`.
+ *
+ *   low_confidence       score = 1 - confidence (per prediction; max wins)
+ *                        emit when confidence < threshold (default 0.5)
+ *   source_disagreement  score = 1 - max_label_count / n_predictions
+ *                        emit when score > 0 (≥2 distinct labels)
+ *   exact_duplicate      score = group_size / total_records (cap 1.0)
+ *                        emit on every member of a normalize(text) cluster
+ *
+ * Re-runs `purgeComputedIssues` first, so imported issues (source != "computed")
+ * are preserved across re-ingest. Cancellation is checked between 500-record
+ * batches and once more before the transaction commits.
+ */
 import { asc } from "drizzle-orm";
 import { normalize } from "../ingest/id.ts";
 import type { Db } from "../store/db.ts";
@@ -25,7 +40,13 @@ export type RunSignalsResult = {
   cancelled: boolean;
 };
 
-const BATCH_SIZE = 500;
+/**
+ * Records processed between cancel checks + progress callbacks. 500 keeps
+ * cancel latency bounded (a few ms at typical record sizes) while amortizing
+ * postMessage cost on the worker path. Exported so tests can pin behavior at
+ * batch boundaries.
+ */
+export const BATCH_SIZE = 500;
 const DEFAULT_LOW_CONFIDENCE = 0.5;
 
 export function runSignals(db: Db, options: RunSignalsOptions = {}): RunSignalsResult {

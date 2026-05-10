@@ -196,11 +196,12 @@ function generateClassification(opts: GenOptions): GeneratedRecord[] {
         ],
       });
     }
-    // Prepend so the schema-inference sample (first 100 records) sees the
-    // context_before field — otherwise inferSchema misses it and ingest
-    // collapses the cluster to a single content-hash ID. Cluster size stays
-    // far below the 50% threshold that would flip the inferred task to
-    // 'boundary'.
+    // Prepend so the schema-inference sample (first 100 records, see
+    // src/config/inference.ts) picks up the `context_before` field —
+    // otherwise inferSchema would omit it from the field map and ingest
+    // would collapse all dup rows to one content-hash ID (ADR 0001).
+    // The cluster also stays well below the >50% context-density threshold
+    // that would flip inferSchema's recommendedTask to 'boundary'.
     records.unshift(...dupRows);
   }
 

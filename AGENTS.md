@@ -108,6 +108,8 @@ LL_DEV_DIR=/tmp/foo bun run dev:up           # alternate dir
 
 Prefill seeds non-empty `marked`, `by-correction:*`, and `by-source:*` queues so a fresh dev launch exercises every queue without typing.
 
+Signals (`flagged`, `by-issue:low_confidence`, `by-issue:source_disagreement`, `by-issue:exact_duplicate`) are computed synchronously after ingest in `src/cli/run.ts` (and in `seed-dev`). The TUI does not launch until the signals pass completes; budget is <30s for 10K records (PRD §16.1, issue #10). The Bun Worker shell in `src/signals/worker.ts` exists for future re-ingest paths where the TUI is already mounted.
+
 Underlying primitive is `bun run seed` (wipes + generates without launching the TUI). Use that when you want to regenerate data without entering the TUI.
 
 To exercise the compiled binary path (parser.worker bundling, real install layout) instead of source:

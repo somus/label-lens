@@ -19,19 +19,23 @@ export type StoredIssue = {
   createdAt: string;
 };
 
+// SQLite hard-caps a single statement at 999 bind parameters by default. Each
+// issues row binds 5 columns, so a 100-row chunk uses 500 params — comfortably
+// under the limit and keeps statement size predictable.
+const ISSUES_INSERT_CHUNK = 100;
+
 export function insertComputedIssues(db: TxOrDb, rows: ComputedIssueInput[]): void {
   if (rows.length === 0) return;
   const now = new Date().toISOString();
-  for (const r of rows) {
-    db.insert(issues)
-      .values({
-        recordId: r.recordId,
-        type: r.type,
-        score: r.score,
-        source: COMPUTED_SIGNAL_SOURCE,
-        createdAt: now,
-      })
-      .run();
+  for (let i = 0; i < rows.length; i += ISSUES_INSERT_CHUNK) {
+    const chunk = rows.slice(i, i + ISSUES_INSERT_CHUNK).map((r) => ({
+      recordId: r.recordId,
+      type: r.type,
+      score: r.score,
+      source: COMPUTED_SIGNAL_SOURCE,
+      createdAt: now,
+    }));
+    db.insert(issues).values(chunk).run();
   }
 }
 
