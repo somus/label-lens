@@ -75,4 +75,9 @@ describe("review screen — boundary task context strip", () => {
     expect(frame).toContain("AFTER_ZULU");
     expect(frame).not.toContain("AFTER_QUEBEC");
   });
+
+  test("action bar shows 'gd doc' hint for boundary task", async () => {
+    const { frame } = await setupBoundary();
+    expect(frame).toContain("gd doc");
+  });
 });
