@@ -11,6 +11,7 @@
  *   --reset                        # force re-seed even if data.jsonl exists
  *   --count <n>                    # records to generate (default 150)
  *   --seed <n>                     # PRNG seed (default 1)
+ *   --task <classification|boundary>  # dataset flavor (default classification)
  *
  * Same flags pass through to scripts/seed-dev.ts.
  */
@@ -38,7 +39,7 @@ function passthroughSeedArgs(): string[] {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--reset") continue;
-    if (arg === "--count" || arg === "--seed") {
+    if (arg === "--count" || arg === "--seed" || arg === "--task") {
       out.push(arg, argv[++i] ?? "");
     }
   }
@@ -95,7 +96,7 @@ function status(): void {
 
 function usage(): never {
   console.error(
-    "usage: bun run scripts/dev.ts <up | down | status> [--reset] [--count N] [--seed N]",
+    "usage: bun run scripts/dev.ts <up | down | status> [--reset] [--count N] [--seed N] [--task classification|boundary]",
   );
   process.exit(2);
 }

@@ -36,11 +36,13 @@ export async function runInit(args: { input: string }): Promise<void> {
   } else {
     console.log("  inferred labels: (none — falling back to 'other')");
   }
+  console.log(`  recommended task: ${inference.recommendedTask}`);
 
   const config = defaultConfig({
     inputPath,
     fields: inference.fields,
     labels: inference.labels,
+    task: inference.recommendedTask,
   });
 
   await Bun.write(configPath, `${JSON.stringify(config, null, 2)}\n`);

@@ -6,9 +6,10 @@
  * labellens.config.json. Idempotent: nukes the dir first.
  *
  * Usage:
- *   bun run scripts/seed-dev.ts                # default 150 records
- *   bun run scripts/seed-dev.ts --count 1000   # bigger
- *   bun run scripts/seed-dev.ts --seed 42      # different deterministic dataset
+ *   bun run scripts/seed-dev.ts                       # default 150 classification records
+ *   bun run scripts/seed-dev.ts --count 1000          # bigger
+ *   bun run scripts/seed-dev.ts --seed 42             # different deterministic dataset
+ *   bun run scripts/seed-dev.ts --task boundary       # boundary task fixture (3-5 docs)
  *   LL_DEV_DIR=/tmp/foo bun run scripts/seed-dev.ts
  */
 
@@ -16,14 +17,22 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-type GenOptions = { count: number; seed: number };
+type Task = "classification" | "boundary";
+type GenOptions = { count: number; seed: number; task: Task };
 
 function parseArgs(): GenOptions {
-  const out: GenOptions = { count: 150, seed: 1 };
+  const out: GenOptions = { count: 150, seed: 1, task: "classification" };
   for (let i = 2; i < process.argv.length; i++) {
     const arg = process.argv[i];
     if (arg === "--count") out.count = Number(process.argv[++i]);
     else if (arg === "--seed") out.seed = Number(process.argv[++i]);
+    else if (arg === "--task") {
+      const v = process.argv[++i];
+      if (v !== "classification" && v !== "boundary") {
+        throw new Error("--task must be 'classification' or 'boundary'");
+      }
+      out.task = v;
+    }
   }
   if (!Number.isFinite(out.count) || out.count < 1) {
     throw new Error("--count must be a positive integer");
@@ -72,11 +81,19 @@ const TEMPLATES: { vendor: string; truthLabel: Label; channels: string[] }[] = [
 
 type GeneratedRecord = {
   text: string;
+  context_before?: string;
+  context_after?: string;
   predictions: { label: string; confidence?: number; source: string; reason?: string }[];
   issues?: { type: string; score: number }[];
+  meta?: Record<string, unknown>;
 };
 
 function generate(opts: GenOptions): GeneratedRecord[] {
+  if (opts.task === "boundary") return generateBoundary(opts);
+  return generateClassification(opts);
+}
+
+function generateClassification(opts: GenOptions): GeneratedRecord[] {
   const rand = rng(opts.seed);
   const records: GeneratedRecord[] = [];
 
@@ -135,6 +152,102 @@ function generate(opts: GenOptions): GeneratedRecord[] {
   return records;
 }
 
+const BOUNDARY_LABELS = ["SECTION_HEADER", "ENTRY_START", "CONTINUATION", "NOISE"] as const;
+
+const DOC_TEMPLATES: { id: string; lines: { text: string; truth: string }[] }[] = [
+  {
+    id: "resume-1",
+    lines: [
+      { text: "Jane Smith", truth: "ENTRY_START" },
+      { text: "San Francisco, CA · jane@example.com", truth: "CONTINUATION" },
+      { text: "EXPERIENCE", truth: "SECTION_HEADER" },
+      { text: "Staff Engineer at Globex", truth: "ENTRY_START" },
+      { text: "Led the storage team rewrite", truth: "CONTINUATION" },
+      { text: "Mentored 4 engineers across 2 teams", truth: "CONTINUATION" },
+      { text: "Reduced p99 latency by 40%", truth: "CONTINUATION" },
+      { text: "Senior Engineer at Initech", truth: "ENTRY_START" },
+      { text: "Built the payments ingestion pipeline", truth: "CONTINUATION" },
+      { text: "Migrated three services to gRPC", truth: "CONTINUATION" },
+      { text: "EDUCATION", truth: "SECTION_HEADER" },
+      { text: "BS Computer Science, MIT, 2017", truth: "ENTRY_START" },
+      { text: "Coursework: distributed systems, ML", truth: "CONTINUATION" },
+      { text: "SKILLS", truth: "SECTION_HEADER" },
+      { text: "Go, Rust, TypeScript, SQL", truth: "CONTINUATION" },
+    ],
+  },
+  {
+    id: "invoice-7",
+    lines: [
+      { text: "INVOICE #2026-0042", truth: "ENTRY_START" },
+      { text: "Date: 2026-04-12", truth: "CONTINUATION" },
+      { text: "Bill To:", truth: "SECTION_HEADER" },
+      { text: "Acme Corporation", truth: "ENTRY_START" },
+      { text: "123 Market Street, San Francisco, CA 94103", truth: "CONTINUATION" },
+      { text: "Items:", truth: "SECTION_HEADER" },
+      { text: "1x Engineering audit — $2,400", truth: "ENTRY_START" },
+      { text: "2x Code review session — $1,800", truth: "ENTRY_START" },
+      { text: "Subtotal: $4,200", truth: "CONTINUATION" },
+      { text: "Tax: $360", truth: "CONTINUATION" },
+      { text: "Total: $4,560", truth: "CONTINUATION" },
+      { text: "Payment Terms:", truth: "SECTION_HEADER" },
+      { text: "Net 30, wire transfer preferred", truth: "CONTINUATION" },
+    ],
+  },
+  {
+    id: "chat-log-3",
+    lines: [
+      { text: "[2026-04-12 09:01] standup channel", truth: "SECTION_HEADER" },
+      { text: "alice: morning everyone", truth: "ENTRY_START" },
+      { text: "bob: morning", truth: "ENTRY_START" },
+      { text: "carol: morning, what's on the board today?", truth: "ENTRY_START" },
+      { text: "alice: I'm picking up the boundary task slice", truth: "CONTINUATION" },
+      { text: "bob: nice. need a review on PR #28", truth: "CONTINUATION" },
+      { text: "carol: I'll grab it after lunch", truth: "CONTINUATION" },
+      { text: "alice: thanks", truth: "CONTINUATION" },
+      { text: "[2026-04-12 14:22] random channel", truth: "SECTION_HEADER" },
+      { text: "bob: anyone seen the migration error?", truth: "ENTRY_START" },
+      { text: "alice: which one", truth: "CONTINUATION" },
+      { text: "bob: 0006 doc-id view", truth: "CONTINUATION" },
+      { text: "alice: looking", truth: "CONTINUATION" },
+      { text: "alice: lgtm now, was a stale snapshot", truth: "CONTINUATION" },
+      { text: "       ", truth: "NOISE" },
+    ],
+  },
+];
+
+function generateBoundary(opts: GenOptions): GeneratedRecord[] {
+  const rand = rng(opts.seed);
+  const records: GeneratedRecord[] = [];
+  for (const doc of DOC_TEMPLATES) {
+    for (let i = 0; i < doc.lines.length; i++) {
+      const line = doc.lines[i]!;
+      const before = doc.lines
+        .slice(Math.max(0, i - 4), i)
+        .map((l) => l.text)
+        .join("\n");
+      const after = doc.lines
+        .slice(i + 1, i + 5)
+        .map((l) => l.text)
+        .join("\n");
+
+      const correct = rand() < 0.85;
+      const predLabel = correct ? line.truth : pick(rand, BOUNDARY_LABELS);
+      const conf = clamp(0.5 + (correct ? rand() * 0.5 : -rand() * 0.3));
+
+      records.push({
+        text: line.text,
+        context_before: before,
+        context_after: after,
+        predictions: [
+          { label: predLabel, confidence: round(conf, 2), source: "rule.entry_boundary" },
+        ],
+        meta: { document_id: doc.id },
+      });
+    }
+  }
+  return records;
+}
+
 function clamp(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
@@ -153,7 +266,9 @@ async function main(): Promise<void> {
   const dir = process.env.LL_DEV_DIR || "/tmp/llens-dev";
   const dataPath = join(dir, "data.jsonl");
 
-  console.log(`Seeding ${dir} with ${opts.count} records (seed=${opts.seed})...`);
+  console.log(
+    `Seeding ${dir} with task=${opts.task}${opts.task === "classification" ? `, count=${opts.count}` : ""} (seed=${opts.seed})...`,
+  );
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
 

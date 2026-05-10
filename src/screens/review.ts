@@ -3,18 +3,20 @@ import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, enterReview } from "../app/context.ts";
 import { labelName } from "../config/config.ts";
-import { resolve } from "../keymap/engine.ts";
+import { createChordResolver } from "../keymap/chord.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
+import { splitContextLines } from "../render/context-strip.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { type HistoryEntry, progressCounts, recentReviewsWithText } from "../store/queries.ts";
 import { type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import { hasTag } from "../store/tags.ts";
 import type { RecordWithPrimaryPrediction, StoredReview } from "../types.ts";
+import { renderDocView } from "./doc-view.ts";
 
 export type ReviewScreenHandle = {
   destroy: () => void;
@@ -44,8 +46,23 @@ export function mountReviewScreen(args: {
   enterReview(app, initialQueueId);
   const bindings = bindingsFor([...registry.values()]);
 
+  const chord = createChordResolver(bindings);
+  let lastDocViewActive = false;
+  let lastOverlayActive = false;
+
   const renderState = () => {
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
+    const docViewActive = app.docView !== null;
+    const overlayActive = app.overlay !== null;
+    if (docViewActive !== lastDocViewActive || overlayActive !== lastOverlayActive) {
+      chord.reset();
+      lastDocViewActive = docViewActive;
+      lastOverlayActive = overlayActive;
+    }
+    if (app.docView) {
+      renderer.root.add(renderDocView(app, renderer.terminalHeight));
+      return;
+    }
     const cursor = app.cursor;
     const queueId = app.queueId ?? initialQueueId;
     const counts = progressCounts(app.db);
@@ -93,11 +110,13 @@ export function mountReviewScreen(args: {
               labels: app.config.labels,
               history,
               display: app.display,
+              contextStrip: contextStripFor(app, record),
             })
           : stackBody({
               window,
               record,
               labels: app.config.labels,
+              contextStrip: contextStripFor(app, record),
               history,
               display: app.display,
             }),
@@ -115,7 +134,7 @@ export function mountReviewScreen(args: {
           : Box(
               { flexDirection: "row" },
               Text({
-                content: ` a accept   r relabel   x reject   s skip   m ${marked ? "unmark" : "mark"}   n note   u undo   j next   k prev   [ prev queue   ] next queue   q quit`,
+                content: ` a accept   r relabel   x reject   s skip   m ${marked ? "unmark" : "mark"}   n note   u undo   j next   k prev${app.config.task === "boundary" ? "   gd doc" : ""}   [ prev queue   ] next queue   q quit`,
                 attributes: TextAttributes.DIM,
               }),
             ),
@@ -134,14 +153,15 @@ export function mountReviewScreen(args: {
       renderState();
       return;
     }
-    const action = resolve(bindings, "review", {
+    const scope = app.docView ? "doc-view" : "review";
+    const action = chord.feed(scope, {
       name: event.name,
       ctrl: event.ctrl,
       shift: event.shift,
       meta: event.meta,
     });
     if (!action) return;
-    void dispatch(registry, "review", app, action);
+    void dispatch(registry, scope, app, action);
   };
 
   const onResize = () => renderState();
@@ -158,19 +178,34 @@ export function mountReviewScreen(args: {
   };
 }
 
+type ContextStrip = { before: string[]; after: string[] };
+
 type BodyArgs = {
   window: { records: RecordWithPrimaryPrediction[]; focusedIndex: number; startIndex: number };
   record: RecordWithPrimaryPrediction | null;
   labels: Parameters<typeof labelName>[0][];
   history: HistoryEntry[];
   display: ResolvedDisplay;
+  contextStrip: ContextStrip | null;
 };
 
+function contextStripFor(
+  app: AppContext,
+  record: RecordWithPrimaryPrediction | null,
+): ContextStrip | null {
+  if (app.config.task !== "boundary" || !app.config.boundary || !record) return null;
+  const n = app.config.boundary.contextLines;
+  return {
+    before: splitContextLines(record.context_before, n, "before"),
+    after: splitContextLines(record.context_after, n, "after"),
+  };
+}
+
 function stackBody(args: BodyArgs): ReturnType<typeof Box> {
-  const { window, record, labels, history, display } = args;
+  const { window, record, labels, history, display, contextStrip } = args;
   return Box(
     { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-    bandRegion(window.records, window.focusedIndex, window.startIndex, display),
+    bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
     predictionLine(record),
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
     noteLine(record),
@@ -180,14 +215,14 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
 }
 
 function splitBody(args: BodyArgs): ReturnType<typeof Box> {
-  const { window, record, labels, history, display } = args;
+  const { window, record, labels, history, display, contextStrip } = args;
   const pin = display.candidatePin;
   return Box(
     { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
     // Main column: full band region (prev above, focused pinned, after below).
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 2, overflow: "hidden" },
-      bandRegion(window.records, window.focusedIndex, window.startIndex, display),
+      bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
     ),
     // Right column: history + metadata + label list, top-aligned to the pin row.
     Box(
@@ -257,6 +292,7 @@ function bandRegion(
   focusedIndex: number,
   startIndex: number,
   display: ResolvedDisplay,
+  contextStrip: ContextStrip | null = null,
 ): ReturnType<typeof Box> {
   if (records.length === 0 || focusedIndex < 0) {
     return Box(
@@ -268,11 +304,47 @@ function bandRegion(
     );
   }
 
-  const before = records.slice(0, focusedIndex);
   const focused = records[focusedIndex]!;
-  const after = records.slice(focusedIndex + 1);
   const pin = display.candidatePin;
   const focusedAbsolute = startIndex + focusedIndex;
+
+  const beforeChildren = contextStrip
+    ? contextStrip.before.map((line, i) =>
+        BandedRecord({
+          text: line,
+          isFocused: false,
+          bandSlot: slotFor(i),
+          display,
+          variant: "context",
+        }),
+      )
+    : records.slice(0, focusedIndex).map((r, i) =>
+        BandedRecord({
+          text: r.text,
+          isFocused: false,
+          bandSlot: slotFor(startIndex + i),
+          display,
+        }),
+      );
+
+  const afterChildren = contextStrip
+    ? contextStrip.after.map((line, i) =>
+        BandedRecord({
+          text: line,
+          isFocused: false,
+          bandSlot: slotFor(i),
+          display,
+          variant: "context",
+        }),
+      )
+    : records.slice(focusedIndex + 1).map((r, i) =>
+        BandedRecord({
+          text: r.text,
+          isFocused: false,
+          bandSlot: slotFor(focusedAbsolute + 1 + i),
+          display,
+        }),
+      );
 
   return Box(
     { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
@@ -285,14 +357,7 @@ function bandRegion(
         justifyContent: "flex-end",
         overflow: "hidden",
       },
-      ...before.map((r, i) =>
-        BandedRecord({
-          text: r.text,
-          isFocused: false,
-          bandSlot: slotFor(startIndex + i),
-          display,
-        }),
-      ),
+      ...beforeChildren,
     ),
     Box(
       {
@@ -308,14 +373,7 @@ function bandRegion(
         bandSlot: slotFor(focusedAbsolute),
         display,
       }),
-      ...after.map((r, i) =>
-        BandedRecord({
-          text: r.text,
-          isFocused: false,
-          bandSlot: slotFor(focusedAbsolute + 1 + i),
-          display,
-        }),
-      ),
+      ...afterChildren,
     ),
   );
 }

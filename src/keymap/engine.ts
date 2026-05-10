@@ -1,6 +1,6 @@
 export type Action = string;
 
-export type Scope = "global" | "review" | "queue" | "stats" | "palette" | "assistant";
+export type Scope = "global" | "review" | "queue" | "stats" | "palette" | "assistant" | "doc-view";
 
 export type Binding = {
   key: string;
@@ -15,7 +15,7 @@ export type KeyEvent = {
   meta?: boolean;
 };
 
-function eventMatchesKey(event: KeyEvent, key: string): boolean {
+export function eventMatchesKey(event: KeyEvent, key: string): boolean {
   const parts = key.toLowerCase().split("+");
   const wantCtrl = parts.includes("ctrl");
   const wantShift = parts.includes("shift");

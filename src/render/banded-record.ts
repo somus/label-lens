@@ -4,11 +4,14 @@ import { Text, TextAttributes } from "./text.ts";
 
 export type BandSlot = "even" | "odd";
 
+export type BandVariant = "queue" | "context";
+
 export type BandedRecordProps = {
   text: string;
   isFocused: boolean;
   bandSlot: BandSlot;
   display: ResolvedDisplay;
+  variant?: BandVariant;
 };
 
 export function focusBoxStyle(display: ResolvedDisplay): "rounded" | "single" {
@@ -51,9 +54,10 @@ export function accentColor(display: ResolvedDisplay): string {
 }
 
 export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
-  const { text, isFocused, bandSlot, display } = props;
+  const { text, isFocused, bandSlot, display, variant = "queue" } = props;
   const marker = leftEdgeMarker(display, isFocused);
   const prefix = marker === null ? "" : `${marker} `;
+  const isContext = variant === "context";
 
   const opts: Parameters<typeof Box>[0] = {
     flexDirection: "column",
@@ -61,7 +65,7 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
     paddingLeft: 1,
     paddingRight: 1,
   };
-  if (display.banding) {
+  if (display.banding && !isContext) {
     opts.backgroundColor = bandColor(display, bandSlot);
   }
   if (isFocused) {
@@ -70,11 +74,17 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
       opts.borderColor = accentColor(display);
     }
   }
+  const attrs =
+    display.color === "mono" && isFocused
+      ? TextAttributes.BOLD
+      : isContext
+        ? TextAttributes.DIM
+        : undefined;
   return Box(
     opts,
     Text({
       content: `${prefix}${text}`,
-      attributes: display.color === "mono" && isFocused ? TextAttributes.BOLD : undefined,
+      attributes: attrs,
     }),
   );
 }
