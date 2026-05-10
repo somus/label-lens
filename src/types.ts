@@ -10,6 +10,7 @@ export type InputPrediction = {
 export type InputIssue = {
   type: string;
   score?: number;
+  source?: string;
 };
 
 export type InputRecord = {

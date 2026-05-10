@@ -1,13 +1,29 @@
 import { eq } from "drizzle-orm";
 import type { ReviewStatus, SourceOfTruth } from "../types.ts";
 import type { TxOrDb } from "./db.ts";
-import { type NewPrediction, type NewRecord, predictions, records, reviews } from "./schema.ts";
+import {
+  issues,
+  type NewPrediction,
+  type NewRecord,
+  predictions,
+  records,
+  reviews,
+} from "./schema.ts";
 
 export type RecordPredictionInput = Omit<NewPrediction, "id" | "recordId">;
 
+export type RecordIssueInput = {
+  type: string;
+  score?: number | null;
+  source?: string | null;
+};
+
 export function insertRecord(
   db: TxOrDb,
-  rec: NewRecord & { predictions: RecordPredictionInput[] },
+  rec: NewRecord & {
+    predictions: RecordPredictionInput[];
+    issues?: RecordIssueInput[];
+  },
 ): void {
   db.insert(records)
     .values({
@@ -22,11 +38,25 @@ export function insertRecord(
     .onConflictDoNothing()
     .run();
 
-  if (rec.predictions.length === 0) return;
   for (const p of rec.predictions) {
     db.insert(predictions)
       .values({ ...p, recordId: rec.id })
       .run();
+  }
+
+  if (rec.issues && rec.issues.length > 0) {
+    const now = new Date().toISOString();
+    for (const i of rec.issues) {
+      db.insert(issues)
+        .values({
+          recordId: rec.id,
+          type: i.type,
+          score: i.score ?? null,
+          source: i.source ?? null,
+          createdAt: now,
+        })
+        .run();
+    }
   }
 }
 

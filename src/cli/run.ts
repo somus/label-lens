@@ -1,11 +1,13 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { createCliRenderer } from "@opentui/core";
+import { switchQueue } from "../actions/queue/switch.ts";
 import { createAppContext } from "../app/context.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { ingestFile } from "../ingest/ingest.ts";
 import { bootstrapDisplay } from "../render/capability.ts";
-import { mountReviewScreen } from "../screens/review.ts";
+import { mountQueueScreen } from "../screens/queue.ts";
+import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts";
 import { openDb } from "../store/db.ts";
 
 export async function runReview(): Promise<void> {
@@ -50,5 +52,29 @@ export async function runReview(): Promise<void> {
       process.exit(0);
     },
   });
-  mountReviewScreen({ renderer, app });
+  let reviewHandle: ReviewScreenHandle | null = null;
+
+  const mountReview = (queueId: string) => {
+    reviewHandle = mountReviewScreen({ renderer, app, initialQueueId: queueId });
+  };
+
+  app.openQueueScreen = () => {
+    reviewHandle?.destroy();
+    reviewHandle = null;
+    const queueHandle = mountQueueScreen({
+      renderer,
+      app,
+      onSelect: (id) => {
+        queueHandle.destroy();
+        switchQueue(app, id);
+        mountReview(id);
+      },
+      onCancel: () => {
+        queueHandle.destroy();
+        mountReview(app.queueId ?? "pending");
+      },
+    });
+  };
+
+  mountReview("pending");
 }

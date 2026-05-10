@@ -23,6 +23,14 @@ export type AppContext = {
   db: Db;
   config: LabellensConfig;
   getCursor(queueId: QueueId): Cursor;
+  /**
+   * Returns whether the next `getCursor(queueId)` call would create a new
+   * Cursor (true) or return a cached one (false). Lets callers skip an
+   * unnecessary `cursor.refresh()` on first switch — the constructor already
+   * runs `queueRecords`, so an extra refresh would double the cost. Used by
+   * `switchQueue` so the <200ms target (PRD §16.1) holds at 50K records.
+   */
+  hasCursor(queueId: QueueId): boolean;
   flash: FlashMessage | null;
   setFlash(message: string, kind: FlashKind, ttlMs?: number): void;
   clearFlash(): void;
@@ -38,6 +46,12 @@ export type AppContext = {
   docView: DocViewState | null;
   openDocView(state: DocViewState): void;
   closeDocView(): void;
+  /**
+   * Set by the orchestrator (cli/run.ts) so review-scope commands can pop the
+   * Queue screen. Unset in tests; the corresponding command flashes "Queue
+   * screen unavailable" rather than crashing.
+   */
+  openQueueScreen?: () => void;
 };
 
 export function createAppContext(args: {
@@ -76,6 +90,9 @@ export function createAppContext(args: {
         cursors.set(queueId, cursor);
       }
       return cursor;
+    },
+    hasCursor(queueId) {
+      return cursors.has(queueId);
     },
     setFlash(message, kind, ttlMs = 3000) {
       ctx.flash = { kind, message, expiresAt: Date.now() + ttlMs };

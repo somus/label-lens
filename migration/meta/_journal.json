@@ -50,6 +50,13 @@
       "when": 1778600000000,
       "tag": "0006_records_with_primary_v2_doc_id",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1778700000000,
+      "tag": "0007_issues_and_reason_index",
+      "breakpoints": true
     }
   ]
 }

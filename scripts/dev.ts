@@ -39,7 +39,17 @@ function passthroughSeedArgs(): string[] {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--reset") continue;
-    if (arg === "--count" || arg === "--seed" || arg === "--task") {
+    if (arg === "--no-prefill") {
+      out.push(arg);
+      continue;
+    }
+    if (
+      arg === "--count" ||
+      arg === "--seed" ||
+      arg === "--task" ||
+      arg === "--with-marks" ||
+      arg === "--with-reviews"
+    ) {
       out.push(arg, argv[++i] ?? "");
     }
   }
@@ -96,7 +106,7 @@ function status(): void {
 
 function usage(): never {
   console.error(
-    "usage: bun run scripts/dev.ts <up | down | status> [--reset] [--count N] [--seed N] [--task classification|boundary]",
+    "usage: bun run scripts/dev.ts <up | down | status> [--reset] [--count N] [--seed N] [--task classification|boundary] [--with-marks N] [--with-reviews N] [--no-prefill]",
   );
   process.exit(2);
 }

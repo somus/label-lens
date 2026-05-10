@@ -1,0 +1,35 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`queue screen e2e renders all built-in queues with counts 1`] = `
+"                                                                                                    
+  Queues                                                                                            
+                                                                                                    
+  > Pending         10                                                                              
+    Skipped         0                                                                               
+    Low confidence  10                                                                              
+    Disagreements   1                                                                               
+    Flagged         1                                                                               
+    Marked          0                                                                               
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  j / k navigate · enter select · esc / q cancel                                                    
+                                                                                                    
+"
+`;

@@ -39,6 +39,39 @@ Users override via `labellens.config.json` `display.*`:
 
 Live theme switching mid-session is a V1 follow-up (PRD §14.5).
 
+## Queue system (PRD §10.3)
+
+Queues are SQL queries over indexed columns; switching is a cursor swap, not a re-query of the full DB. Cursors are memoized per-queue in `AppContext` so re-entering a queue resumes at the last position. `[` / `]` cycle the static built-ins; `shift+q` opens the Queue screen with live counts.
+
+**Built-in queues:**
+
+- `pending` — untouched records (no effective review). Excludes `skipped` (ADR 0003).
+- `skipped` — latest effective review status = `skipped`.
+- `low-confidence` — unreviewed, ordered by `primary_confidence` ASC; NULL confidences sort last.
+- `disagreements` — unreviewed records whose `predictions[]` carry ≥2 distinct labels.
+- `flagged` — records with any row in the `issues` table (imported via JSONL `issues[]` per PRD §10.4; computed signals land in #10).
+- `marked` — records tagged `marked` via the `m` key (additive; survives review state).
+
+**Parametric factories** (resolved by `resolveQueue` parsing `<head>:<rest>`):
+
+- `by-source:<s>` — `primary_source = <s>`. Source strings may contain `:` — the rest is reassembled (e.g. `by-source:llm:gpt-4`).
+- `by-reason:<r>` — `primary_reason = <r>`.
+- `by-label:<l>` — effective `final_label` if reviewed, else `primary_label`. Reviewer-set labels take precedence.
+- `by-issue:<t>` — `EXISTS (issues WHERE type = <t>)`.
+- `by-correction:<from>:<to>` — latest effective review flipped `<from>` → `<to>`. Drilldown target for stats. Split on the **last** colon, so colon-namespaced from-labels survive (`by-correction:policy:spam:ham` → from=`policy:spam`, to=`ham`). The to-label cannot itself contain a colon.
+
+**Power-user `where:<expr>`:**
+
+```
+:queue where:source = 'llm:gpt-4' and confidence < 0.3
+:queue where:final_label != prev_label and prev_label = 'ENTRY_START'
+:queue where:issue_type in ('source_disagreement', 'low_confidence')
+```
+
+Recursive-descent parser over a strict whitelist. Columns: `status`, `final_label`, `prev_label`, `source`, `confidence`, `reason`, `issue_type`. Operators: `=`, `!=`, `<`, `<=`, `>`, `>=`, `in`. Precedence: `and` > `or`; parens override. Values bind via drizzle `${value}` interpolation — no string concatenation, no SQL injection. Unknown columns / operators throw `WhereParseError`. `issue_type` compiles to an `EXISTS` subquery against the `issues` table.
+
+When adding a queue, follow the file-per-queue convention in `src/store/queues/<name>.ts` and register it in `registry.ts`. Always read `effective_reviews`, never raw `reviews`, for current-state predicates (ADR 0007).
+
 ## Conventions
 
 - **Domain language is law.** "Annotation" means human label; "Prediction" means machine label. Don't say "label" alone unless you mean the value (`food`, `SECTION_HEADER`).
@@ -64,8 +97,13 @@ bun run dev:status    # show what's in /tmp/llens-dev
 ```sh
 bun run dev:up -- --reset                    # wipe + reseed before launching
 bun run dev:up -- --count 1000 --seed 42     # bigger / different dataset (only on first init or --reset)
+bun run dev:up -- --with-marks 5             # pre-tag N records as marked (default 5)
+bun run dev:up -- --with-reviews 8           # pre-insert N reviews — half accepted, half relabeled (default 8)
+bun run dev:up -- --no-prefill               # skip the marks + reviews prefill entirely
 LL_DEV_DIR=/tmp/foo bun run dev:up           # alternate dir
 ```
+
+Prefill seeds non-empty `marked`, `by-correction:*`, and `by-source:*` queues so a fresh dev launch exercises every queue without typing.
 
 Underlying primitive is `bun run seed` (wipes + generates without launching the TUI). Use that when you want to regenerate data without entering the TUI.
 
