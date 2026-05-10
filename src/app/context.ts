@@ -84,7 +84,14 @@ export function createAppContext(args: {
         flashTimer = null;
         if (ctx.flash && ctx.flash.expiresAt <= Date.now()) {
           ctx.flash = null;
-          ctx.requestRender();
+          // Tests can let the AppContext outlive its sqlite handle; the
+          // expiry tick must not crash the process if requestRender ends up
+          // querying a closed db.
+          try {
+            ctx.requestRender();
+          } catch {
+            // swallow — re-render is best-effort here
+          }
         }
       }, ttlMs + 10);
       ctx.requestRender();
