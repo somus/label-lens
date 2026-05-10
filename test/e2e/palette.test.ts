@@ -104,6 +104,50 @@ describe("palette e2e", () => {
     expect(app.queueId).toBe("by-source:llm");
   });
 
+  test(":queue typo flashes an unknown-queue error and closes the overlay", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { app, mockInput, renderOnce } = await setup(store);
+    mockInput.pressKey(":");
+    await renderOnce();
+    for (const ch of "queue") {
+      mockInput.pressKey(ch);
+      await renderOnce();
+    }
+    mockInput.pressKey(" ");
+    await renderOnce();
+    for (const ch of "no-such-queue") {
+      mockInput.pressKey(ch);
+      await renderOnce();
+    }
+    mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
+    await renderOnce();
+    expect(app.overlay).toBeNull();
+    expect(app.flash?.kind).toBe("error");
+    expect(app.flash?.message).toContain("unknown queue");
+  });
+
+  test(":by-source carries colon-bearing arguments end-to-end", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { app, mockInput, renderOnce } = await setup(store);
+    mockInput.pressKey(":");
+    await renderOnce();
+    for (const ch of "by-source") {
+      mockInput.pressKey(ch);
+      await renderOnce();
+    }
+    mockInput.pressKey(" ");
+    await renderOnce();
+    for (const ch of "llm:gpt-4") {
+      mockInput.pressKey(ch);
+      await renderOnce();
+    }
+    mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
+    await renderOnce();
+    expect(app.queueId).toBe("by-source:llm:gpt-4");
+  });
+
   test(":help with no argument flashes the topic list", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { app, mockInput, renderOnce } = await setup(store);

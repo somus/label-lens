@@ -7,10 +7,18 @@ export type MarkdownProps = {
   bg?: ColorInput;
 };
 
+// Allocated once for the lifetime of the process so re-renders of guidelines
+// / man-page overlays don't churn the underlying SyntaxStyle resource.
+let SHARED_STYLE: SyntaxStyle | null = null;
+function sharedStyle(): SyntaxStyle {
+  if (SHARED_STYLE === null) SHARED_STYLE = SyntaxStyle.create();
+  return SHARED_STYLE;
+}
+
 export function Markdown(props: MarkdownProps) {
   return h(MarkdownRenderable, {
     content: props.content,
-    syntaxStyle: SyntaxStyle.create(),
+    syntaxStyle: sharedStyle(),
     streaming: false,
     ...(props.fg !== undefined ? { fg: props.fg } : {}),
     ...(props.bg !== undefined ? { bg: props.bg } : {}),

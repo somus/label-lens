@@ -7,7 +7,11 @@ export const helpShow: Command = {
   binding: "?",
   run: (ctx) => {
     const registry = ctx.commandRegistry;
-    const commands = registry ? Array.from(registry.values()) : [];
+    if (!registry) {
+      ctx.setFlash("help: command registry unavailable", "error");
+      return;
+    }
+    const commands = Array.from(registry.values());
     const scope = ctx.activeScope ?? "review";
     ctx.openOverlay({ kind: "help", state: openHelp({ commands, scope }) });
   },

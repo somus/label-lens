@@ -8,7 +8,11 @@ export const paletteOpen: Command = {
   hidden: true,
   run: (ctx) => {
     const registry = ctx.commandRegistry;
-    const commands = registry ? Array.from(registry.values()) : [];
+    if (!registry) {
+      ctx.setFlash("palette: command registry unavailable", "error");
+      return;
+    }
+    const commands = Array.from(registry.values());
     ctx.openOverlay({
       kind: "palette",
       state: openPalette({ commands, history: ctx.paletteHistory.slice() }),

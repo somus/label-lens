@@ -8,6 +8,11 @@ export type DispatchCommandFn = (name: string, argument?: string) => void | Prom
 /**
  * Interpret data Effects emitted by an Overlay reducer against the AppContext.
  * Source-of-truth side effects (ADR 0004) live here so reducers stay pure.
+ *
+ * `dispatchCommand` is the screen-supplied callback that re-enters the
+ * Command dispatcher when an overlay emits a `runCommand` effect (palette).
+ * Unit tests can omit it; the interpreter then flashes an error rather
+ * than silently dropping the dispatch.
  */
 export function applyEffects(
   app: AppContext,

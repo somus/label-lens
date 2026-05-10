@@ -8,6 +8,7 @@ After ingesting a JSONL file, the review screen presents one record at a time.
 - Press `?` for the contextual help overlay.
 - Press `:` to open the command palette.
 - Press `g g` to read the project guidelines.
+- Type `:help <topic>` (e.g. `:help keymap`, `:help config`, `:help assistant`) to read the bundled docs without leaving the TUI.
 
 ## Reviewing a record
 
