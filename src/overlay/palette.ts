@@ -1,4 +1,5 @@
 import type { Command } from "../actions/command.ts";
+import type { Scope } from "../keymap/engine.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 export type PaletteEntry = {
@@ -18,6 +19,7 @@ export type PaletteState = {
 export type OpenPaletteArgs = {
   commands: Command[];
   history: string[];
+  scope: Scope;
 };
 
 export function openPalette(args: OpenPaletteArgs): PaletteState {
@@ -25,6 +27,7 @@ export function openPalette(args: OpenPaletteArgs): PaletteState {
   for (const c of args.commands) {
     if (!c.palette) continue;
     if (c.hidden) continue;
+    if (c.scope !== args.scope && c.scope !== "global") continue;
     entries.push({ commandName: c.name, palette: c.palette });
   }
   return {
@@ -160,7 +163,10 @@ export function reducePalette(state: PaletteState, event: OverlayEvent): ReduceR
     return { overlay: packed(withFilter(state, state.filter.slice(0, -1))), effects: [] };
   }
   const ch = name === "space" ? " " : name;
-  if (ch.length === 1 && /^[\w \-_:.]$/.test(ch)) {
+  // Accept any printable ASCII so `:where source = 'llm:gpt-4' and …` and
+  // similar PRD-spec inputs typecheck through the palette. Single char plus
+  // ctrl-modifier-free (so ctrl+p stays a navigation key).
+  if (ch.length === 1 && ch >= " " && ch < "\x7f" && !event.event.ctrl) {
     return { overlay: packed(withFilter(state, state.filter + ch)), effects: [] };
   }
   return { overlay: packed(state), effects: [] };

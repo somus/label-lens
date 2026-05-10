@@ -430,6 +430,16 @@ function renderOverlay(overlay: Overlay): ReturnType<typeof Box> {
 }
 
 function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
+  // Slice the markdown source by line so the reducer's scroll counter
+  // actually drives what the user sees. MarkdownRenderable doesn't expose
+  // a viewport; line-slice keeps it simple and matches the up/down=1,
+  // pgup/pgdn=10 model.
+  const lines = state.content.split("\n");
+  const total = lines.length;
+  const start = Math.min(state.scroll, Math.max(total - 1, 0));
+  const sliced = lines.slice(start).join("\n");
+  const moreAbove = start > 0;
+  const titleSuffix = total > 1 ? `   line ${start + 1}/${total}` : "";
   return Box(
     {
       flexDirection: "column",
@@ -438,9 +448,12 @@ function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
       marginTop: 1,
       flexGrow: 1,
     },
-    Text({ content: ` ${state.title}` }),
-    Markdown({ content: state.content }),
-    Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
+    Text({ content: ` ${state.title}${titleSuffix}${moreAbove ? "   ↑ above" : ""}` }),
+    Markdown({ content: sliced }),
+    Text({
+      content: " ↑/↓ scroll · pgup/pgdn page · esc close",
+      attributes: TextAttributes.DIM,
+    }),
   );
 }
 

@@ -13,9 +13,10 @@ export const paletteOpen: Command = {
       return;
     }
     const commands = Array.from(registry.values());
+    const scope = ctx.activeScope ?? "review";
     ctx.openOverlay({
       kind: "palette",
-      state: openPalette({ commands, history: ctx.paletteHistory.slice() }),
+      state: openPalette({ commands, scope, history: ctx.paletteHistory.slice() }),
     });
   },
 };
