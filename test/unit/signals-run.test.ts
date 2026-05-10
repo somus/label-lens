@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { runSignals } from "../../src/signals/run.ts";
+import { COMPUTED_SIGNAL_SOURCE } from "../../src/store/issues.ts";
 import { queueRecords } from "../../src/store/queries.ts";
 import { resolveQueue } from "../../src/store/queues/registry.ts";
 import { openTmpStore } from "../util/tmp.ts";
@@ -53,7 +54,7 @@ describe("runSignals (sync orchestrator)", () => {
   test("isCancelled hook short-circuits before any write", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const importedBefore = store.db.all<{ n: number }>(
-      sql`SELECT COUNT(*) AS n FROM issues WHERE source IS NULL OR source != 'computed'`,
+      sql`SELECT COUNT(*) AS n FROM issues WHERE source IS NULL OR source != ${COMPUTED_SIGNAL_SOURCE}`,
     )[0]!.n;
 
     const result = runSignals(store.db, { isCancelled: () => true });
@@ -61,12 +62,12 @@ describe("runSignals (sync orchestrator)", () => {
     expect(result.written).toBe(0);
 
     const computed = store.db.all<{ n: number }>(
-      sql`SELECT COUNT(*) AS n FROM issues WHERE source = 'computed'`,
+      sql`SELECT COUNT(*) AS n FROM issues WHERE source = ${COMPUTED_SIGNAL_SOURCE}`,
     )[0]!.n;
     expect(computed).toBe(0);
 
     const imported = store.db.all<{ n: number }>(
-      sql`SELECT COUNT(*) AS n FROM issues WHERE source IS NULL OR source != 'computed'`,
+      sql`SELECT COUNT(*) AS n FROM issues WHERE source IS NULL OR source != ${COMPUTED_SIGNAL_SOURCE}`,
     )[0]!.n;
     expect(imported).toBe(importedBefore);
   });
@@ -75,13 +76,13 @@ describe("runSignals (sync orchestrator)", () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     runSignals(store.db, { lowConfidenceThreshold: 0.5 });
     const firstCount = store.db.all<{ n: number }>(
-      sql`SELECT COUNT(*) AS n FROM issues WHERE source = 'computed'`,
+      sql`SELECT COUNT(*) AS n FROM issues WHERE source = ${COMPUTED_SIGNAL_SOURCE}`,
     )[0]!.n;
     expect(firstCount).toBeGreaterThan(0);
 
     runSignals(store.db, { lowConfidenceThreshold: 0.5 });
     const secondCount = store.db.all<{ n: number }>(
-      sql`SELECT COUNT(*) AS n FROM issues WHERE source = 'computed'`,
+      sql`SELECT COUNT(*) AS n FROM issues WHERE source = ${COMPUTED_SIGNAL_SOURCE}`,
     )[0]!.n;
     expect(secondCount).toBe(firstCount);
 

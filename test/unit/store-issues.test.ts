@@ -5,6 +5,7 @@ import {
   insertComputedIssues,
   issuesForRecord,
   purgeComputedIssues,
+  safeIssueSource,
 } from "../../src/store/issues.ts";
 import { openTmpStore } from "../util/tmp.ts";
 
@@ -34,6 +35,45 @@ describe("insertComputedIssues", () => {
   test("no-op for an empty array", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     expect(() => insertComputedIssues(store.db, [])).not.toThrow();
+  });
+});
+
+describe("safeIssueSource (pure)", () => {
+  test("passes through ordinary user sources", () => {
+    expect(safeIssueSource("cleanlab")).toBe("cleanlab");
+    expect(safeIssueSource("llm:gpt-4")).toBe("llm:gpt-4");
+    expect(safeIssueSource(null)).toBeNull();
+    expect(safeIssueSource(undefined)).toBeNull();
+  });
+
+  test("rewrites the reserved sentinel so user data can't be purged", () => {
+    expect(safeIssueSource(COMPUTED_SIGNAL_SOURCE)).toBe(`imported:${COMPUTED_SIGNAL_SOURCE}`);
+  });
+});
+
+describe("safeIssueSource (sentinel collision defense)", () => {
+  test("rewrites imported sources that collide with the computed sentinel", async () => {
+    using store = await openTmpStore();
+    // Hand-roll a record + an imported issue whose source is the sentinel.
+    const recordId = "rec-collision";
+    store.db.run(
+      sql`INSERT INTO records (id, source_path, row_index, text, raw)
+          VALUES (${recordId}, 'inline', 0, 'hello', '{}')`,
+    );
+    insertComputedIssues(store.db, [{ recordId, type: "low_confidence", score: 0.5 }]);
+    // Simulate an imported issue carrying the sentinel string before our
+    // ingest defense runs (or coming from a future hand-edit).
+    store.db.run(
+      sql`INSERT INTO issues (record_id, type, score, source, created_at)
+          VALUES (${recordId}, 'label_issue', 0.9, ${`imported:${COMPUTED_SIGNAL_SOURCE}`}, ${new Date().toISOString()})`,
+    );
+
+    purgeComputedIssues(store.db);
+
+    const remaining = issuesForRecord(store.db, recordId);
+    expect(remaining.length).toBe(1);
+    expect(remaining[0]?.type).toBe("label_issue");
+    expect(remaining[0]?.source).toBe(`imported:${COMPUTED_SIGNAL_SOURCE}`);
   });
 });
 

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import type { WorkerInbound, WorkerOutbound } from "../../src/signals/worker.ts";
 import { openDb } from "../../src/store/db.ts";
+import { COMPUTED_SIGNAL_SOURCE } from "../../src/store/issues.ts";
 import { openTmpStore } from "../util/tmp.ts";
 
 const WORKER_URL = new URL("../../src/signals/worker.ts", import.meta.url).href;
@@ -39,7 +40,7 @@ describe("signals worker (Bun Worker)", () => {
     const verify = openDb(dbPath);
     try {
       const n = verify.all<{ n: number }>(
-        sql`SELECT COUNT(*) AS n FROM issues WHERE source = 'computed'`,
+        sql`SELECT COUNT(*) AS n FROM issues WHERE source = ${COMPUTED_SIGNAL_SOURCE}`,
       )[0]!.n;
       expect(n).toBeGreaterThan(0);
     } finally {
@@ -64,7 +65,7 @@ describe("signals worker (Bun Worker)", () => {
     const verify = openDb(dbPath);
     try {
       const computed = verify.all<{ n: number }>(
-        sql`SELECT COUNT(*) AS n FROM issues WHERE source = 'computed'`,
+        sql`SELECT COUNT(*) AS n FROM issues WHERE source = ${COMPUTED_SIGNAL_SOURCE}`,
       )[0]!.n;
       expect(computed).toBe(0);
     } finally {

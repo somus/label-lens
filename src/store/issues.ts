@@ -2,7 +2,26 @@ import { eq } from "drizzle-orm";
 import type { TxOrDb } from "./db.ts";
 import { issues } from "./schema.ts";
 
-export const COMPUTED_SIGNAL_SOURCE = "computed";
+/**
+ * Namespaced sentinel marking issues written by the signals worker.
+ * `purgeComputedIssues` filters on this exact value, so it must not collide
+ * with any imported `issues[].source` from user JSONL. The colon-prefixed
+ * `labellens:` namespace matches the convention used elsewhere (predictions
+ * sources like `llm:gpt-4`, `regex.simple`). Imported issues whose source
+ * equals this string are rewritten at ingest — see `safeIssueSource`.
+ */
+export const COMPUTED_SIGNAL_SOURCE = "labellens:computed";
+
+/**
+ * Strip the reserved sentinel from any imported issue source so user-supplied
+ * data can't be mistaken for computed signals on the next purge. Anything
+ * else passes through untouched.
+ */
+export function safeIssueSource(source: string | null | undefined): string | null {
+  if (source == null) return null;
+  if (source === COMPUTED_SIGNAL_SOURCE) return `imported:${source}`;
+  return source;
+}
 
 export type ComputedIssueInput = {
   recordId: string;
