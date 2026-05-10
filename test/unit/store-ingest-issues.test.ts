@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { openTmpStore } from "../util/tmp.ts";
+import { ingestFile } from "../../src/ingest/ingest.ts";
+import { DEFAULT_FIELDS, openTmpStore, tmpdir } from "../util/tmp.ts";
 
 type IssueRow = {
   record_id: string;
@@ -27,5 +30,24 @@ describe("ingest issues[]", () => {
     using store = await openTmpStore();
     const count = store.db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM issues`)[0]?.n;
     expect(count).toBe(0);
+  });
+
+  test("preserves issue.source field for imported provenance", async () => {
+    using store = await openTmpStore();
+    using dir = tmpdir({ prefix: "labellens-issue-source-" });
+    const path = join(dir.path, "with-source.jsonl");
+    writeFileSync(
+      path,
+      `${JSON.stringify({
+        text: "row with sourced issue",
+        prediction: "food",
+        source: "llm:gpt-4",
+        issues: [{ type: "label_issue", score: 0.81, source: "cleanlab" }],
+      })}\n`,
+    );
+    await ingestFile(store.db, path, DEFAULT_FIELDS);
+    const rows = store.db.all<IssueRow>(sql`SELECT record_id, type, score, source FROM issues`);
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.source).toBe("cleanlab");
   });
 });

@@ -80,6 +80,7 @@ export async function ingestFile(
       issues: issuesIn.map((i) => ({
         type: i.type,
         score: typeof i.score === "number" ? i.score : null,
+        source: typeof i.source === "string" ? i.source : null,
       })),
     });
     ingested++;

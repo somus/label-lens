@@ -301,6 +301,9 @@ function prefillStateOpen(db: ReturnType<typeof openDb>, opts: GenOptions): void
     const rows = db.$client
       .prepare("SELECT id, primary_label FROM records_with_primary")
       .all() as Row[];
+    // Sample without replacement: marks first, then reviews. If
+    // withMarks + withReviews > rows.length, the trailing iterations are
+    // intentionally skipped — small datasets just get fewer prefills.
     const candidates = rows.slice();
 
     let marks = 0;

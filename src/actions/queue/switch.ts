@@ -10,8 +10,12 @@ import type { Command } from "../command.ts";
  */
 export function switchQueue(ctx: AppContext, queueId: QueueId): void {
   const def = resolveQueue(queueId);
+  // Cached cursors may be stale if reviews landed while focused elsewhere;
+  // a freshly-constructed cursor is already current (see Cursor constructor),
+  // so refreshing twice would just double the queueRecords cost.
+  const cached = ctx.hasCursor(queueId);
   const cursor = ctx.getCursor(queueId);
-  cursor.refresh();
+  if (cached) cursor.refresh();
   ctx.cursor = cursor;
   ctx.queueId = queueId;
   ctx.setFlash(`Queue: ${def.label}`, "info", 1500);

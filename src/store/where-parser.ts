@@ -78,14 +78,13 @@ const COLUMNS: Record<string, ColumnDef> = {
           throw new WhereParseError("issue_type values must be strings");
         }
       }
-      const inList = (sub: SQL) => sql`(${sub})`;
       const placeholders = values.map((v) => sql`${v}`);
       const list = sql.join(placeholders, sql`, `);
       const exists =
         op === "in"
           ? sql`EXISTS (
               SELECT 1 FROM issues i
-              WHERE i.record_id = ${recordsWithPrimary.id} AND i.type IN ${inList(list)}
+              WHERE i.record_id = ${recordsWithPrimary.id} AND i.type IN (${list})
             )`
           : sql`EXISTS (
               SELECT 1 FROM issues i

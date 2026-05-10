@@ -57,7 +57,12 @@ export function resolveQueue(id: QueueId): QueueDefinition {
       case "by-correction": {
         const sep = rest.indexOf(":");
         if (sep < 1) throw new Error("by-correction needs <from>:<to>");
-        return byCorrection(rest.slice(0, sep), rest.slice(sep + 1));
+        const from = rest.slice(0, sep);
+        const to = rest.slice(sep + 1);
+        if (to.includes(":")) {
+          throw new Error(`by-correction: unexpected extra colon in "${to}"`);
+        }
+        return byCorrection(from, to);
       }
     }
   }

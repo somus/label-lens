@@ -31,6 +31,33 @@ describe("by-label queue factory", () => {
     expect(rows.find((r) => r.id === id)).toBeDefined();
   });
 
+  test("rejected record (final_label IS NULL) does not match by-label", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Lunch at Zomato Bangalore'`,
+    )[0]!.id;
+    insertReview(store.db, {
+      record_id: id,
+      status: "rejected",
+      final_label: null,
+      prev_label: "food",
+      source_of_truth: "human",
+    });
+    // Reviewer rejected the prediction; record no longer counted under 'food'.
+    expect(
+      queueRecords(store.db, resolveQueue("by-label:food").query).find((r) => r.id === id),
+    ).toBeUndefined();
+  });
+
+  test("record without primary prediction does not match", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    store.db.run(sql`DELETE FROM predictions WHERE record_id = ${id}`);
+    expect(
+      queueRecords(store.db, resolveQueue("by-label:food").query).find((r) => r.id === id),
+    ).toBeUndefined();
+  });
+
   test("review label takes precedence over prediction label", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const id = store.db.all<{ id: string }>(
