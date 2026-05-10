@@ -3,11 +3,18 @@ import type { QueueId } from "../store/queues/registry.ts";
 import { insertReview, updateRecordNote } from "../store/records.ts";
 import type { Effect } from "./types.ts";
 
+export type DispatchCommandFn = (name: string, argument?: string) => void | Promise<void>;
+
 /**
  * Interpret data Effects emitted by an Overlay reducer against the AppContext.
  * Source-of-truth side effects (ADR 0004) live here so reducers stay pure.
  */
-export function applyEffects(app: AppContext, queueId: QueueId, effects: Effect[]): void {
+export function applyEffects(
+  app: AppContext,
+  queueId: QueueId,
+  effects: Effect[],
+  dispatchCommand?: DispatchCommandFn,
+): void {
   for (const effect of effects) {
     switch (effect.kind) {
       case "close":
@@ -31,6 +38,16 @@ export function applyEffects(app: AppContext, queueId: QueueId, effects: Effect[
       case "markAssistantViewed":
         // Slice 11 plumbing — flag the record's source-of-truth as 'human+assistant'
         // for the next decision. No-op until then.
+        break;
+      case "runCommand":
+        if (!dispatchCommand) {
+          app.setFlash(`palette: cannot dispatch ${effect.commandName} (no handler)`, "error");
+          break;
+        }
+        void dispatchCommand(effect.commandName, effect.argument);
+        break;
+      case "pushPaletteHistory":
+        app.pushPaletteHistory(effect.entry);
         break;
     }
   }

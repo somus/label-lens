@@ -12,7 +12,7 @@ export type Command<Ctx extends ActionContext = ActionContext> = {
   /** Message flashed when run is gated by `enabled === false`. */
   disabledMessage?: string | ((ctx: Ctx) => string);
   enabled?: (ctx: Ctx) => boolean;
-  run: (ctx: Ctx) => void | Promise<void>;
+  run: (ctx: Ctx, argument?: string) => void | Promise<void>;
 };
 
 export type CommandRegistry = Map<string, Command>;

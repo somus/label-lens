@@ -1,0 +1,17 @@
+import { openPalette } from "../../overlay/palette.ts";
+import type { Command } from "../command.ts";
+
+export const paletteOpen: Command = {
+  name: "palette.open",
+  scope: "global",
+  binding: ":",
+  hidden: true,
+  run: (ctx) => {
+    const registry = ctx.commandRegistry;
+    const commands = registry ? Array.from(registry.values()) : [];
+    ctx.openOverlay({
+      kind: "palette",
+      state: openPalette({ commands, history: ctx.paletteHistory.slice() }),
+    });
+  },
+};

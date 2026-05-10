@@ -1,5 +1,8 @@
 import type { KeyEvent } from "../keymap/engine.ts";
 import type { ReviewStatus, SourceOfTruth } from "../types.ts";
+import type { GuidelinesState } from "./guidelines.ts";
+import type { HelpState } from "./help.ts";
+import type { PaletteState } from "./palette.ts";
 
 /** Per-Overlay state types. */
 
@@ -31,7 +34,10 @@ export type AssistantState = {
 export type Overlay =
   | { kind: "picker"; state: PickerState }
   | { kind: "note"; state: NoteState }
-  | { kind: "assistant"; state: AssistantState };
+  | { kind: "assistant"; state: AssistantState }
+  | { kind: "palette"; state: PaletteState }
+  | { kind: "help"; state: HelpState }
+  | { kind: "guidelines"; state: GuidelinesState };
 
 export type OverlayKind = Overlay["kind"];
 
@@ -56,7 +62,9 @@ export type Effect =
       sourceOfTruth: SourceOfTruth;
     }
   | { kind: "updateNote"; recordId: string; value: string }
-  | { kind: "markAssistantViewed"; recordId: string };
+  | { kind: "markAssistantViewed"; recordId: string }
+  | { kind: "runCommand"; commandName: string; argument?: string }
+  | { kind: "pushPaletteHistory"; entry: string };
 
 export type ReduceResult = {
   overlay: Overlay | null;

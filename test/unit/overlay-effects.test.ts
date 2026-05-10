@@ -73,4 +73,43 @@ describe("applyEffects", () => {
       applyEffects(app, "pending", [{ kind: "markAssistantViewed", recordId: "x" }]),
     ).not.toThrow();
   });
+
+  test("pushPaletteHistory appends to AppContext.paletteHistory", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = ctx(store.db);
+    applyEffects(app, "pending", [{ kind: "pushPaletteHistory", entry: "queue pending" }]);
+    applyEffects(app, "pending", [{ kind: "pushPaletteHistory", entry: "marked" }]);
+    expect(app.paletteHistory).toEqual(["queue pending", "marked"]);
+  });
+
+  test("pushPaletteHistory deduplicates by moving the existing entry to the end", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = ctx(store.db);
+    applyEffects(app, "pending", [{ kind: "pushPaletteHistory", entry: "marked" }]);
+    applyEffects(app, "pending", [{ kind: "pushPaletteHistory", entry: "queue pending" }]);
+    applyEffects(app, "pending", [{ kind: "pushPaletteHistory", entry: "marked" }]);
+    expect(app.paletteHistory).toEqual(["queue pending", "marked"]);
+  });
+
+  test("runCommand calls the provided dispatchCommand callback with name + argument", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = ctx(store.db);
+    const calls: { name: string; argument?: string }[] = [];
+    applyEffects(
+      app,
+      "pending",
+      [{ kind: "runCommand", commandName: "palette.queue", argument: "low-confidence" }],
+      (name, argument) => {
+        calls.push({ name, argument });
+      },
+    );
+    expect(calls).toEqual([{ name: "palette.queue", argument: "low-confidence" }]);
+  });
+
+  test("runCommand without a dispatchCommand callback flashes an error", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = ctx(store.db);
+    applyEffects(app, "pending", [{ kind: "runCommand", commandName: "x.y" }]);
+    expect(app.flash?.kind).toBe("error");
+  });
 });
