@@ -35,6 +35,7 @@ export type StoredRecord = {
   context_after: string | null;
   raw: string;
   note: string | null;
+  document_id: string | null;
 };
 
 export type StoredPrediction = {

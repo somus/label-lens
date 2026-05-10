@@ -34,6 +34,8 @@ export type InferenceResult = {
   sampleSize: number;
   /** Distinct prediction labels seen in the sample, ordered by descending frequency. */
   labels: string[];
+  /** Recommended task based on context-field density (PRD §12.1). */
+  recommendedTask: "classification" | "boundary";
 };
 
 export async function inferSchema(filePath: string, sampleLimit = 100): Promise<InferenceResult> {
@@ -66,6 +68,20 @@ export async function inferSchema(filePath: string, sampleLimit = 100): Promise<
 
   const predictionField = pickFirst("prediction");
   const labels = collectLabels(samples, predictionField);
+  const ctxBefore = pickFirst("context_before");
+  const ctxAfter = pickFirst("context_after");
+
+  let withContext = 0;
+  for (const row of samples) {
+    if (
+      (ctxBefore && isNonEmptyString(row[ctxBefore])) ||
+      (ctxAfter && isNonEmptyString(row[ctxAfter]))
+    ) {
+      withContext++;
+    }
+  }
+  const recommendedTask: "classification" | "boundary" =
+    sampleSize > 0 && withContext / sampleSize > 0.5 ? "boundary" : "classification";
 
   return {
     fields: {
@@ -73,14 +89,19 @@ export async function inferSchema(filePath: string, sampleLimit = 100): Promise<
       prediction: predictionField,
       confidence: pickFirst("confidence"),
       source: pickFirst("source"),
-      context_before: pickFirst("context_before"),
-      context_after: pickFirst("context_after"),
+      context_before: ctxBefore,
+      context_after: ctxAfter,
       id: pickFirst("id"),
     },
     topLevelFields: [...seenFields],
     sampleSize,
     labels,
+    recommendedTask,
   };
+}
+
+function isNonEmptyString(v: unknown): boolean {
+  return typeof v === "string" && v.length > 0;
 }
 
 function collectLabels(

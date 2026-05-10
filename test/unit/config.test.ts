@@ -41,6 +41,23 @@ describe("defaultConfig", () => {
   });
 });
 
+describe("defaultConfig boundary task", () => {
+  test("classification task: omits boundary block", () => {
+    const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS });
+    expect(cfg.task).toBe("classification");
+    expect(cfg.boundary).toBeUndefined();
+  });
+
+  test("boundary task: populates boundary block with documented defaults", () => {
+    const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS, task: "boundary" });
+    expect(cfg.task).toBe("boundary");
+    expect(cfg.boundary).toEqual({
+      documentField: "document_id",
+      contextLines: 3,
+    });
+  });
+});
+
 describe("LabellensConfig display key shape", () => {
   test("user-supplied display overrides accepted on the type", () => {
     // Type-level test: this object must satisfy LabellensConfig without errors.

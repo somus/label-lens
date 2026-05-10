@@ -119,6 +119,7 @@ export const recordsWithPrimary = sqliteView("records_with_primary", {
   contextAfter: text("context_after"),
   raw: text("raw").notNull(),
   note: text("note"),
+  documentId: text("document_id"),
   primaryPredictionId: integer("primary_prediction_id"),
   primaryLabel: text("primary_label"),
   primaryConfidence: real("primary_confidence"),

@@ -57,6 +57,18 @@ A SQL-backed filter over records. Built-in: `pending`, `low-confidence`, `disagr
 The reviewer's position within a **Queue** — index into the ordered list of pending records the queue resolves to. One Cursor per Queue, persisted at app scope so screen switches and queue switches preserve focus. Reset when the queue is invalidated (re-ingest, re-prioritize, label set change).
 _Avoid_: Position, pointer, head (overloaded with linked-list pointers).
 
+**Document**:
+A logical group of related records sharing a `document_id`. Resolved per **Boundary task** from the configured `boundary.documentField` (top-level), then `meta.document_id`, then `meta.doc`. Used to group records into the **Doc view** escape hatch and to derive same-doc context.
+_Avoid_: File, source, group (overloaded).
+
+**Context strip**:
+Banded `±N` rows of preceding and following text rendered around the focus box on the review screen for the **Boundary task**. `N = boundary.contextLines` (default 3). Lines come from the focused record's `context_before` / `context_after` strings, split on newline (last N before, first N after). Context rows render dimmer than queue siblings and have no focus box.
+_Avoid_: Window, surroundings.
+
+**Doc view**:
+Read-only full-document view entered via `g d` chord on the review screen. Shows every **Record** sharing the focused record's **Document**, with the candidate line highlighted and the focus box drawn. Banding is off in doc view to keep it scannable. Owns its own keymap scope (`doc-view`) — only scroll keys (`j` / `k`, `ctrl-d` / `ctrl-u`, `g g`, `G`) and exit (`q` / `esc`). Doc view does **not** mutate the **Cursor**; exit returns to the same record in the same queue.
+_Avoid_: Source view, raw view, file view.
+
 **Overlay**:
 A modal sub-surface that captures keypresses while open and commits an action when it closes. Three adapters: relabel **Picker** (`r`), **Note** prompt (`n`), **Assistant** panel (`i`, slice 11). Each Overlay owns its state, accepts a uniform `OverlayEvent` (key, stream token, cancel, commit), and emits data **Effects** (`close`, `commitDecision`, `updateNote`, `markAssistantViewed`) the screen interprets against the AppContext. While an Overlay is open the review-scope keymap is dormant — raw key events flow to the Overlay reducer.
 _Avoid_: Modal, dialog, popup. "Panel" is reserved for the assistant's internal panel structure.

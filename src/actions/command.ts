@@ -9,6 +9,8 @@ export type Command<Ctx extends ActionContext = ActionContext> = {
   binding?: string | string[];
   palette?: string;
   hidden?: boolean;
+  /** Message flashed when run is gated by `enabled === false`. */
+  disabledMessage?: string | ((ctx: Ctx) => string);
   enabled?: (ctx: Ctx) => boolean;
   run: (ctx: Ctx) => void | Promise<void>;
 };

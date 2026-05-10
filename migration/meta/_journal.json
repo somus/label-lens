@@ -43,6 +43,13 @@
       "when": 1778500000000,
       "tag": "0005_effective_reviews_view",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1778600000000,
+      "tag": "0006_records_with_primary_v2_doc_id",
+      "breakpoints": true
     }
   ]
 }

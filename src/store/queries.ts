@@ -30,6 +30,7 @@ function hydrate(row: ViewRow): RecordWithPrimaryPrediction {
     context_after: row.contextAfter,
     raw: row.raw,
     note: row.note,
+    document_id: row.documentId,
     primaryPrediction: primary,
     latestReview: null,
   };
@@ -53,6 +54,17 @@ export function queueRecords(db: Db, query: QueueQuery = {}): RecordWithPrimaryP
 export function recordById(db: Db, id: string): RecordWithPrimaryPrediction | null {
   const row = db.select().from(recordsWithPrimary).where(eq(recordsWithPrimary.id, id)).get();
   return row ? hydrate(row) : null;
+}
+
+/** All records sharing the given document_id, ordered by row_index ASC. */
+export function recordsInDoc(db: TxOrDb, documentId: string): RecordWithPrimaryPrediction[] {
+  const rows = db
+    .select()
+    .from(recordsWithPrimary)
+    .where(eq(recordsWithPrimary.documentId, documentId))
+    .orderBy(asc(recordsWithPrimary.rowIndex))
+    .all();
+  return rows.map(hydrate);
 }
 
 type EffectiveRow = typeof effectiveReviews.$inferSelect;

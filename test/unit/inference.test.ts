@@ -32,4 +32,35 @@ describe("schema inference", () => {
     await Bun.write(tmp, '{"foo": "bar"}\n');
     await expect(inferSchema(tmp)).rejects.toThrow(InferenceError);
   });
+
+  test("recommendedTask=classification when <50% carry context fields (tiny.jsonl: 20%)", async () => {
+    const result = await inferSchema("test/fixtures/tiny.jsonl");
+    expect(result.recommendedTask).toBe("classification");
+  });
+
+  test("recommendedTask=boundary when >50% carry context_before/after", async () => {
+    const tmp = `/tmp/labellens-boundary-${Date.now()}.jsonl`;
+    const rows: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const row: Record<string, unknown> = { text: `line ${i}`, prediction: "x" };
+      if (i < 6) row.context_before = `prev ${i}`;
+      rows.push(JSON.stringify(row));
+    }
+    await Bun.write(tmp, `${rows.join("\n")}\n`);
+    const result = await inferSchema(tmp);
+    expect(result.recommendedTask).toBe("boundary");
+  });
+
+  test("recommendedTask=classification at exactly 50% (strictly >50% rule)", async () => {
+    const tmp = `/tmp/labellens-half-${Date.now()}.jsonl`;
+    const rows: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const row: Record<string, unknown> = { text: `line ${i}`, prediction: "x" };
+      if (i < 5) row.context_after = `next ${i}`;
+      rows.push(JSON.stringify(row));
+    }
+    await Bun.write(tmp, `${rows.join("\n")}\n`);
+    const result = await inferSchema(tmp);
+    expect(result.recommendedTask).toBe("classification");
+  });
 });

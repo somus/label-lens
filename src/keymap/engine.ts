@@ -1,6 +1,6 @@
 export type Action = string;
 
-export type Scope = "global" | "review" | "queue" | "stats" | "palette" | "assistant";
+export type Scope = "global" | "review" | "queue" | "stats" | "palette" | "assistant" | "doc-view";
 
 export type Binding = {
   key: string;

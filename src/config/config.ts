@@ -10,10 +10,16 @@ export type DisplayConfig = {
   layout?: "auto" | "stack" | "split";
 };
 
+export type BoundaryConfig = {
+  documentField: string;
+  contextLines: number;
+};
+
 export type LabellensConfig = {
   task: "classification" | "boundary";
   labels: LabelConfigEntry[];
   guidelines?: string;
+  boundary?: BoundaryConfig;
   input: {
     path: string;
     format: "jsonl";
@@ -31,11 +37,14 @@ export function defaultConfig(args: {
   fields: FieldMap;
   labels?: string[];
   outputPath?: string;
+  task?: "classification" | "boundary";
 }): LabellensConfig {
   const labels = args.labels && args.labels.length > 0 ? [...args.labels] : ["other"];
+  const task = args.task ?? "classification";
   return {
-    task: "classification",
+    task,
     labels,
+    ...(task === "boundary" ? { boundary: { documentField: "document_id", contextLines: 3 } } : {}),
     input: {
       path: args.inputPath,
       format: "jsonl",

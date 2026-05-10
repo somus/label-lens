@@ -20,6 +20,11 @@ export async function dispatch(
     return { kind: "scope-mismatch", action: actionName };
   }
   if (cmd.enabled && !cmd.enabled(ctx)) {
+    if (cmd.disabledMessage) {
+      const msg =
+        typeof cmd.disabledMessage === "function" ? cmd.disabledMessage(ctx) : cmd.disabledMessage;
+      ctx.setFlash(msg, "info");
+    }
     return { kind: "disabled", action: actionName };
   }
   try {
