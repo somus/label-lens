@@ -59,6 +59,21 @@ describe("findUnknownLabels", () => {
     expect(labels).toContain("legacy_prev");
   });
 
+  test("object-form label entries: extracts name via labelName()", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const configured = [
+      { name: "food", key: "f", color: "red" },
+      { name: "travel", key: "t" },
+      "shopping",
+      "utility",
+      "salary",
+      "rent",
+      "other",
+      "ENTRY_START",
+    ];
+    expect(findUnknownLabels(store.db, configured)).toEqual([]);
+  });
+
   test("counts are per-distinct-record", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const result = findUnknownLabels(store.db, []);

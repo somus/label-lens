@@ -37,12 +37,20 @@ export async function runMigrateCli({ args, cwd }: RunMigrateCliArgs): Promise<v
   if (!spec) {
     throw new MigrateCliError(`--rename requires <old>:<new>\n\n${usageText()}`);
   }
-  const colon = spec.indexOf(":");
+  // Split on the LAST colon so colon-namespaced from-labels (e.g.
+  // `policy:spam:ham`) survive — same convention as the `by-correction:`
+  // queue parser. The to-label cannot itself contain a colon.
+  const colon = spec.lastIndexOf(":");
   if (colon === -1) {
     throw new MigrateCliError(`--rename expected <old>:<new>, got '${spec}'`);
   }
   const oldLabel = spec.slice(0, colon);
   const newLabel = spec.slice(colon + 1);
+  if (oldLabel.length === 0 || newLabel.length === 0) {
+    throw new MigrateCliError(
+      `--rename <old>:<new>: both sides must be non-empty, got '${oldLabel}' and '${newLabel}'`,
+    );
+  }
 
   const configPath = resolve(cwd, "labellens.config.json");
   if (!existsSync(configPath)) {
@@ -66,6 +74,11 @@ export async function runMigrateCli({ args, cwd }: RunMigrateCliArgs): Promise<v
       return;
     }
 
+    // Flush WAL into the main db file before copying the state dir, so the
+    // backup is a coherent snapshot. Without this, in-flight WAL pages can
+    // leave state.db and state.db-wal mutually inconsistent inside the copy.
+    db.$client.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+
     let bakDir = `${stateDir}.bak`;
     if (existsSync(bakDir)) bakDir = `${stateDir}.bak-${Date.now()}`;
     cpSync(stateDir, bakDir, { recursive: true });
@@ -78,8 +91,11 @@ export async function runMigrateCli({ args, cwd }: RunMigrateCliArgs): Promise<v
         .run();
       tx.update(reviews).set({ prevLabel: newLabel }).where(eq(reviews.prevLabel, oldLabel)).run();
     });
+    // `refs` counts raw rows touched across the three columns — includes
+    // rows from compensated/undone reviews because migrate intentionally
+    // rewrites the audit log atomically (PRD §11.4), not just current state.
     console.log(
-      `migrate: renamed '${oldLabel}' -> '${newLabel}' (${refs} reference${refs === 1 ? "" : "s"}); backup at ${bakDir}`,
+      `migrate: renamed '${oldLabel}' -> '${newLabel}' (rewrote ${refs} row${refs === 1 ? "" : "s"}); backup at ${bakDir}`,
     );
   } finally {
     db.$client.close();

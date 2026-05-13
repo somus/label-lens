@@ -96,9 +96,10 @@ export async function runReview(): Promise<void> {
       console.error(`  '${u.label}' — ${u.count} record${u.count === 1 ? "" : "s"}`);
     }
     console.error("");
-    console.error("Either re-add the missing label(s) to labellens.config.json, or remap them:");
+    console.error("Either re-add the missing label(s) to labellens.config.json, or remap them");
+    console.error("to a label that is already configured:");
     for (const u of unknown) {
-      console.error(`  labellens migrate --rename ${u.label}:<replacement>`);
+      console.error(`  labellens migrate --rename ${u.label}:<configured-replacement>`);
     }
     db.$client.close();
     process.exit(2);

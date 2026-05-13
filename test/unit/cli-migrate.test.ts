@@ -176,6 +176,42 @@ describe("runMigrateCli", () => {
     );
   });
 
+  test("empty <old> in --rename throws", async () => {
+    using project = await seedProject("empty-old");
+    await expect(runMigrateCli({ args: ["--rename", ":foo"], cwd: project.dir })).rejects.toThrow(
+      /must be non-empty/,
+    );
+  });
+
+  test("empty <new> in --rename throws", async () => {
+    using project = await seedProject("empty-new");
+    await expect(runMigrateCli({ args: ["--rename", "foo:"], cwd: project.dir })).rejects.toThrow(
+      /must be non-empty/,
+    );
+  });
+
+  test("colon-namespaced from-label: last colon splits old/new", async () => {
+    using project = await seedProject("colon-from");
+    const db = openDb(project.dbPath);
+    db.run(sql`UPDATE predictions SET label = 'policy:spam' WHERE label = 'food'`);
+    db.$client.close();
+
+    await runMigrateCli({ args: ["--rename", "policy:spam:ham"], cwd: project.dir });
+
+    expect(countLabel(project.dbPath, "label", "policy:spam")).toBe(0);
+    expect(countLabel(project.dbPath, "label", "ham")).toBeGreaterThan(0);
+  });
+
+  test("old == new: rewrites rows with no semantic change", async () => {
+    using project = await seedProject("self-rename");
+    const before = countLabel(project.dbPath, "label", "food");
+    expect(before).toBeGreaterThan(0);
+
+    await runMigrateCli({ args: ["--rename", "food:food"], cwd: project.dir });
+
+    expect(countLabel(project.dbPath, "label", "food")).toBe(before);
+  });
+
   test("missing labellens.config.json throws MigrateCliError", async () => {
     const dir = mkdtempSync(join(tmpdir(), "labellens-migrate-noconfig-"));
     try {
