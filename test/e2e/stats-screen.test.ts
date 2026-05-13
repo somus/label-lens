@@ -79,7 +79,7 @@ describe("stats screen e2e", () => {
     expect(frame).toContain("Top corrections");
     expect(frame).toContain("food → travel");
     expect(frame).toContain("Suggested next queue");
-    expect(frame).toContain("j / k navigate");
+    expect(frame).toContain("[j/k] navigate");
     // Highlight marker (>) must appear on at least one drillable row.
     expect(frame).toMatch(/^.*>\s+/m);
     expect(frame).toMatchSnapshot();

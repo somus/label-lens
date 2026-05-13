@@ -2,7 +2,7 @@
 
 exports[`slice 3: review screen banding + focus + pin truecolor: focused record at index 0 carries the rounded focus box; nothing else does 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -22,15 +22,15 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · t stats · : cmd · ? help · gg guide · q quit                                                     
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
+ help                                                                                               
                                                                                                     
 "
 `;
 
 exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' moves the focus box to next record 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending · 2 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  2 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -50,15 +50,15 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   2 travel >                                                                                        
   3 other                                                                                           
                                                                                                     
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · t stats · : cmd · ? help · gg guide · q quit                                                     
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
+ help                                                                                               
                                                                                                     
 "
 `;
 
 exports[`slice 3: review screen banding + focus + pin 16-color: plain border + ▶ marker on focused, │ on context 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -78,15 +78,15 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · t stats · : cmd · ? help · gg guide · q quit                                                     
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
+ help                                                                                               
                                                                                                     
 "
 `;
 
 exports[`slice 3: review screen banding + focus + pin mono: same plain border + markers as 16-color 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -106,15 +106,15 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · t stats · : cmd · ? help · gg guide · q quit                                                     
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
+ help                                                                                               
                                                                                                     
 "
 `;
 
 exports[`slice 3: review screen banding + focus + pin 256-color: rounded border, no left-edge markers (banding does the work) 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -134,15 +134,15 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · t stats · : cmd · ? help · gg guide · q quit                                                     
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
+ help                                                                                               
                                                                                                     
 "
 `;
 
 exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: rounded border, accent border color differs from light 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -162,15 +162,15 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · t stats · : cmd · ? help · gg guide · q quit                                                     
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
+ help                                                                                               
                                                                                                     
 "
 `;
 
 exports[`slice 3: review screen banding + focus + pin display.banding = off at truecolor: rounded border still present, no banding bg 1`] = `
 "                                                                                                    
-  LabelLens · tiny.jsonl · Pending · 1 / 10             Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -190,8 +190,8 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · t stats · : cmd · ? help · gg guide · q quit                                                     
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
+ help                                                                                               
                                                                                                     
 "
 `;

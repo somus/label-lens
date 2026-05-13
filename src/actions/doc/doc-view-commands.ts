@@ -22,6 +22,7 @@ export const docNext: Command = {
   name: "doc.next",
   scope: "doc-view",
   binding: ["j", "down"],
+  footer: { label: "scroll ↓", order: 10 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, 1),
 };
@@ -30,6 +31,7 @@ export const docPrev: Command = {
   name: "doc.prev",
   scope: "doc-view",
   binding: ["k", "up"],
+  footer: { label: "scroll ↑", order: 20 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, -1),
 };
@@ -38,6 +40,7 @@ export const docPageDown: Command = {
   name: "doc.page-down",
   scope: "doc-view",
   binding: ["ctrl+d", "pagedown"],
+  footer: { label: "page ↓", order: 30 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, HALF_PAGE_LINES),
 };
@@ -46,6 +49,7 @@ export const docPageUp: Command = {
   name: "doc.page-up",
   scope: "doc-view",
   binding: ["ctrl+u", "pageup"],
+  footer: { label: "page ↑", order: 40 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, -HALF_PAGE_LINES),
 };
@@ -74,6 +78,7 @@ export const docClose: Command = {
   name: "doc.close",
   scope: "doc-view",
   binding: ["escape", "q"],
+  footer: { label: "close", order: 50 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => {
     clearDocLines(ctx);

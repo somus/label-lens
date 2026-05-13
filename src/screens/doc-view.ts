@@ -40,7 +40,8 @@ export function renderDocView(app: AppContext, terminalHeight: number): ReturnTy
       Text({ content: "Doc view: no document loaded.", attributes: TextAttributes.DIM }),
     );
   }
-  const viewport = viewportHeight(terminalHeight);
+  // Chrome reserves 4 rows (status bar + spacer + footer + padding).
+  const viewport = viewportHeight(terminalHeight - 4);
   const maxScroll = Math.max(0, lines.rows.length - viewport);
   const scrollTop = Math.max(0, Math.min(app.docView.scrollTop, maxScroll));
   // Normalize stored state so subsequent commands see the same upper bound
@@ -65,18 +66,11 @@ export function renderDocView(app: AppContext, terminalHeight: number): ReturnTy
   });
 
   return Box(
-    { flexDirection: "column", flexGrow: 1, padding: 1 },
-    Box(
-      { flexDirection: "row", justifyContent: "space-between" },
-      Text({
-        content: ` Doc view · ${lines.documentId} · ${lines.focusedIndex + 1} / ${lines.rows.length}`,
-        attributes: TextAttributes.BOLD,
-      }),
-      Text({
-        content: "j/k scroll · ctrl-d/u half-page · gg top · G bottom · esc/q close ",
-        attributes: TextAttributes.DIM,
-      }),
-    ),
+    { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+    Text({
+      content: ` ${lines.documentId} · ${lines.focusedIndex + 1} / ${lines.rows.length}`,
+      attributes: TextAttributes.DIM,
+    }),
     Box({ height: 1 }),
     Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...rows),
   );

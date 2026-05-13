@@ -2,7 +2,7 @@
 
 exports[`stats screen e2e renders core sections + first-drillable highlight + footer 1`] = `
 "                                                                                                    
-  Stats                                                                                             
+  LabelLens  tiny.jsonl  Stats                                                    7 drillable rows  
                                                                                                     
                                                                                                     
   Progress                                                                                          
@@ -39,7 +39,7 @@ exports[`stats screen e2e renders core sections + first-drillable highlight + fo
     by-source:llm:gpt-4   (score 7.00)                                                              
                                                                                                     
                                                                                                     
-  j / k navigate · enter drill · esc / q back                                                       
+   [j/k] navigate  [enter] drill  [esc] back                                                        
                                                                                                     
 "
 `;

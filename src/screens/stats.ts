@@ -1,9 +1,14 @@
 import type { CliRenderer } from "@opentui/core";
 import type { AppContext } from "../app/context.ts";
 import { Box } from "../render/box.ts";
+import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { allStats, drillToQueue, type Section, type StatRow } from "../store/stats.ts";
+
+function basename(p: string): string {
+  return p.split("/").pop() ?? p;
+}
 
 export type StatsScreenHandle = { destroy: () => void };
 
@@ -90,8 +95,6 @@ export function mountStatsScreen(args: {
   const renderState = () => {
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
     const children: ReturnType<typeof Text>[] = [];
-    children.push(Text({ content: " Stats", attributes: TextAttributes.BOLD }));
-    children.push(Text({ content: "" }));
     lines.forEach((line, i) => {
       if (line.kind === "section-header") {
         children.push(Text({ content: "" }));
@@ -109,16 +112,35 @@ export function mountStatsScreen(args: {
       );
     });
 
+    const statusLeft: Segment[] = [
+      { text: " LabelLens", tone: "bold" },
+      { text: "  ", tone: "dim" },
+      { text: basename(app.config.input.path), tone: "muted" },
+      { text: "  ", tone: "dim" },
+      { text: "Stats", tone: "accent" },
+    ];
+    const drillableCount = lines.filter((l) => l.kind === "row" && l.drillTo !== null).length;
+    const statusRight: Segment[] = [{ text: `${drillableCount} drillable rows `, tone: "muted" }];
+
+    const footerHint: Segment[] = [
+      { text: " [j/k] ", tone: "accent" },
+      { text: "navigate  ", tone: "muted" },
+      { text: "[enter] ", tone: "accent" },
+      { text: "drill  ", tone: "muted" },
+      { text: "[esc] ", tone: "accent" },
+      { text: "back", tone: "muted" },
+    ];
+
     renderer.root.add(
-      Box(
-        { flexDirection: "column", flexGrow: 1, padding: 1 },
-        ...children,
-        Box({ flexGrow: 1 }),
-        Text({
-          content: " j / k navigate · enter drill · esc / q back",
-          attributes: TextAttributes.DIM,
-        }),
-      ),
+      Chrome({
+        display: app.display,
+        app,
+        scope: "stats",
+        statusLeft,
+        statusRight,
+        footerHint,
+        body: Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...children),
+      }),
     );
   };
 

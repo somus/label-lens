@@ -5,6 +5,7 @@ export const openNoteCommand: Command = {
   name: "record.openNote",
   scope: "review",
   binding: "n",
+  footer: { label: "note", order: 50 },
   enabled: (ctx) => ctx.cursor?.current() != null,
   run: (ctx) => {
     const record = ctx.cursor?.current();

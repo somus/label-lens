@@ -5,6 +5,7 @@ export const statsShow: Command = {
   scope: "review",
   binding: "t",
   palette: "Show stats",
+  footer: { label: "stats", order: 120 },
   run: (ctx) => {
     if (!ctx.openStatsScreen) {
       ctx.setFlash("Stats screen unavailable", "info", 1200);
