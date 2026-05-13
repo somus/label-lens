@@ -7,7 +7,7 @@ import type { ResolvedDisplay } from "./capability.ts";
  *   bg.*       — backgrounds. canvas/chrome/overlay set the substrate;
  *                band.even/odd power record banding; soft.* tint Badge fills.
  *   border.*   — single-source rules for border colors. Pair with
- *                `borderForScope` (below) for the matching glyph style.
+ *                `borderForRole` (below) for the matching glyph style.
  *
  * To add a new foreground tone:
  *   1. Add it to `fg` in `ThemeTokens`.
@@ -218,18 +218,30 @@ function monoTokens(): ThemeTokens {
   };
 }
 
+const THEME_CACHE = new Map<string, ThemeTokens>();
+
 export function resolveTheme(display: ResolvedDisplay): ThemeTokens {
   const dark = display.theme === "dark";
+  const key = `${display.color}:${display.theme}`;
+  const cached = THEME_CACHE.get(key);
+  if (cached) return cached;
+  let tokens: ThemeTokens;
   switch (display.color) {
     case "truecolor":
-      return truecolorTokens(dark);
+      tokens = truecolorTokens(dark);
+      break;
     case "256":
-      return tokens256(dark);
+      tokens = tokens256(dark);
+      break;
     case "16":
-      return ansi16Tokens(dark);
+      tokens = ansi16Tokens(dark);
+      break;
     case "mono":
-      return monoTokens();
+      tokens = monoTokens();
+      break;
   }
+  THEME_CACHE.set(key, tokens);
+  return tokens;
 }
 
 /**
@@ -245,10 +257,7 @@ export function resolveTheme(display: ResolvedDisplay): ThemeTokens {
  */
 export type BorderRole = "focus" | "overlay" | "subtle";
 
-export function borderForRole(
-  display: ResolvedDisplay,
-  role: BorderRole,
-): "rounded" | "single" | "double" {
+export function borderForRole(display: ResolvedDisplay, role: BorderRole): "rounded" | "single" {
   if (display.color === "mono" || display.color === "16") return "single";
   switch (role) {
     case "focus":
@@ -257,5 +266,9 @@ export function borderForRole(
       return "rounded";
     case "subtle":
       return "single";
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`unhandled border role: ${_exhaustive}`);
+    }
   }
 }

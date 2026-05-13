@@ -54,14 +54,17 @@ export function Badge(props: BadgeProps): StyledText {
   const { display, variant, label } = props;
   const icon = props.icon ?? DEFAULT_ICON[variant];
   const text = icon ? ` ${icon} ${label} ` : ` ${label} `;
-  const supportsFg = display.color === "truecolor" || display.color === "256";
-
-  if (!supportsFg) {
-    // ANSI16 + mono: rely on bold + color (or bold alone for mono).
+  if (display.color === "mono") {
     return new StyledText([boldFn(text)]);
   }
 
   const { fg, bg } = variantColors(display, variant);
+  if (display.color === "16") {
+    // Preserve the semantic color channel — bg is transparent in the 16-color
+    // palette, so we only apply fg + bold.
+    return new StyledText([boldFn(fgFn(fg)(text))]);
+  }
+
   const chunk: TextChunk = boldFn(bgFn(bg)(fgFn(fg)(text)));
   return new StyledText([chunk]);
 }

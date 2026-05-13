@@ -46,4 +46,21 @@ describe("Badge", () => {
     expect(styled.chunks[0]?.fg).toBeUndefined();
     expect(styled.chunks[0]?.text).toContain("⚠");
   });
+
+  test("preserves variant fg color at 16-color", () => {
+    const warn = Badge({
+      display: displayFor({ color: "16" }),
+      variant: "warning",
+      label: "low",
+    });
+    const danger = Badge({
+      display: displayFor({ color: "16" }),
+      variant: "danger",
+      label: "err",
+    });
+    // Semantic color channel survives — each variant carries its own fg.
+    expect(warn.chunks[0]?.fg).toBeDefined();
+    expect(danger.chunks[0]?.fg).toBeDefined();
+    expect(warn.chunks[0]?.fg).not.toEqual(danger.chunks[0]?.fg);
+  });
 });
