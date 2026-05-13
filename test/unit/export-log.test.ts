@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { exportReviewLogString } from "../../src/export/log.ts";
 import type { Db } from "../../src/store/db.ts";
 import { insertUndoEntry } from "../../src/store/queries.ts";
-import { insertReview } from "../../src/store/records.ts";
+import { insertReview, updateRecordNote } from "../../src/store/records.ts";
 import { openTmpStore } from "../util/tmp.ts";
 
 function recordIds(db: Db): string[] {
@@ -60,7 +60,57 @@ describe("exportReviewLogString", () => {
     expect(String(rows[1]!.reviewed_at) <= String(rows[2]!.reviewed_at)).toBe(true);
   });
 
-  test("omits note (per-review note schema deferred — see follow-up issue)", async () => {
+  test("emits note captured at write time", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ids = recordIds(store.db);
+    updateRecordNote(store.db, ids[0]!, "needs second look");
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    const [row] = lines(exportReviewLogString(store.db));
+    expect(row!.note).toBe("needs second look");
+  });
+
+  test("review note is snapshot — later record-note edits do not mutate it", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ids = recordIds(store.db);
+    updateRecordNote(store.db, ids[0]!, "first");
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    updateRecordNote(store.db, ids[0]!, "second");
+    const [row] = lines(exportReviewLogString(store.db));
+    expect(row!.note).toBe("first");
+  });
+
+  test("undo entry captures record's note at undo time", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ids = recordIds(store.db);
+    updateRecordNote(store.db, ids[0]!, "first");
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    updateRecordNote(store.db, ids[0]!, "second");
+    insertUndoEntry(store.db, ids[0]!);
+    const rows = lines(exportReviewLogString(store.db));
+    expect(rows[0]!.note).toBe("first");
+    expect(rows[1]!.status).toBe("undone");
+    expect(rows[1]!.note).toBe("second");
+  });
+
+  test("review row with no note emits note: null", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ids = recordIds(store.db);
     insertReview(store.db, {
@@ -71,6 +121,7 @@ describe("exportReviewLogString", () => {
       source_of_truth: "human",
     });
     const [row] = lines(exportReviewLogString(store.db));
-    expect(Object.hasOwn(row!, "note")).toBe(false);
+    expect(Object.hasOwn(row!, "note")).toBe(true);
+    expect(row!.note).toBeNull();
   });
 });

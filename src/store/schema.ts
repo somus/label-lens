@@ -92,6 +92,7 @@ export const reviews = sqliteTable(
     compensatesReviewId: integer("compensates_review_id").references(
       (): AnySQLiteColumn => reviews.id,
     ),
+    note: text("note"),
   },
   (t) => [
     index("idx_reviews_record").on(t.recordId),
@@ -131,6 +132,7 @@ export const effectiveReviews = sqliteView("effective_reviews", {
     enum: ["human", "human+assistant"],
   }).notNull(),
   compensatesReviewId: integer("compensates_review_id"),
+  note: text("note"),
 }).existing();
 
 /**

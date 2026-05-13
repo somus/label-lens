@@ -79,6 +79,7 @@ function effectiveRowToStored(row: EffectiveRow): StoredReview {
     reviewed_at: row.reviewedAt,
     source_of_truth: row.sourceOfTruth,
     compensates_review_id: row.compensatesReviewId,
+    note: row.note,
   };
 }
 
@@ -92,6 +93,7 @@ function reviewRowToStored(row: typeof reviews.$inferSelect): StoredReview {
     reviewed_at: row.reviewedAt,
     source_of_truth: row.sourceOfTruth,
     compensates_review_id: row.compensatesReviewId,
+    note: row.note,
   };
 }
 
@@ -228,6 +230,11 @@ export function latestReview(db: TxOrDb): StoredReview | null {
 export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
   const target = currentReview(db, recordId);
   if (!target) return null;
+  const noteRow = db
+    .select({ note: records.note })
+    .from(records)
+    .where(eq(records.id, recordId))
+    .get();
   const inserted = db
     .insert(reviews)
     .values({
@@ -238,6 +245,7 @@ export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
       reviewedAt: new Date().toISOString(),
       sourceOfTruth: "human",
       compensatesReviewId: target.id,
+      note: noteRow?.note ?? null,
     })
     .returning({ id: reviews.id })
     .get();
