@@ -1,0 +1,45 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`stats screen e2e renders core sections + first-drillable highlight + footer 1`] = `
+"                                                                                                    
+  Stats                                                                                             
+                                                                                                    
+                                                                                                    
+  Progress                                                                                          
+    Total: 10                                                                                       
+    Reviewed: 1                                                                                     
+    Pending: 9                                                                                      
+    Skipped: 0                                                                                      
+                                                                                                    
+  Decisions                                                                                         
+    Accepted: 0                                                                                     
+    Relabeled: 1                                                                                    
+    Rejected: 0                                                                                     
+    Skipped: 0                                                                                      
+                                                                                                    
+  Acceptance by source                                                                              
+  > llm:gpt-4                      0%  (1 reviewed)                                                 
+                                                                                                    
+  Relabel by source                                                                                 
+    llm:gpt-4                    100%  (1 reviewed)                                                 
+                                                                                                    
+  Top corrections                                                                                   
+    food → travel                           1                                                       
+                                                                                                    
+  Labels with highest correction rate                                                               
+    food                         100%  (1 reviewed)                                                 
+                                                                                                    
+  Weakest sources                                                                                   
+    llm:gpt-4                    100%  (1 reviewed)                                                 
+                                                                                                    
+  Imported issues                                                                                   
+    label_issue                      1 record                                                       
+                                                                                                    
+  Suggested next queue                                                                              
+    by-source:llm:gpt-4   (score 7.00)                                                              
+                                                                                                    
+                                                                                                    
+  j / k navigate · enter drill · esc / q back                                                       
+                                                                                                    
+"
+`;

@@ -23,7 +23,7 @@ exports[`review screen e2e initial render: progress strip + first record + prima
   3 other                                                                                           
                                                                                                     
   a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · : cmd · ? help · gg guide · q quit                                                               
+ · t stats · : cmd · ? help · gg guide · q quit                                                     
                                                                                                     
 "
 `;
@@ -51,7 +51,7 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
   history:                                                                                          
   + food  Lunch at Zomato Bangalore                                                                 
   a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · : cmd · ? help · gg guide · q quit                                                               
+ · t stats · : cmd · ? help · gg guide · q quit                                                     
                                                                                                     
 "
 `;
@@ -79,7 +79,7 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
   3 other                                                                                           
                                                                                                     
   a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · : cmd · ? help · gg guide · q quit                                                               
+ · t stats · : cmd · ? help · gg guide · q quit                                                     
                                                                                                     
 "
 `;
@@ -107,7 +107,7 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
   + food  Coffee at Blue Tokai                                                                      
   + rent  Rent transfer to landlord                                                                 
   a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue   
- · : cmd · ? help · gg guide · q quit                                                               
+ · t stats · : cmd · ? help · gg guide · q quit                                                     
                                                                                                     
 "
 `;

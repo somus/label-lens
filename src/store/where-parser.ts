@@ -300,10 +300,28 @@ class Parser {
     }
 
     const valTok = this.peek();
-    if (valTok?.kind !== "string" && valTok?.kind !== "number") {
+    if (valTok?.kind !== "string" && valTok?.kind !== "number" && valTok?.kind !== "ident") {
       throw new WhereParseError("expected literal value", valTok?.pos);
     }
     this.advance();
+
+    if (valTok.kind === "ident") {
+      const rhsName = valTok.value;
+      const rhsDef = COLUMNS[rhsName];
+      if (!rhsDef) throw new WhereParseError(`unknown column ${rhsName}`, valTok.pos);
+      if (rhsDef.buildPredicate || colDef.buildPredicate) {
+        throw new WhereParseError(
+          "column-vs-column comparison is not supported for issue_type",
+          valTok.pos,
+        );
+      }
+      const leftOperand = colDef.operand("");
+      const rightOperand = rhsDef.operand("");
+      const left = leftOperand.kind === "col" ? sql`${leftOperand.col}` : leftOperand.sql;
+      const right = rightOperand.kind === "col" ? sql`${rightOperand.col}` : rightOperand.sql;
+      return binaryColumnPredicate(left, op, right);
+    }
+
     const value = valTok.value;
     if (colDef.buildPredicate) return colDef.buildPredicate(op, value);
     const operand = colDef.operand(value);
@@ -321,6 +339,25 @@ class Parser {
 
   done(): boolean {
     return this.pos >= this.tokens.length;
+  }
+}
+
+function binaryColumnPredicate(left: SQL, op: Operator, right: SQL): SQL {
+  switch (op) {
+    case "=":
+      return sql`${left} = ${right}`;
+    case "!=":
+      return sql`${left} != ${right}`;
+    case "<":
+      return sql`${left} < ${right}`;
+    case "<=":
+      return sql`${left} <= ${right}`;
+    case ">":
+      return sql`${left} > ${right}`;
+    case ">=":
+      return sql`${left} >= ${right}`;
+    case "in":
+      throw new WhereParseError("internal: 'in' handled separately");
   }
 }
 

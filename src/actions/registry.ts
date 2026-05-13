@@ -16,7 +16,7 @@ import {
   paletteQueue,
   paletteWhere,
 } from "./palette/queue.ts";
-import { paletteAssistant, paletteExport, paletteReload, paletteStats } from "./palette/stubs.ts";
+import { paletteAssistant, paletteExport, paletteReload } from "./palette/stubs.ts";
 import { nextQueue, prevQueue } from "./queue/cycle-queue.ts";
 import { openQueueScreen } from "./queue/open-screen.ts";
 import { queueSwitchCommands } from "./queue/switch.ts";
@@ -28,6 +28,7 @@ import { prev } from "./record/prev.ts";
 import { showDoc } from "./record/show-doc.ts";
 import { toggleMark } from "./record/toggle-mark.ts";
 import { undo } from "./record/undo.ts";
+import { paletteStats, statsShow } from "./stats/show.ts";
 
 export const ALL_COMMANDS: Command[] = [
   accept,
@@ -60,6 +61,7 @@ export const ALL_COMMANDS: Command[] = [
   paletteGuidelines,
   paletteHelp,
   paletteStats,
+  statsShow,
   paletteExport,
   paletteAssistant,
   paletteReload,
