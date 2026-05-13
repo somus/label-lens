@@ -1,0 +1,8 @@
+{
+  "export_large_ms": 834,
+  "ingest_medium_ms": 1435,
+  "keystroke_j_ms": 19,
+  "queue_switch_large_ms": 766,
+  "signals_medium_ms": 134,
+  "stats_open_large_ms": 5703
+}
