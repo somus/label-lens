@@ -91,7 +91,7 @@ describe("exportReviewLogString", () => {
     expect(row!.note).toBe("first");
   });
 
-  test("undo entry captures record's note at undo time", async () => {
+  test("undo entry emits note: null (undo is a meta-action, not a decision)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ids = recordIds(store.db);
     updateRecordNote(store.db, ids[0]!, "first");
@@ -107,7 +107,7 @@ describe("exportReviewLogString", () => {
     const rows = lines(exportReviewLogString(store.db));
     expect(rows[0]!.note).toBe("first");
     expect(rows[1]!.status).toBe("undone");
-    expect(rows[1]!.note).toBe("second");
+    expect(rows[1]!.note).toBeNull();
   });
 
   test("review row with no note emits note: null", async () => {

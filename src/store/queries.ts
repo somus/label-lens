@@ -230,11 +230,6 @@ export function latestReview(db: TxOrDb): StoredReview | null {
 export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
   const target = currentReview(db, recordId);
   if (!target) return null;
-  const noteRow = db
-    .select({ note: records.note })
-    .from(records)
-    .where(eq(records.id, recordId))
-    .get();
   const inserted = db
     .insert(reviews)
     .values({
@@ -245,7 +240,7 @@ export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
       reviewedAt: new Date().toISOString(),
       sourceOfTruth: "human",
       compensatesReviewId: target.id,
-      note: noteRow?.note ?? null,
+      note: null,
     })
     .returning({ id: reviews.id })
     .get();
