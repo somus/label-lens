@@ -1,6 +1,6 @@
 import { existsSync, renameSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { createCliRenderer } from "@opentui/core";
+import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { sql } from "drizzle-orm";
 import { switchQueue } from "../actions/queue/switch.ts";
 import { createAppContext } from "../app/context.ts";
@@ -32,14 +32,22 @@ export async function runReview(): Promise<void> {
 
   let db = openDb(stateDbPath);
 
-  const renderer = await createCliRenderer({ exitOnCtrlC: true });
-
   const recordCount = (handle: Db) =>
     handle.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records`)[0]!.n;
 
   const isEmpty = recordCount(db) === 0;
   const stored = readFingerprint(db, inputPath);
   const current = await computeFingerprint(inputPath);
+
+  // Renderer is created lazily so terminal probes (palette + theme OSC
+  // queries) don't fire during the non-interactive fingerprint / ingest
+  // window. If the process exits before mounting any screen, the terminal
+  // never gets primed and no probe responses leak into the parent shell.
+  let renderer: CliRenderer | null = null;
+  const ensureRenderer = async (): Promise<CliRenderer> => {
+    if (!renderer) renderer = await createCliRenderer({ exitOnCtrlC: true });
+    return renderer;
+  };
 
   if (isEmpty) {
     console.error(`Ingesting ${inputPath}...`);
@@ -63,9 +71,10 @@ export async function runReview(): Promise<void> {
       // mtime touched but content identical (e.g. `touch` on the file).
       writeFingerprint(db, inputPath, current);
     } else {
-      const choice = await promptForChoice(renderer, diff);
+      const r = await ensureRenderer();
+      const choice = await promptForChoice(r, diff);
       if (choice === "cancel") {
-        renderer.destroy();
+        r.destroy();
         process.exit(0);
       }
       if (choice === "fresh") {
@@ -79,13 +88,14 @@ export async function runReview(): Promise<void> {
     }
   }
 
+  const r = await ensureRenderer();
   const display = await bootstrapDisplay({
     env: {
       COLORTERM: process.env.COLORTERM,
       TERM: process.env.TERM,
       NO_COLOR: process.env.NO_COLOR,
     },
-    themeProbe: { waitForThemeMode: (ms) => renderer.waitForThemeMode(ms) },
+    themeProbe: { waitForThemeMode: (ms) => r.waitForThemeMode(ms) },
     config: config.display,
   });
   const app = createAppContext({
@@ -94,21 +104,25 @@ export async function runReview(): Promise<void> {
     display,
     requestRender: () => {},
     onQuit: () => {
-      renderer.destroy();
-      process.exit(0);
+      r.destroy();
+      // Give the terminal time to drain in-flight OSC probe responses
+      // (palette + theme queries OpenTUI fires on init) before we exit —
+      // otherwise those bytes leak past process.exit into the parent shell
+      // and render as garbage in the prompt.
+      setTimeout(() => process.exit(0), 30);
     },
   });
   let reviewHandle: ReviewScreenHandle | null = null;
 
   const mountReview = (queueId: string) => {
-    reviewHandle = mountReviewScreen({ renderer, app, initialQueueId: queueId });
+    reviewHandle = mountReviewScreen({ renderer: r, app, initialQueueId: queueId });
   };
 
   app.openQueueScreen = () => {
     reviewHandle?.destroy();
     reviewHandle = null;
     const queueHandle = mountQueueScreen({
-      renderer,
+      renderer: r,
       app,
       onSelect: (id) => {
         queueHandle.destroy();
@@ -126,7 +140,7 @@ export async function runReview(): Promise<void> {
     reviewHandle?.destroy();
     reviewHandle = null;
     const statsHandle = mountStatsScreen({
-      renderer,
+      renderer: r,
       app,
       onDrill: (id) => {
         statsHandle.destroy();
@@ -143,10 +157,7 @@ export async function runReview(): Promise<void> {
   mountReview("pending");
 }
 
-function promptForChoice(
-  renderer: Awaited<ReturnType<typeof createCliRenderer>>,
-  diff: DiffResult,
-): Promise<ReingestChoice> {
+function promptForChoice(renderer: CliRenderer, diff: DiffResult): Promise<ReingestChoice> {
   return new Promise((resolveChoice) => {
     const handle = mountReingestPrompt({
       renderer,
