@@ -6,10 +6,12 @@
 test/
 ├── unit/        — pure-TS modules + storage tests against a real bun:sqlite
 ├── e2e/         — screens driven via @opentui/core/testing's createTestRenderer
-├── perf/        — envelope assertions on shared fixtures (issue #15)
+├── perf/        — envelope assertions on shared fixtures (*.perf.ts; see #15)
 ├── fixtures/    — committed JSONL datasets (tiny + small/medium/large + boundary; see test/fixtures/README.md)
 └── util/        — shared helpers (tmp-store, future fakes)
 ```
+
+Perf tests use the `*.perf.ts` suffix so `bun test` (pre-commit / pre-push) skips them. Run them explicitly with `bun run test:perf`, and refresh baselines with `bun run perf:update-baselines`.
 
 ## tmp store with `using` disposal
 
@@ -134,7 +136,7 @@ Review the diff before committing — a snapshot churn that wasn't intended is a
 
 ## Performance
 
-`test/perf/` runs the envelope from PRD §16.1 (queue switch <200ms at 50K, ingest <30s at 10K, etc.). Shared fixtures live in `test/fixtures/` and are deterministic (issue #14). Baselines committed at `test/perf/baselines.json`; CI fails on >20% regression.
+`test/perf/*.perf.ts` runs the envelope from PRD §16.1 (queue switch <200ms at 50K, ingest <30s at 10K, etc.). Shared fixtures live in `test/fixtures/` and are deterministic (issue #14). Baselines committed at `test/perf/baselines.json`; CI fails on >20% regression. Refresh with `bun run perf:update-baselines` and commit the diff manually. The `perf` job in `.github/workflows/ci.yml` enforces this on every PR.
 
 ## SSH path
 

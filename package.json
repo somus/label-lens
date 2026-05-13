@@ -12,6 +12,8 @@
     "dev": "bun run --watch src/main.ts",
     "start": "bun run src/main.ts",
     "test": "bun test",
+    "test:perf": "bun test ./test/perf/*.perf.ts",
+    "perf:update-baselines": "bun run scripts/update-perf-baselines.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check",
     "lint:fix": "biome check --write",
