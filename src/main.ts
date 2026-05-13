@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { runExportCli } from "./cli/export.ts";
 import { runInit } from "./cli/init.ts";
 import { runReview } from "./cli/run.ts";
 
@@ -25,13 +26,18 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (cmd === "export") {
+    await runExportCli({ args: rest, cwd: process.cwd() });
+    return;
+  }
+
   if (cmd === undefined) {
     await runReview();
     return;
   }
 
   console.error(`labellens: unknown command '${cmd}'`);
-  console.error("usage: labellens [init <file.jsonl>]");
+  console.error("usage: labellens [init <file.jsonl> | export [format]]");
   process.exit(2);
 }
 

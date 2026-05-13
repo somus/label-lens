@@ -11,6 +11,5 @@ function notYet(name: string, palette: string): Command {
   };
 }
 
-export const paletteExport: Command = notYet("palette.export", ":export");
 export const paletteAssistant: Command = notYet("palette.assistant", ":assistant");
 export const paletteReload: Command = notYet("palette.reload", ":reload");
