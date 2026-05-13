@@ -34,6 +34,7 @@ describe("applyDiff", () => {
           ],
         },
       ],
+      revived: [],
       orphans: [],
       newRecords: [],
     });
@@ -70,7 +71,7 @@ describe("applyDiff", () => {
       .where(eq(predictions.recordId, id))
       .all();
 
-    applyDiff(store.db, { predictionsOnly: [], orphans: [id], newRecords: [] });
+    applyDiff(store.db, { predictionsOnly: [], revived: [], orphans: [id], newRecords: [] });
 
     const rec = store.db.select().from(records).where(eq(records.id, id)).all()[0]!;
     expect(rec.orphan).toBe(true);
@@ -86,12 +87,86 @@ describe("applyDiff", () => {
     expect(tags).toHaveLength(1);
   });
 
+  test("revived: orphan flag cleared + predictions replaced + reviews intact", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records ORDER BY row_index LIMIT 1`,
+    )[0]!.id;
+    insertReview(store.db, {
+      record_id: id,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    store.db.run(sql`UPDATE records SET orphan = 1 WHERE id = ${id}`);
+
+    applyDiff(store.db, {
+      predictionsOnly: [],
+      revived: [
+        {
+          id,
+          predictions: [
+            {
+              label: "food",
+              confidence: 0.88,
+              source: "llm:gpt-5",
+              reason: null,
+              raw: '{"label":"food","confidence":0.88,"source":"llm:gpt-5"}',
+            },
+          ],
+        },
+      ],
+      orphans: [],
+      newRecords: [],
+    });
+
+    const rec = store.db.select().from(records).where(eq(records.id, id)).all()[0]!;
+    expect(rec.orphan).toBe(false);
+    const preds = store.db.select().from(predictions).where(eq(predictions.recordId, id)).all();
+    expect(preds).toHaveLength(1);
+    expect(preds[0]!.source).toBe("llm:gpt-5");
+    const revs = store.db.select().from(reviews).where(eq(reviews.recordId, id)).all();
+    expect(revs).toHaveLength(1);
+    expect(revs[0]!.finalLabel).toBe("food");
+  });
+
+  test("newRecords: issues[] from JSONL persisted to issues table", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    applyDiff(store.db, {
+      predictionsOnly: [],
+      revived: [],
+      orphans: [],
+      newRecords: [
+        {
+          id: "withissues",
+          sourcePath: "/tmp/x.jsonl",
+          rowIndex: 1000,
+          text: "Has issues",
+          contextBefore: null,
+          contextAfter: null,
+          raw: "{}",
+          predictions: [],
+          issues: [{ type: "label_issue", score: 0.7, source: "cleanlab" }],
+        },
+      ],
+    });
+    const issueRows = store.db.all<{ type: string; score: number; source: string }>(
+      sql`SELECT type, score, source FROM issues WHERE record_id = 'withissues'`,
+    );
+    expect(issueRows).toHaveLength(1);
+    expect(issueRows[0]!.type).toBe("label_issue");
+    expect(issueRows[0]!.score).toBe(0.7);
+    expect(issueRows[0]!.source).toBe("cleanlab");
+  });
+
   test("newRecords: insert behaves like fresh ingest", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const before = store.db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records`)[0]!.n;
 
     applyDiff(store.db, {
       predictionsOnly: [],
+      revived: [],
       orphans: [],
       newRecords: [
         {
@@ -111,6 +186,7 @@ describe("applyDiff", () => {
               raw: '{"label":"food","confidence":0.5,"source":"llm:gpt-4"}',
             },
           ],
+          issues: [],
         },
       ],
     });

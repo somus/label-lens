@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { sql } from "drizzle-orm";
 import { diffIngest } from "../../src/ingest/reingest.ts";
 import { DEFAULT_FIELDS, fixturePath, openTmpStore, tmpdir } from "../util/tmp.ts";
 
@@ -11,6 +12,41 @@ describe("diffIngest", () => {
     expect(diff.predictionsOnly).toEqual([]);
     expect(diff.orphans).toEqual([]);
     expect(diff.newRecords).toEqual([]);
+  });
+
+  test("newRecords carry imported issues[] from JSONL", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    using dir = tmpdir({ prefix: "labellens-reingest-" });
+    const path = join(dir.path, "extra.jsonl");
+    const original = readFileSync(fixturePath("tiny.jsonl"), "utf-8").trimEnd();
+    const extraRow = JSON.stringify({
+      text: "Brand-new row with imported issues",
+      prediction: "food",
+      confidence: 0.5,
+      source: "llm:gpt-4",
+      issues: [{ type: "label_issue", score: 0.42, source: "cleanlab" }],
+    });
+    writeFileSync(path, `${original}\n${extraRow}\n`);
+
+    const diff = await diffIngest(store.db, path, DEFAULT_FIELDS);
+    expect(diff.newRecords).toHaveLength(1);
+    expect(diff.newRecords[0]!.issues).toEqual([
+      { type: "label_issue", score: 0.42, source: "cleanlab" },
+    ]);
+  });
+
+  test("revived orphan: id reappears in new file → revived bucket, not newRecords", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const orphanId = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records ORDER BY row_index LIMIT 1`,
+    )[0]!.id;
+    store.db.run(sql`UPDATE records SET orphan = 1 WHERE id = ${orphanId}`);
+
+    // Re-ingest the original (unedited) JSONL — orphan id is back.
+    const diff = await diffIngest(store.db, fixturePath("tiny.jsonl"), DEFAULT_FIELDS);
+    expect(diff.revived.map((r) => r.id)).toContain(orphanId);
+    expect(diff.newRecords.find((r) => r.id === orphanId)).toBeUndefined();
+    expect(diff.orphans).not.toContain(orphanId);
   });
 
   test("text edit on one row → 1 orphan + 1 new, others unchanged", async () => {
