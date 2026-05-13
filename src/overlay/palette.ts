@@ -189,6 +189,9 @@ function tryOpenPicker(state: PaletteState): ReduceResult | null {
     case "topic":
       candidates = data.topics;
       break;
+    case "format":
+      candidates = data.formats;
+      break;
     default:
       return null;
   }

@@ -16,6 +16,7 @@ export type PaletteData = {
   sourceCounts: Map<string, number>;
   labelCounts: Map<string, number>;
   topics: string[];
+  formats: string[];
 };
 
 export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
@@ -70,5 +71,6 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     sourceCounts,
     labelCounts,
     topics: manPageTopics(),
+    formats: ["jsonl", "csv", "stats"],
   };
 }

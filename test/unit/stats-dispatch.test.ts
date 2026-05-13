@@ -25,7 +25,7 @@ describe("stats command + palette wiring", () => {
     expect(cmd?.binding).toBe("t");
   });
 
-  test("palette.stats is registered with palette label 'Stats' in global scope", () => {
+  test("palette.stats is registered with palette label ':stats' in global scope", () => {
     const reg = defaultRegistry();
     const cmd = reg.get("palette.stats");
     expect(cmd).toBe(paletteStats);
@@ -33,25 +33,7 @@ describe("stats command + palette wiring", () => {
     expect(cmd?.palette).toBe(":stats");
   });
 
-  test("stats.show calls openStatsScreen when wired", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    let opened = 0;
-    const app = createAppContext({
-      db: store.db,
-      config: makeConfig(),
-      display: defaultDisplay(),
-      requestRender: () => {},
-      onQuit: () => {},
-    });
-    app.openStatsScreen = () => {
-      opened++;
-    };
-    const result = await dispatch(defaultRegistry(), "review", app, "stats.show");
-    expect(result).toEqual({ kind: "ok", action: "stats.show" });
-    expect(opened).toBe(1);
-  });
-
-  test("stats.show flashes a message when the orchestrator hook is missing", async () => {
+  test("stats.show opens stats overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = createAppContext({
       db: store.db,
@@ -62,12 +44,11 @@ describe("stats command + palette wiring", () => {
     });
     const result = await dispatch(defaultRegistry(), "review", app, "stats.show");
     expect(result).toEqual({ kind: "ok", action: "stats.show" });
-    expect(app.flash?.message).toBe("Stats screen unavailable");
+    expect(app.overlay?.kind).toBe("stats");
   });
 
-  test("palette.stats dispatches in any scope (global)", async () => {
+  test("palette.stats opens stats overlay in any scope (global)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    let opened = 0;
     const app = createAppContext({
       db: store.db,
       config: makeConfig(),
@@ -75,13 +56,12 @@ describe("stats command + palette wiring", () => {
       requestRender: () => {},
       onQuit: () => {},
     });
-    app.openStatsScreen = () => {
-      opened++;
-    };
     const r1 = await dispatch(defaultRegistry(), "review", app, "palette.stats");
     expect(r1.kind).toBe("ok");
+    expect(app.overlay?.kind).toBe("stats");
+    app.closeOverlay();
     const r2 = await dispatch(defaultRegistry(), "queue", app, "palette.stats");
     expect(r2.kind).toBe("ok");
-    expect(opened).toBe(2);
+    expect(app.overlay?.kind).toBe("stats");
   });
 });

@@ -598,6 +598,8 @@ function renderOverlay(
       return renderHelp(overlay.state, display, termWidth, termHeight);
     case "guidelines":
       return renderGuidelines(overlay.state, display, termWidth, termHeight);
+    case "stats":
+      return renderStatsOverlay(overlay.state, display, termWidth, termHeight);
   }
 }
 
@@ -647,6 +649,34 @@ function renderHelp(
       Text({
         content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
         attributes: TextAttributes.DIM,
+      }),
+    ),
+    Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
+  );
+}
+
+function renderStatsOverlay(
+  state: import("../overlay/stats-overlay.ts").StatsOverlayState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  const PAGE = 20;
+  const visible = state.lines.slice(state.scroll, state.scroll + PAGE);
+  const more = state.lines.length - state.scroll - visible.length;
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.7,
+    Text({
+      content: ` Stats${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
+      attributes: TextAttributes.BOLD,
+    }),
+    ...visible.map((line) =>
+      Text({
+        content: line.display,
+        attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
       }),
     ),
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),

@@ -21,7 +21,7 @@ export type PaletteMetadata = {
   category?: PaletteCategory;
   description?: string;
   arity?: 0 | 1;
-  pickerKind?: "source" | "label" | "reason" | "issue" | "correction" | "topic";
+  pickerKind?: "source" | "label" | "reason" | "issue" | "correction" | "topic" | "format";
 };
 
 export type Command<Ctx extends ActionContext = ActionContext> = {

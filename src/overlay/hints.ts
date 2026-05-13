@@ -49,6 +49,7 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
       ];
     case "help":
     case "guidelines":
+    case "stats":
       return [
         { text: "[↑↓] ", tone: "accent" },
         { text: "scroll  ", tone: "muted" },

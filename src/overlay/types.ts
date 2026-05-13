@@ -3,6 +3,7 @@ import type { ReviewStatus, SourceOfTruth } from "../types.ts";
 import type { GuidelinesState } from "./guidelines.ts";
 import type { HelpState } from "./help.ts";
 import type { PaletteState } from "./palette.ts";
+import type { StatsOverlayState } from "./stats-overlay.ts";
 
 /** Per-Overlay state types. */
 
@@ -37,7 +38,8 @@ export type Overlay =
   | { kind: "assistant"; state: AssistantState }
   | { kind: "palette"; state: PaletteState }
   | { kind: "help"; state: HelpState }
-  | { kind: "guidelines"; state: GuidelinesState };
+  | { kind: "guidelines"; state: GuidelinesState }
+  | { kind: "stats"; state: StatsOverlayState };
 
 export type OverlayKind = Overlay["kind"];
 

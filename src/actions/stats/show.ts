@@ -1,4 +1,11 @@
+import { openStatsOverlay } from "../../overlay/stats-overlay.ts";
+import { allStats } from "../../store/stats.ts";
 import type { Command } from "../command.ts";
+
+function openStats(ctx: import("../../app/context.ts").AppContext): void {
+  const { sections } = allStats(ctx.db);
+  ctx.openOverlay({ kind: "stats", state: openStatsOverlay(sections) });
+}
 
 export const statsShow: Command = {
   name: "stats.show",
@@ -6,13 +13,7 @@ export const statsShow: Command = {
   binding: "t",
   hidden: true,
   footer: { label: "stats", order: 120 },
-  run: (ctx) => {
-    if (!ctx.openStatsScreen) {
-      ctx.setFlash("Stats screen unavailable", "info", 1200);
-      return;
-    }
-    ctx.openStatsScreen();
-  },
+  run: openStats,
 };
 
 export const paletteStats: Command = {
@@ -20,11 +21,5 @@ export const paletteStats: Command = {
   scope: "global",
   palette: ":stats",
   paletteMetadata: { category: "actions", description: "Review statistics" },
-  run: (ctx) => {
-    if (!ctx.openStatsScreen) {
-      ctx.setFlash("Stats screen unavailable", "info", 1200);
-      return;
-    }
-    ctx.openStatsScreen();
-  },
+  run: openStats,
 };
