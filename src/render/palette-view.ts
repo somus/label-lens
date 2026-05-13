@@ -1,4 +1,5 @@
 import { bold as boldFn, dim as dimFn, fg as fgFn, StyledText } from "@opentui/core";
+import type { Command } from "../actions/command.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import type { CategoryGroup } from "../overlay/palette-categories.ts";
 import type { PickerField } from "../overlay/palette-picker.ts";
@@ -11,16 +12,18 @@ export function renderPalette(
   state: PaletteState,
   display: ResolvedDisplay,
   termWidth: number,
+  termHeight: number,
 ): ReturnType<typeof Box> {
   const border = borderForRole(display, "overlay");
   const t = resolveTheme(display);
   const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * 0.6)));
-  const marginLeft = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
+  const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
+  const topOffset = Math.max(1, Math.floor(termHeight * 0.15));
 
   if (state.mode === "pick" && state.picker) {
-    return renderPickerModal(state.picker, display, t, modalWidth, marginLeft, border);
+    return renderPickerModal(state.picker, display, t, modalWidth, leftOffset, topOffset, border);
   }
-  return renderBrowseModal(state, display, t, modalWidth, marginLeft, border);
+  return renderBrowseModal(state, display, t, modalWidth, leftOffset, topOffset, border);
 }
 
 function renderBrowseModal(
@@ -28,7 +31,8 @@ function renderBrowseModal(
   display: ResolvedDisplay,
   t: ReturnType<typeof resolveTheme>,
   modalWidth: number,
-  marginLeft: number,
+  leftOffset: number,
+  topOffset: number,
   border: "rounded" | "single",
 ): ReturnType<typeof Box> {
   const innerWidth = modalWidth - 4;
@@ -42,7 +46,7 @@ function renderBrowseModal(
 
   if (state.categories.length > 0) {
     for (const cat of state.categories) {
-      children.push(renderCategoryHeader(cat, display, t));
+      children.push(renderCategoryHeader(cat, useColor, t));
       for (const entry of cat.entries) {
         const isHighlighted = flatIdx === state.highlight;
         children.push(
@@ -91,9 +95,12 @@ function renderBrowseModal(
       flexDirection: "column",
       borderStyle: border,
       padding: 1,
-      marginTop: 2,
-      marginLeft,
+      position: "absolute",
+      top: topOffset,
+      left: leftOffset,
       width: modalWidth,
+      zIndex: 100,
+      shouldFill: true,
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
     ...children,
@@ -105,7 +112,8 @@ function renderPickerModal(
   display: ResolvedDisplay,
   t: ReturnType<typeof resolveTheme>,
   modalWidth: number,
-  marginLeft: number,
+  leftOffset: number,
+  topOffset: number,
   border: "rounded" | "single",
 ): ReturnType<typeof Box> {
   const innerWidth = modalWidth - 4;
@@ -143,9 +151,12 @@ function renderPickerModal(
       flexDirection: "column",
       borderStyle: border,
       padding: 1,
-      marginTop: 2,
-      marginLeft,
+      position: "absolute",
+      top: topOffset,
+      left: leftOffset,
       width: modalWidth,
+      zIndex: 100,
+      shouldFill: true,
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
     ...children,
@@ -154,14 +165,14 @@ function renderPickerModal(
 
 function renderCategoryHeader(
   cat: CategoryGroup,
-  display: ResolvedDisplay,
+  useColor: boolean,
   t: ReturnType<typeof resolveTheme>,
 ): ReturnType<typeof Text> {
-  const useColor = display.color === "truecolor" || display.color === "256";
   if (useColor) {
-    return new StyledText([dimFn(fgFn(t.fg.muted)(` ${cat.label}`))]) as unknown as ReturnType<
-      typeof Text
-    >;
+    return Text({
+      content: new StyledText([dimFn(fgFn(t.fg.muted)(` ${cat.label}`))]),
+      attributes: TextAttributes.NONE,
+    });
   }
   return Text({ content: ` ${cat.label}`, attributes: TextAttributes.DIM });
 }
@@ -190,18 +201,22 @@ function renderEntry(
   const line = `${leftText}${" ".repeat(gap)}${right}`;
 
   if (useColor && highlighted) {
-    return new StyledText([boldFn(fgFn(t.fg.accent)(line))]) as unknown as ReturnType<typeof Text>;
+    return Text({
+      content: new StyledText([boldFn(fgFn(t.fg.accent)(line))]),
+      attributes: TextAttributes.NONE,
+    });
   }
   if (highlighted) {
     return Text({ content: line, attributes: TextAttributes.BOLD });
   }
   if (useColor) {
-    return new StyledText([fgFn(t.fg.default)(line)]) as unknown as ReturnType<typeof Text>;
+    return Text({
+      content: new StyledText([fgFn(t.fg.default)(line)]),
+      attributes: TextAttributes.NONE,
+    });
   }
   return Text({ content: line, attributes: TextAttributes.DIM });
 }
-
-import type { Command } from "../actions/command.ts";
 
 function entryDescription(commandName: string, commands: Command[]): string | undefined {
   const cmd = commands.find((c) => c.name === commandName);

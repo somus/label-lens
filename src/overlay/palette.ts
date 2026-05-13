@@ -3,7 +3,7 @@ import type { Scope } from "../keymap/engine.ts";
 import type { Db } from "../store/db.ts";
 import type { PaletteData } from "../store/palette-data.ts";
 import { fetchPaletteData } from "../store/palette-data.ts";
-import { type CategoryGroup, categorize } from "./palette-categories.ts";
+import { type CategoryGroup, categorize, flattenForNav } from "./palette-categories.ts";
 import { openPicker, type PickerField, reducePicker } from "./palette-picker.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
@@ -34,13 +34,15 @@ export type OpenPaletteArgs = {
 };
 
 export function openPalette(args: OpenPaletteArgs): PaletteState {
-  const entries: PaletteEntry[] = [];
+  const rawEntries: PaletteEntry[] = [];
   for (const c of args.commands) {
     if (!c.palette) continue;
     if (c.hidden) continue;
     if (c.scope !== args.scope && c.scope !== "global") continue;
-    entries.push({ commandName: c.name, palette: c.palette });
+    rawEntries.push({ commandName: c.name, palette: c.palette });
   }
+  const categories = categorize(rawEntries, args.commands);
+  const entries = flattenForNav(categories).map((n) => n.entry);
   return {
     filter: "",
     entries: filteredEntries(entries, ""),
@@ -49,7 +51,7 @@ export function openPalette(args: OpenPaletteArgs): PaletteState {
     history: args.history.slice(),
     allEntries: entries,
     mode: "browse",
-    categories: categorize(entries, args.commands),
+    categories,
     picker: null,
     counts: new Map(),
     pickerOptions: null,

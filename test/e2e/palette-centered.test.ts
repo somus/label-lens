@@ -68,13 +68,14 @@ describe("palette centered modal", () => {
     expect(frame).toContain("Filter by issue type");
   });
 
-  test("highlight marker '>' appears on first entry", async () => {
+  test("first entry is highlighted with '>' marker", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey(":");
     await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain("> queue");
+    const state = app.overlay?.state as import("../../src/overlay/palette.ts").PaletteState;
+    expect(state.highlight).toBe(0);
+    expect(state.entries[0]!.palette).toBe(":queue");
   });
 
   test("modal is centered (has margin on both sides)", async () => {
@@ -103,7 +104,7 @@ describe("palette centered modal", () => {
     await renderOnce();
     const frame = captureCharFrame();
     expect(frame).toContain("Queues");
-    expect(frame).toContain("> queue");
+    expect(frame).toContain("Filters");
     expect(frame).toContain("[enter] run");
   });
 

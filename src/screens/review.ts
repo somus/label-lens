@@ -174,7 +174,9 @@ export function mountReviewScreen(args: {
             totalRecords: counts.total,
             predictionCount,
           }),
-      app.overlay ? renderOverlay(app.overlay, app.display, renderer.terminalWidth) : Box({}),
+      app.overlay
+        ? renderOverlay(app.overlay, app.display, renderer.terminalWidth, renderer.terminalHeight)
+        : Box({}),
     );
 
     const footerHint = app.overlay ? overlayFooterHint(app.overlay) : flashFooterHint(flash);
@@ -542,6 +544,7 @@ function renderOverlay(
   overlay: Overlay,
   display: ResolvedDisplay,
   termWidth: number,
+  termHeight: number,
 ): ReturnType<typeof Box> {
   const border = borderForRole(display, "overlay");
   switch (overlay.kind) {
@@ -555,7 +558,7 @@ function renderOverlay(
         Text({ content: " assistant overlay (slice 11)" }),
       );
     case "palette":
-      return renderPaletteV2(overlay.state, display, termWidth);
+      return renderPaletteV2(overlay.state, display, termWidth, termHeight);
     case "help":
       return renderHelp(overlay.state, border);
     case "guidelines":
