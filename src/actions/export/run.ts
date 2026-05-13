@@ -85,14 +85,24 @@ function scopeQuery(queueId: QueueId | null | undefined): QueueQuery | undefined
   return resolveQueue(queueId).query;
 }
 
-export function parseExportArgument(argument: string | undefined): {
+/**
+ * Parse export options. Accepts either a single argument string (palette
+ * surface, where the user types `:export jsonl --include-rejected`) or an
+ * already-tokenized argv array (CLI surface, where the shell tokenized).
+ *
+ * Re-splitting argv on whitespace would corrupt paths like
+ * `-o './my exports/out.jsonl'`, so the array form is preserved verbatim.
+ */
+export function parseExportArgument(argument: string | string[] | undefined): {
   format?: ExportFormat;
   includeRejected: boolean;
   includeOrphans: boolean;
   outputPath?: string;
   error?: string;
 } {
-  const tokens = (argument ?? "").trim().split(/\s+/).filter(Boolean);
+  const tokens = Array.isArray(argument)
+    ? argument.filter(Boolean)
+    : (argument ?? "").trim().split(/\s+/).filter(Boolean);
   let format: ExportFormat | undefined;
   let includeRejected = false;
   let includeOrphans = false;

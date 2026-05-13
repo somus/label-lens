@@ -38,7 +38,7 @@ export async function runExportCli({ args, cwd }: RunExportCliArgs): Promise<voi
   }
 
   const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
-  const parsed = parseExportArgument(args.join(" "));
+  const parsed = parseExportArgument(args);
   if (parsed.error) {
     throw new ExportCliError(`${parsed.error}\n\n${usageText()}`);
   }

@@ -149,6 +149,21 @@ describe("exportJsonlString — default", () => {
     expect(withOrphans.map((r) => r.id).sort()).toEqual([ids[0], ids[1]].sort());
   });
 
+  test("does not double-nest input.meta (no meta.meta in output)", async () => {
+    using store = await openTmpStore({ ingest: "boundary.jsonl" });
+    const ids = recordIds(store.db);
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "accepted",
+      final_label: "SECTION_HEADER",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    const row = JSON.parse(lines(exportJsonlString(store.db))[0]!);
+    expect(row.meta).toEqual({ document_id: "doc-1" });
+    expect((row.meta as Record<string, unknown>).meta).toBeUndefined();
+  });
+
   test("emits document_id as a top-level field for boundary records", async () => {
     using store = await openTmpStore({ ingest: "boundary.jsonl" });
     const ids = recordIds(store.db);

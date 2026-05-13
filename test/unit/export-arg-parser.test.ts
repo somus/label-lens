@@ -40,6 +40,13 @@ describe("parseExportArgument", () => {
     expect(parseExportArgument("yaml").error).toMatch(/unknown format/);
   });
 
+  test("accepts string[] form and preserves tokens with spaces (CLI surface)", () => {
+    const r = parseExportArgument(["jsonl", "-o", "./my exports/out.jsonl"]);
+    expect(r.format).toBe("jsonl");
+    expect(r.outputPath).toBe("./my exports/out.jsonl");
+    expect(r.error).toBeUndefined();
+  });
+
   test("returns no format when argument is empty / whitespace", () => {
     expect(parseExportArgument(undefined).format).toBeUndefined();
     expect(parseExportArgument("").format).toBeUndefined();

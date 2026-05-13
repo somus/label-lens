@@ -209,6 +209,49 @@ describe("`e` binding", () => {
     expect(JSON.parse(rows[0]!).id).toBe(ids[0]);
   });
 
+  test("--include-orphans surfaces orphan rows even when the active queue's where filters them out", async () => {
+    using tmp = mkTmpDir();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ids = recordIds(store.db);
+    // Mark record #2 as orphan but give it a flagged-style import issue so a
+    // `pending`-scoped export with --include-orphans surfaces it.
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    insertReview(store.db, {
+      record_id: ids[1]!,
+      status: "accepted",
+      final_label: "travel",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    store.db.run(sql`UPDATE records SET orphan = 1 WHERE id = ${ids[1]}`);
+    const outPath = join(tmp.dir, "reviewed.jsonl");
+    const app = createAppContext({
+      db: store.db,
+      config: makeConfig(outPath),
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    // Scope to pending queue (its where: NOT EXISTS effective_reviews AND orphan = 0).
+    // Without --include-orphans this won't return orphans. With it, the orphan
+    // row must surface regardless of the queue's hardcoded orphan filter.
+    enterReview(app, "pending");
+    const reg = buildRegistry([paletteExportCommand]);
+    await dispatch(reg, "review", app, "palette.export", "jsonl --include-orphans");
+    const rowIds = readFileSync(outPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l).id as string);
+    // Accepted record #0 is in scope; orphan record #1 surfaces via the flag.
+    expect(rowIds).toContain(ids[1]!);
+  });
+
   test("honors the active queue's where clause when scoping the export", async () => {
     using tmp = mkTmpDir();
     using store = await openTmpStore({ ingest: "tiny.jsonl" });

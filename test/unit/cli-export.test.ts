@@ -122,6 +122,14 @@ describe("runExportCli", () => {
     }
   });
 
+  test("preserves output paths containing spaces (no argv re-tokenization)", async () => {
+    using project = await seedProject("spaced");
+    const spacedDir = join(project.dir, "my exports");
+    const overridePath = join(spacedDir, "out.jsonl");
+    await runExportCli({ args: ["jsonl", "-o", overridePath], cwd: project.dir });
+    expect(existsSync(overridePath)).toBe(true);
+  });
+
   test("throws ExportCliError when -o is missing its path argument", async () => {
     using project = await seedProject("bad-args");
     await expect(runExportCli({ args: ["jsonl", "-o"], cwd: project.dir })).rejects.toThrow(

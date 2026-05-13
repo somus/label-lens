@@ -45,6 +45,29 @@ describe("projectMeta", () => {
     expect(projectMeta(raw)).toEqual({ keep_me: true });
   });
 
+  test("returns input.meta verbatim when input has a top-level meta object", () => {
+    const raw = JSON.stringify({
+      text: "x",
+      prediction: "p",
+      meta: { document_id: "doc-1", nested: { extra: 1 } },
+    });
+    expect(projectMeta(raw)).toEqual({ document_id: "doc-1", nested: { extra: 1 } });
+  });
+
+  test("prefers input.meta over stranded extras when both exist", () => {
+    const raw = JSON.stringify({
+      text: "x",
+      meta: { canonical: true },
+      stranded_extra: "ignored",
+    });
+    expect(projectMeta(raw)).toEqual({ canonical: true });
+  });
+
+  test("treats non-object input.meta as a stripped key (falls back to extras)", () => {
+    const raw = JSON.stringify({ text: "x", meta: "scalar", user_id: "u-1" });
+    expect(projectMeta(raw)).toEqual({ user_id: "u-1" });
+  });
+
   test("returns undefined when raw is not a JSON object", () => {
     expect(projectMeta("not-json")).toBeUndefined();
     expect(projectMeta("[1,2,3]")).toBeUndefined();
