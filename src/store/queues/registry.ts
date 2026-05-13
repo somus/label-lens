@@ -9,6 +9,7 @@ import { disagreements } from "./disagreements.ts";
 import { flagged } from "./flagged.ts";
 import { lowConfidence } from "./low-confidence.ts";
 import { marked } from "./marked.ts";
+import { orphans } from "./orphans.ts";
 import { pending } from "./pending.ts";
 import { skipped } from "./skipped.ts";
 
@@ -27,6 +28,7 @@ export const BUILTIN_QUEUES: Record<QueueId, QueueDefinition> = {
   disagreements,
   flagged,
   marked,
+  orphans,
 };
 
 /** Order in which `[` / `]` cycle the focused queue. Static queues only. */

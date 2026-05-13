@@ -652,6 +652,8 @@ The smart `[r]` path is the default because the common workflow — "review N re
 
 Smart merging that *rebinds* orphans across text edits — preserving reviews across edits via fuzzy text match, soft-deleting truly removed records, surfacing newly-added records — is still **V1 work** (see §18). The MVP smart re-ingest only avoids creating orphans when text didn't change; it does not try to recover orphans once they exist. See ADR 0002.
 
+Detection uses a per-source fingerprint stored in `ingest_fingerprints` (sha256 of file content + `<mtimeMs>:<sizeBytes>` token). The sha256 is the authority on content equality; mtime+size is a fast-path skip. Filesystems with coarse mtime granularity (FAT32, some network mounts) can still rely on the sha256 to catch content changes — a stale mtime won't mask a real edit.
+
 ## 14. Key screens
 
 ### 14.1 Review screen

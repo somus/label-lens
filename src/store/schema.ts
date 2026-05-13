@@ -19,6 +19,22 @@ export const records = sqliteTable("records", {
   contextAfter: text("context_after"),
   raw: text("raw").notNull(),
   note: text("note"),
+  // Set on bucket-2 re-ingest (text/context changed). Excluded from every
+  // built-in queue except `orphans`. Predictions/reviews/tags stay intact so
+  // the prior labeling work survives. ADR 0002 + PRD §13.
+  orphan: integer("orphan", { mode: "boolean" }).notNull().default(false),
+});
+
+/**
+ * Per-source-path fingerprint of the last successful ingest. Compared at
+ * launch (mtime + content sha256) to decide whether to run the smart
+ * re-ingest diff. PRD §13.
+ */
+export const ingestFingerprints = sqliteTable("ingest_fingerprints", {
+  sourcePath: text("source_path").primaryKey(),
+  mtime: text("mtime").notNull(),
+  contentSha256: text("content_sha256").notNull(),
+  ingestedAt: text("ingested_at").notNull(),
 });
 
 export const predictions = sqliteTable(
@@ -135,6 +151,10 @@ export const recordsWithPrimary = sqliteView("records_with_primary", {
   contextAfter: text("context_after"),
   raw: text("raw").notNull(),
   note: text("note"),
+  // Sourced from base `records` table — LEFT JOIN to predictions can't null
+  // this column out. Safe to mark notNull. View definition lives in
+  // migration 0009.
+  orphan: integer("orphan", { mode: "boolean" }).notNull(),
   documentId: text("document_id"),
   primaryPredictionId: integer("primary_prediction_id"),
   primaryLabel: text("primary_label"),
@@ -153,6 +173,8 @@ export type NewReview = typeof reviews.$inferInsert;
 export type RecordTag = typeof recordTags.$inferSelect;
 export type NewRecordTag = typeof recordTags.$inferInsert;
 export type RecordWithPrimary = typeof recordsWithPrimary.$inferSelect;
+export type IngestFingerprint = typeof ingestFingerprints.$inferSelect;
+export type NewIngestFingerprint = typeof ingestFingerprints.$inferInsert;
 
 // Re-export sql tag so callers don't need a second drizzle-orm import for ad-hoc fragments.
 export { sql };

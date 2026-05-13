@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { recordsWithPrimary } from "../schema.ts";
 import type { QueueDefinition } from "./registry.ts";
 
@@ -8,7 +8,7 @@ export function bySource(value: string): QueueDefinition {
     id: `by-source:${value}`,
     label: `Source: ${value}`,
     query: {
-      where: eq(recordsWithPrimary.primarySource, value),
+      where: and(eq(recordsWithPrimary.primarySource, value), eq(recordsWithPrimary.orphan, false)),
       orderBy: asc(recordsWithPrimary.rowIndex),
     },
   };

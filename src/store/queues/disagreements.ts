@@ -12,7 +12,7 @@ export const disagreements: QueueDefinition = {
     ) AND (
       SELECT COUNT(DISTINCT p.label) FROM predictions p
       WHERE p.record_id = ${recordsWithPrimary.id}
-    ) > 1`,
+    ) > 1 AND ${recordsWithPrimary.orphan} = 0`,
     orderBy: asc(recordsWithPrimary.rowIndex),
   },
 };

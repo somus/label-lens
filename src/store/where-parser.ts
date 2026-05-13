@@ -73,6 +73,10 @@ const COLUMNS: Record<string, ColumnDef> = {
     operand: () => ({ kind: "col", col: recordsWithPrimary.primaryConfidence }),
   },
   reason: { operand: () => ({ kind: "col", col: recordsWithPrimary.primaryReason }) },
+  // `orphan` is exposed so the power-user `where:` form can filter the orphan
+  // bucket explicitly. Built-in queues already exclude orphans; `where:` does
+  // NOT auto-exclude (escape hatch should be transparent). PRD §10.3, slice 9.
+  orphan: { operand: () => ({ kind: "col", col: recordsWithPrimary.orphan }) },
   issue_type: {
     operand: () => {
       throw new WhereParseError("issue_type uses dedicated EXISTS path");

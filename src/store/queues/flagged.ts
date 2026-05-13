@@ -9,7 +9,7 @@ export const flagged: QueueDefinition = {
     where: sql`EXISTS (
       SELECT 1 FROM issues i
       WHERE i.record_id = ${recordsWithPrimary.id}
-    )`,
+    ) AND ${recordsWithPrimary.orphan} = 0`,
     orderBy: asc(recordsWithPrimary.rowIndex),
   },
 };

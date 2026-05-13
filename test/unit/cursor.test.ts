@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { openCursor } from "../../src/cursor/cursor.ts";
 import { insertReview } from "../../src/store/records.ts";
+import { records } from "../../src/store/schema.ts";
 import { openTmpStore } from "../util/tmp.ts";
 
 describe("Cursor", () => {
@@ -55,6 +57,22 @@ describe("Cursor", () => {
     cursor.refresh();
     expect(cursor.total).toBe(9);
     expect(cursor.current()?.id).not.toBe(focused.id);
+  });
+
+  test("refresh after focused record is orphaned moves to next live record", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const cursor = openCursor(store.db, "pending");
+    cursor.next();
+    cursor.next();
+    const orphaned = cursor.current()!;
+    const before = cursor.position;
+
+    store.db.update(records).set({ orphan: true }).where(eq(records.id, orphaned.id)).run();
+    cursor.refresh();
+
+    expect(cursor.total).toBe(9);
+    expect(cursor.current()?.id).not.toBe(orphaned.id);
+    expect(cursor.position).toBe(Math.min(before, cursor.total - 1));
   });
 
   test("seek finds a record by id", async () => {

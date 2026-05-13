@@ -23,7 +23,7 @@ export function byLabel(value: string): QueueDefinition {
     id: `by-label:${value}`,
     label: `Label: ${value}`,
     query: {
-      where: sql`(
+      where: sql`((
         (
           SELECT er.final_label FROM effective_reviews er
           WHERE er.record_id = ${recordsWithPrimary.id}
@@ -35,7 +35,7 @@ export function byLabel(value: string): QueueDefinition {
           WHERE er.record_id = ${recordsWithPrimary.id}
         )
         AND ${recordsWithPrimary.primaryLabel} = ${value}
-      )`,
+      )) AND ${recordsWithPrimary.orphan} = 0`,
       orderBy: asc(recordsWithPrimary.rowIndex),
     },
   };

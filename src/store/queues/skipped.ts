@@ -10,7 +10,7 @@ export const skipped: QueueDefinition = {
       SELECT er.status FROM effective_reviews er
       WHERE er.record_id = ${recordsWithPrimary.id}
       ORDER BY er.id DESC LIMIT 1
-    ) = 'skipped'`,
+    ) = 'skipped' AND ${recordsWithPrimary.orphan} = 0`,
     orderBy: asc(recordsWithPrimary.rowIndex),
   },
 };
