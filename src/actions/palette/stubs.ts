@@ -5,6 +5,7 @@ function notYet(name: string, palette: string): Command {
     name,
     scope: "global",
     palette,
+    paletteMetadata: { category: "actions" },
     run: (ctx) => {
       ctx.setFlash(`${palette}: not yet implemented`, "info", 3000);
     },

@@ -40,7 +40,7 @@ describe("palette e2e", () => {
     await renderOnce();
     expect(app.overlay?.kind).toBe("palette");
     const frame = captureCharFrame();
-    expect(frame).toContain("enter run");
+    expect(frame).toContain("[enter] run");
   });
 
   test("Esc closes the palette", async () => {

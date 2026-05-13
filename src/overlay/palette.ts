@@ -1,5 +1,10 @@
 import type { Command } from "../actions/command.ts";
 import type { Scope } from "../keymap/engine.ts";
+import type { Db } from "../store/db.ts";
+import type { PaletteData } from "../store/palette-data.ts";
+import { fetchPaletteData } from "../store/palette-data.ts";
+import { type CategoryGroup, categorize } from "./palette-categories.ts";
+import { openPicker, type PickerField, reducePicker } from "./palette-picker.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 export type PaletteEntry = {
@@ -14,6 +19,12 @@ export type PaletteState = {
   historyIdx: number | null;
   history: string[];
   allEntries: PaletteEntry[];
+  mode: "browse" | "pick";
+  categories: CategoryGroup[];
+  picker: PickerField | null;
+  counts: Map<string, number>;
+  pickerOptions: PaletteData | null;
+  commands: Command[];
 };
 
 export type OpenPaletteArgs = {
@@ -37,6 +48,27 @@ export function openPalette(args: OpenPaletteArgs): PaletteState {
     historyIdx: null,
     history: args.history.slice(),
     allEntries: entries,
+    mode: "browse",
+    categories: categorize(entries, args.commands),
+    picker: null,
+    counts: new Map(),
+    pickerOptions: null,
+    commands: args.commands,
+  };
+}
+
+export type OpenPaletteV2Args = OpenPaletteArgs & {
+  db: Db;
+  labels: string[];
+};
+
+export function openPaletteV2(args: OpenPaletteV2Args): PaletteState {
+  const state = openPalette(args);
+  const data = fetchPaletteData(args.db, args.labels);
+  return {
+    ...state,
+    counts: data.counts,
+    pickerOptions: data,
   };
 }
 
@@ -101,15 +133,12 @@ function cycleHistory(state: PaletteState, direction: -1 | 1): ReduceResult {
   };
 }
 
-function commit(state: PaletteState): ReduceResult {
+function commitDirect(state: PaletteState): ReduceResult {
   const entry = state.entries[state.highlight];
   if (!entry) return { overlay: packed(state), effects: [] };
   const sp = state.filter.indexOf(" ");
   const argRaw = sp === -1 ? "" : state.filter.slice(sp + 1).trim();
   const argument = argRaw.length === 0 ? undefined : argRaw;
-  // Close BEFORE dispatch: a palette command may itself open a new overlay
-  // (e.g. `:guidelines` → guidelines overlay) and a trailing `close` would
-  // clobber it.
   return {
     overlay: null,
     effects: [
@@ -120,17 +149,128 @@ function commit(state: PaletteState): ReduceResult {
   };
 }
 
+function tryOpenPicker(state: PaletteState): ReduceResult | null {
+  const entry = state.entries[state.highlight];
+  if (!entry || !state.pickerOptions) return null;
+
+  const cmd = state.commands.find((c) => c.name === entry.commandName);
+  if (!cmd?.paletteMetadata?.pickerKind) return null;
+  if (cmd.paletteMetadata.arity !== 1) return null;
+
+  const sp = state.filter.indexOf(" ");
+  const hasArg = sp !== -1 && state.filter.slice(sp + 1).trim().length > 0;
+  if (hasArg) return null;
+
+  const kind = cmd.paletteMetadata.pickerKind;
+  const data = state.pickerOptions;
+  let candidates: string[];
+  let candidateCounts: Map<string, number> | undefined;
+
+  switch (kind) {
+    case "source":
+      candidates = data.sources;
+      candidateCounts = data.sourceCounts;
+      break;
+    case "label":
+      candidates = data.labels;
+      candidateCounts = data.labelCounts;
+      break;
+    case "reason":
+      candidates = data.reasons;
+      break;
+    case "issue":
+      candidates = data.issueTypes;
+      break;
+    case "correction":
+      candidates = [...new Set(data.corrections.map((c) => c.from))].sort();
+      break;
+    default:
+      return null;
+  }
+
+  return {
+    overlay: packed({
+      ...state,
+      mode: "pick",
+      picker: openPicker(entry.commandName, kind, candidates, candidateCounts),
+    }),
+    effects: [],
+  };
+}
+
+function commit(state: PaletteState): ReduceResult {
+  const pickerResult = tryOpenPicker(state);
+  if (pickerResult) return pickerResult;
+  return commitDirect(state);
+}
+
 function withFilter(state: PaletteState, filter: string): PaletteState {
+  const newEntries = filteredEntries(state.allEntries, filter);
   return {
     ...state,
     filter,
-    entries: filteredEntries(state.allEntries, filter),
+    entries: newEntries,
+    categories: categorize(newEntries, state.commands),
     highlight: 0,
     historyIdx: null,
   };
 }
 
+function handlePickerEvent(state: PaletteState, event: OverlayEvent): ReduceResult {
+  if (!state.picker) return { overlay: packed(state), effects: [] };
+
+  const result = reducePicker(state.picker, event);
+
+  switch (result.kind) {
+    case "back":
+      return {
+        overlay: packed({ ...state, mode: "browse", picker: null }),
+        effects: [],
+      };
+
+    case "selected": {
+      const stem = stemOf(
+        state.entries.find((e) => e.commandName === result.commandName)?.palette ?? "",
+      );
+      const historyEntry = `${stem} ${result.argument}`;
+      return {
+        overlay: null,
+        effects: [
+          { kind: "close" },
+          { kind: "pushPaletteHistory", entry: historyEntry },
+          { kind: "runCommand", commandName: result.commandName, argument: result.argument },
+        ],
+      };
+    }
+
+    case "updated": {
+      const picker = result.picker;
+      if (
+        picker.step === "to" &&
+        picker.candidates.length === 0 &&
+        state.pickerOptions?.corrections
+      ) {
+        const toLabels = state.pickerOptions.corrections
+          .filter((c) => c.from === picker.selectedFrom)
+          .map((c) => c.to)
+          .sort();
+        picker.candidates = toLabels;
+        picker.allCandidates = toLabels;
+      }
+      return {
+        overlay: packed({ ...state, picker }),
+        effects: [],
+      };
+    }
+
+    case "noop":
+      return { overlay: packed(state), effects: [] };
+  }
+}
+
 export function reducePalette(state: PaletteState, event: OverlayEvent): ReduceResult {
+  if (state.mode === "pick") return handlePickerEvent(state, event);
+
   if (event.kind === "cancel") return { overlay: null, effects: [{ kind: "close" }] };
   if (event.kind === "commit") return commit(state);
   if (event.kind !== "key") return { overlay: packed(state), effects: [] };
@@ -147,8 +287,6 @@ export function reducePalette(state: PaletteState, event: OverlayEvent): ReduceR
       effects: [],
     };
   }
-  // ctrl+p / ctrl+n cycle session history; arrow keys are reserved for
-  // entry-list navigation so the palette behaves like fzf / readline.
   if (event.event.ctrl && (name === "p" || name === "n")) {
     return cycleHistory(state, name === "p" ? -1 : 1);
   }
@@ -163,9 +301,6 @@ export function reducePalette(state: PaletteState, event: OverlayEvent): ReduceR
     return { overlay: packed(withFilter(state, state.filter.slice(0, -1))), effects: [] };
   }
   const ch = name === "space" ? " " : name;
-  // Accept any printable ASCII so `:where source = 'llm:gpt-4' and …` and
-  // similar PRD-spec inputs typecheck through the palette. Single char plus
-  // ctrl-modifier-free (so ctrl+p stays a navigation key).
   if (ch.length === 1 && ch >= " " && ch < "\x7f" && !event.event.ctrl) {
     return { overlay: packed(withFilter(state, state.filter + ch)), effects: [] };
   }

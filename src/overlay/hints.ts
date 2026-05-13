@@ -8,7 +8,18 @@ import type { Overlay } from "./types.ts";
  */
 export function overlayFooterHint(overlay: Overlay): Segment[] {
   switch (overlay.kind) {
-    case "palette":
+    case "palette": {
+      const inPicker = overlay.state.mode === "pick";
+      if (inPicker) {
+        return [
+          { text: "[enter] ", tone: "accent" },
+          { text: "select  ", tone: "muted" },
+          { text: "[↑↓] ", tone: "accent" },
+          { text: "navigate  ", tone: "muted" },
+          { text: "[esc] ", tone: "accent" },
+          { text: "back", tone: "muted" },
+        ];
+      }
       return [
         { text: "[enter] ", tone: "accent" },
         { text: "run  ", tone: "muted" },
@@ -17,8 +28,9 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
         { text: "[^p/^n] ", tone: "accent" },
         { text: "history  ", tone: "muted" },
         { text: "[esc] ", tone: "accent" },
-        { text: "cancel", tone: "muted" },
+        { text: "close", tone: "muted" },
       ];
+    }
     case "picker":
       return [
         { text: "[enter] ", tone: "accent" },

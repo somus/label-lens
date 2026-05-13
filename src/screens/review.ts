@@ -9,7 +9,7 @@ import { applyEffects } from "../overlay/effects.ts";
 import type { GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
-import type { PaletteState } from "../overlay/palette.ts";
+
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { BadgeLine, type BadgeVariant } from "../render/badge.ts";
@@ -19,6 +19,7 @@ import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { Markdown } from "../render/markdown.ts";
+import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole } from "../render/theme.ts";
@@ -173,7 +174,7 @@ export function mountReviewScreen(args: {
             totalRecords: counts.total,
             predictionCount,
           }),
-      app.overlay ? renderOverlay(app.overlay, app.display) : Box({}),
+      app.overlay ? renderOverlay(app.overlay, app.display, renderer.terminalWidth) : Box({}),
     );
 
     const footerHint = app.overlay ? overlayFooterHint(app.overlay) : flashFooterHint(flash);
@@ -537,7 +538,11 @@ function labelListBox(
   );
 }
 
-function renderOverlay(overlay: Overlay, display: ResolvedDisplay): ReturnType<typeof Box> {
+function renderOverlay(
+  overlay: Overlay,
+  display: ResolvedDisplay,
+  termWidth: number,
+): ReturnType<typeof Box> {
   const border = borderForRole(display, "overlay");
   switch (overlay.kind) {
     case "picker":
@@ -550,7 +555,7 @@ function renderOverlay(overlay: Overlay, display: ResolvedDisplay): ReturnType<t
         Text({ content: " assistant overlay (slice 11)" }),
       );
     case "palette":
-      return renderPalette(overlay.state, border);
+      return renderPaletteV2(overlay.state, display, termWidth);
     case "help":
       return renderHelp(overlay.state, border);
     case "guidelines":
@@ -607,26 +612,6 @@ function renderHelp(
       }),
     ),
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
-  );
-}
-
-function renderPalette(
-  state: PaletteState,
-  border: "rounded" | "single" | "double",
-): ReturnType<typeof Box> {
-  return Box(
-    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
-    Text({ content: ` :${state.filter}_` }),
-    ...state.entries.slice(0, 12).map((e, i) =>
-      Text({
-        content: ` ${e.palette}${i === state.highlight ? "  <-" : ""}`,
-        attributes: i === state.highlight ? TextAttributes.BOLD : TextAttributes.DIM,
-      }),
-    ),
-    Text({
-      content: " enter run · ↑/↓ navigate · ctrl+p/n history · esc cancel",
-      attributes: TextAttributes.DIM,
-    }),
   );
 }
 

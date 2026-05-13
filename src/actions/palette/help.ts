@@ -6,6 +6,7 @@ export const paletteHelp: Command = {
   name: "palette.help",
   scope: "global",
   palette: ":help",
+  paletteMetadata: { category: "help", arity: 1, description: "Keyboard reference" },
   run: (ctx, argument) => {
     const topic = argument?.trim() ?? "";
     if (topic.length === 0) {
