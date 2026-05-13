@@ -24,7 +24,7 @@ export function byCorrection(from: string, to: string): QueueDefinition {
           )
           AND er.prev_label = ${from}
           AND er.final_label = ${to}
-      )`,
+      ) AND ${recordsWithPrimary.orphan} = 0`,
       orderBy: asc(recordsWithPrimary.rowIndex),
     },
   };

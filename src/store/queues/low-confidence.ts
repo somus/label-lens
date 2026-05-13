@@ -9,7 +9,7 @@ export const lowConfidence: QueueDefinition = {
     where: sql`NOT EXISTS (
       SELECT 1 FROM effective_reviews er
       WHERE er.record_id = ${recordsWithPrimary.id}
-    )`,
+    ) AND ${recordsWithPrimary.orphan} = 0`,
     // NULL confidences sort last so reviewers see the model's lowest scores first.
     orderBy: sql`(${recordsWithPrimary.primaryConfidence} IS NULL), ${asc(recordsWithPrimary.primaryConfidence)}, ${asc(recordsWithPrimary.rowIndex)}`,
   },

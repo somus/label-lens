@@ -1,16 +1,20 @@
-import { existsSync } from "node:fs";
+import { existsSync, renameSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { createCliRenderer } from "@opentui/core";
+import { sql } from "drizzle-orm";
 import { switchQueue } from "../actions/queue/switch.ts";
 import { createAppContext } from "../app/context.ts";
 import type { LabellensConfig } from "../config/config.ts";
+import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
 import { ingestFile } from "../ingest/ingest.ts";
+import { applyDiff, type DiffResult, diffIngest } from "../ingest/reingest.ts";
 import { bootstrapDisplay } from "../render/capability.ts";
 import { mountQueueScreen } from "../screens/queue.ts";
+import { mountReingestPrompt, type ReingestChoice } from "../screens/reingest-prompt.ts";
 import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts";
 import { mountStatsScreen } from "../screens/stats.ts";
 import { runSignals } from "../signals/run.ts";
-import { openDb } from "../store/db.ts";
+import { type Db, openDb } from "../store/db.ts";
 
 export async function runReview(): Promise<void> {
   const configPath = resolve("./labellens.config.json");
@@ -23,22 +27,58 @@ export async function runReview(): Promise<void> {
 
   const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
   const inputPath = resolve(config.input.path);
-  const stateDbPath = join(dirname(configPath), ".labellens", "state.db");
+  const stateDir = join(dirname(configPath), ".labellens");
+  const stateDbPath = join(stateDir, "state.db");
 
-  const isFreshDb = !existsSync(stateDbPath);
-  const db = openDb(stateDbPath);
+  let db = openDb(stateDbPath);
 
-  if (isFreshDb) {
+  const renderer = await createCliRenderer({ exitOnCtrlC: true });
+
+  const recordCount = (handle: Db) =>
+    handle.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records`)[0]!.n;
+
+  const isEmpty = recordCount(db) === 0;
+  const stored = readFingerprint(db, inputPath);
+  const current = await computeFingerprint(inputPath);
+
+  if (isEmpty) {
     console.error(`Ingesting ${inputPath}...`);
     const result = await ingestFile(db, inputPath, config.input.fields);
     console.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
-
     console.error("Computing prioritization signals...");
     const signals = runSignals(db);
     console.error(`  wrote ${signals.written} issue rows`);
+    writeFingerprint(db, inputPath, current);
+  } else if (!stored) {
+    // Legacy DB from before slice 9 (no fingerprint row). Trust existing data;
+    // record the current source fingerprint so future runs can diff.
+    writeFingerprint(db, inputPath, current);
+  } else if (stored.mtime !== current.mtime || stored.contentSha256 !== current.contentSha256) {
+    const diff = await diffIngest(db, inputPath, config.input.fields);
+    if (
+      diff.predictionsOnly.length === 0 &&
+      diff.orphans.length === 0 &&
+      diff.newRecords.length === 0
+    ) {
+      // mtime touched but content identical (e.g. `touch` on the file).
+      writeFingerprint(db, inputPath, current);
+    } else {
+      const choice = await promptForChoice(renderer, diff);
+      if (choice === "cancel") {
+        renderer.destroy();
+        process.exit(0);
+      }
+      if (choice === "fresh") {
+        db = await freshReingest(db, stateDir, stateDbPath, inputPath, config);
+        writeFingerprint(db, inputPath, current);
+      } else {
+        applyDiff(db, diff);
+        runSignals(db);
+        writeFingerprint(db, inputPath, current);
+      }
+    }
   }
 
-  const renderer = await createCliRenderer({ exitOnCtrlC: true });
   const display = await bootstrapDisplay({
     env: {
       COLORTERM: process.env.COLORTERM,
@@ -101,4 +141,56 @@ export async function runReview(): Promise<void> {
   };
 
   mountReview("pending");
+}
+
+function promptForChoice(
+  renderer: Awaited<ReturnType<typeof createCliRenderer>>,
+  diff: DiffResult,
+): Promise<ReingestChoice> {
+  return new Promise((resolveChoice) => {
+    const handle = mountReingestPrompt({
+      renderer,
+      counts: {
+        predictionsOnly: diff.predictionsOnly.length,
+        orphans: diff.orphans.length,
+        newRecords: diff.newRecords.length,
+      },
+      onChoice: (choice) => {
+        handle.destroy();
+        for (const child of renderer.root.getChildren()) child.destroyRecursively();
+        resolveChoice(choice);
+      },
+    });
+  });
+}
+
+/**
+ * `[f]` legacy escape hatch (PRD §13): back up `.labellens/` to
+ * `.labellens.bak/` and start fresh. Closes the current sqlite handle so the
+ * rename can complete on Windows-style filesystems, then reopens at the same
+ * path.
+ */
+async function freshReingest(
+  db: Db,
+  stateDir: string,
+  stateDbPath: string,
+  inputPath: string,
+  config: LabellensConfig,
+): Promise<Db> {
+  db.$client.close();
+  let bakDir = `${stateDir}.bak`;
+  if (existsSync(bakDir)) {
+    bakDir = `${stateDir}.bak-${Date.now()}`;
+  }
+  renameSync(stateDir, bakDir);
+  console.error(`Backed up state to ${bakDir}`);
+
+  const fresh = openDb(stateDbPath);
+  console.error(`Ingesting ${inputPath}...`);
+  const result = await ingestFile(fresh, inputPath, config.input.fields);
+  console.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
+  console.error("Computing prioritization signals...");
+  const signals = runSignals(fresh);
+  console.error(`  wrote ${signals.written} issue rows`);
+  return fresh;
 }

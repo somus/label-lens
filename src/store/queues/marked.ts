@@ -9,7 +9,7 @@ export const marked: QueueDefinition = {
     where: sql`EXISTS (
       SELECT 1 FROM record_tags rt
       WHERE rt.record_id = ${recordsWithPrimary.id} AND rt.tag = 'marked'
-    )`,
+    ) AND ${recordsWithPrimary.orphan} = 0`,
     orderBy: asc(recordsWithPrimary.rowIndex),
   },
 };

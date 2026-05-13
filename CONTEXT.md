@@ -48,10 +48,10 @@ _Avoid_: Error, problem (overclaims; LabelLens never asserts label-correctness v
 Audit tag on each review entry: `human` or `human+assistant`. Tagged `human+assistant` whenever the assistant panel was viewed for that record before the action — not only when the suggestion was accepted.
 
 **Orphan**:
-A review entry whose record no longer matches any current ingest (because source text changed and content-hash IDs shifted). Preserved in the database; surfaced explicitly during re-ingest.
+A record whose content-hash id no longer matches anything in the current ingest (because source text or context changed and the id shifted). Stored as `records.orphan = 1`. Predictions, reviews, and tags stay attached — orphans are preserved, not destroyed. Excluded from every built-in queue except `orphans`. Set during smart re-ingest (ADR 0002, PRD §13).
 
 **Queue**:
-A SQL-backed filter over records. Built-in: `pending`, `low-confidence`, `disagreements`, `flagged`, `marked`, `skipped`, `by-source:<s>`, `by-reason:<r>`, `by-label:<l>`, `by-issue:<t>`, `by-correction:<from>:<to>`. Power users compose with `:where`.
+A SQL-backed filter over records. Built-in: `pending`, `low-confidence`, `disagreements`, `flagged`, `marked`, `skipped`, `orphans`, `by-source:<s>`, `by-reason:<r>`, `by-label:<l>`, `by-issue:<t>`, `by-correction:<from>:<to>`. Power users compose with `:where`. Every built-in queue except `orphans` excludes orphan records.
 
 **Cursor**:
 The reviewer's position within a **Queue** — index into the ordered list of pending records the queue resolves to. One Cursor per Queue, persisted at app scope so screen switches and queue switches preserve focus. Reset when the queue is invalidated (re-ingest, re-prioritize, label set change).

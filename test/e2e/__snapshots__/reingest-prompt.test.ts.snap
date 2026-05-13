@@ -1,0 +1,29 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`reingest-prompt screen e2e renders PRD §13 block with counts 1`] = `
+"                                                                                                    
+  Source file has changed since last review.                                                        
+     482 records — predictions[] changed only (text/context unchanged)                              
+      18 records — text or context changed → 18 prior reviews would orphan                          
+       6 records — new (no matching prior record)                                                   
+                                                                                                    
+   [r] Refresh predictions, keep reviews, accept orphans + new records                              
+   [f] Fresh re-ingest, back up .labellens/ → .labellens.bak/   (legacy)                            
+   [c] Cancel                                                                                       
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  r — refresh · f — fresh · c — cancel                                                              
+                                                                                                    
+"
+`;

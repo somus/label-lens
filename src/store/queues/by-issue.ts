@@ -11,7 +11,7 @@ export function byIssue(type: string): QueueDefinition {
       where: sql`EXISTS (
         SELECT 1 FROM issues i
         WHERE i.record_id = ${recordsWithPrimary.id} AND i.type = ${type}
-      )`,
+      ) AND ${recordsWithPrimary.orphan} = 0`,
       orderBy: asc(recordsWithPrimary.rowIndex),
     },
   };

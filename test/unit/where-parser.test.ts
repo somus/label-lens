@@ -149,6 +149,20 @@ describe("where: parser", () => {
     expect(after.length).toBe(9);
   });
 
+  test("orphan column: where:orphan = 1 lists only orphans; = 0 hides them", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    store.db.run(sql`UPDATE records SET orphan = 1 WHERE id = ${id}`);
+
+    const isOrphan = queueRecords(store.db, resolveQueue("where:orphan = 1").query);
+    expect(isOrphan).toHaveLength(1);
+    expect(isOrphan[0]!.id).toBe(id);
+
+    const notOrphan = queueRecords(store.db, resolveQueue("where:orphan = 0").query);
+    expect(notOrphan).toHaveLength(9);
+    expect(notOrphan.find((r) => r.id === id)).toBeUndefined();
+  });
+
   test("status != 'skipped' keeps pending records (NULL coerced)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
