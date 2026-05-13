@@ -66,13 +66,14 @@ describe("review screen slice 2 UI", () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store);
     const frame = captureCharFrame();
-    expect(frame).toContain("a accept");
-    expect(frame).toContain("r relabel");
-    expect(frame).toContain("x reject");
-    expect(frame).toContain("s skip");
-    expect(frame).toContain("m mark");
-    expect(frame).toContain("n note");
-    expect(frame).toContain("u undo");
+    // Primary review actions live on the chrome footer. Secondary bindings
+    // (m mark, u undo, j next, ]/[ cycle, etc.) are discoverable via `?`
+    // and the command palette — not duplicated on the footer.
+    expect(frame).toContain("[a] accept");
+    expect(frame).toContain("[r] relabel");
+    expect(frame).toContain("[x] reject");
+    expect(frame).toContain("[s] skip");
+    expect(frame).toContain("[n] note");
   });
 
   test("history strip lists recent decisions", async () => {
@@ -145,15 +146,16 @@ describe("review screen slice 2 UI", () => {
     expect(captureCharFrame()).not.toContain("● marked");
   });
 
-  test("action bar swaps 'm mark' to 'm unmark' when current record is marked", async () => {
+  test("status bar surfaces the marked indicator when current record is marked", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store);
-    expect(captureCharFrame()).toContain("m mark");
+    // `m` lives under `?` help — the visual signal is the ● indicator in the
+    // status bar, not a footer relabel.
+    expect(captureCharFrame()).not.toContain("● marked");
     mockInput.pressKey("m");
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain("m unmark");
-    expect(frame).not.toContain("m mark ");
+    expect(frame).toContain("● marked");
   });
 
   test("picker filter accepts space character", async () => {
@@ -171,22 +173,22 @@ describe("review screen slice 2 UI", () => {
   test("header shows '<position> / <total>' indicator and advances on action", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store);
-    expect(captureCharFrame()).toContain("Pending · 1 / 10");
+    expect(captureCharFrame()).toContain("Pending  1 / 10");
     mockInput.pressKey("a");
     await renderOnce();
-    expect(captureCharFrame()).toContain("Pending · 1 / 9");
+    expect(captureCharFrame()).toContain("Pending  1 / 9");
   });
 
   test("']' switches to the skipped queue and updates header", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store);
-    expect(captureCharFrame()).toContain("· Pending");
+    expect(captureCharFrame()).toContain("Pending");
     mockInput.pressKey("s");
     await renderOnce();
     mockInput.pressKey("]");
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain("· Skipped");
+    expect(frame).toContain("Skipped");
   });
 
   test("note prompt accepts spaces between words", async () => {

@@ -54,30 +54,39 @@ function decisionCommand(spec: DecisionSpec): Command {
   };
 }
 
-export const accept: Command = decisionCommand({
-  name: "record.accept",
-  binding: "a",
-  status: "accepted",
-  finalLabel: (r) => r.primaryPrediction?.label ?? null,
-  prevLabel: () => null,
-  requiresPrediction: true,
-});
+export const accept: Command = {
+  ...decisionCommand({
+    name: "record.accept",
+    binding: "a",
+    status: "accepted",
+    finalLabel: (r) => r.primaryPrediction?.label ?? null,
+    prevLabel: () => null,
+    requiresPrediction: true,
+  }),
+  footer: { label: "accept", order: 10 },
+};
 
-export const reject: Command = decisionCommand({
-  name: "record.reject",
-  binding: "x",
-  status: "rejected",
-  finalLabel: () => null,
-  prevLabel: (r) => r.primaryPrediction?.label ?? null,
-});
+export const reject: Command = {
+  ...decisionCommand({
+    name: "record.reject",
+    binding: "x",
+    status: "rejected",
+    finalLabel: () => null,
+    prevLabel: (r) => r.primaryPrediction?.label ?? null,
+  }),
+  footer: { label: "reject", order: 30 },
+};
 
-export const skip: Command = decisionCommand({
-  name: "record.skip",
-  binding: "s",
-  status: "skipped",
-  finalLabel: () => null,
-  prevLabel: () => null,
-});
+export const skip: Command = {
+  ...decisionCommand({
+    name: "record.skip",
+    binding: "s",
+    status: "skipped",
+    finalLabel: () => null,
+    prevLabel: () => null,
+  }),
+  footer: { label: "skip", order: 40 },
+};
 
 /**
  * `1`..`9` quick-relabel. Resolves the label by index into `config.labels`;

@@ -5,6 +5,11 @@ export const helpShow: Command = {
   name: "help.show",
   scope: "global",
   binding: "?",
+  footer: {
+    label: "help",
+    order: 130,
+    scopes: ["review", "queue", "stats", "doc-view"],
+  },
   run: (ctx) => {
     const registry = ctx.commandRegistry;
     if (!registry) {

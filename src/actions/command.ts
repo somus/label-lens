@@ -3,12 +3,25 @@ import type { Scope } from "../keymap/engine.ts";
 
 export type ActionContext = AppContext;
 
+/**
+ * When set, this command appears in the action footer (PRD §UX-overhaul Slice 1).
+ * Footer entries are the user-facing surface of the keymap — discoverability is
+ * the contract. `scopes` restricts a global command to specific screens; omit to
+ * inherit the command's own `scope`.
+ */
+export type FooterSpec = {
+  label: string;
+  order?: number;
+  scopes?: Scope[];
+};
+
 export type Command<Ctx extends ActionContext = ActionContext> = {
   name: string;
   scope: Scope;
   binding?: string | string[];
   palette?: string;
   hidden?: boolean;
+  footer?: FooterSpec;
   /** Message flashed when run is gated by `enabled === false`. */
   disabledMessage?: string | ((ctx: Ctx) => string);
   enabled?: (ctx: Ctx) => boolean;

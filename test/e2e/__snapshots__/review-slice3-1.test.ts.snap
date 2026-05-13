@@ -2,7 +2,7 @@
 
 exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, truecolor light 1`] = `
 "                                                                                                                                                                                                        
-  LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -23,14 +23,14 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   Coffee at Blue Tokai                                                                                                                                                                                  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · t stats · : cmd · ? help · gg guide · q quit                                                        
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
                                                                                                                                                                                                         
 "
 `;
 
 exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, 256-color light 1`] = `
 "                                                                                                                                                                                                        
-  LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -51,14 +51,14 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   Coffee at Blue Tokai                                                                                                                                                                                  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · t stats · : cmd · ? help · gg guide · q quit                                                        
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
                                                                                                                                                                                                         
 "
 `;
 
 exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, 16-color light (markers) 1`] = `
 "                                                                                                                                                                                                        
-  LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -79,14 +79,14 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   │ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · t stats · : cmd · ? help · gg guide · q quit                                                        
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
                                                                                                                                                                                                         
 "
 `;
 
 exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, truecolor dark 1`] = `
 "                                                                                                                                                                                                        
-  LabelLens · tiny.jsonl · Pending · 1 / 10                                                                                                                 Reviewed: 0 / 10 · Skipped: 0 · Pending: 10 
+  LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -107,7 +107,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   Coffee at Blue Tokai                                                                                                                                                                                  
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  a accept · r relabel · x reject · s skip · m mark · n note · u undo · j/k next/prev · [/] queue · t stats · : cmd · ? help · gg guide · q quit                                                        
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
                                                                                                                                                                                                         
 "
 `;

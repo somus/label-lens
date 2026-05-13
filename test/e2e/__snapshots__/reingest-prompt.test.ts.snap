@@ -2,6 +2,8 @@
 
 exports[`reingest-prompt screen e2e renders PRD §13 block with counts 1`] = `
 "                                                                                                    
+  LabelLens  test.jsonl  Re-ingest                                                                  
+                                                                                                    
   Source file has changed since last review.                                                        
        482 records — predictions[] changed only (text/context unchanged)                            
         18 records — text or context changed → 18 prior reviews would orphan                        
@@ -21,9 +23,7 @@ exports[`reingest-prompt screen e2e renders PRD §13 block with counts 1`] = `
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-  r — refresh · f — fresh · c — cancel                                                              
+  [r] refresh  [f] fresh  [c] cancel                                                                
                                                                                                     
 "
 `;

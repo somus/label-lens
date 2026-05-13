@@ -79,7 +79,7 @@ describe("stats screen e2e", () => {
     expect(frame).toContain("Top corrections");
     expect(frame).toContain("food → travel");
     expect(frame).toContain("Suggested next queue");
-    expect(frame).toContain("j / k navigate");
+    expect(frame).toContain("[j/k] navigate");
     // Highlight marker (>) must appear on at least one drillable row.
     expect(frame).toMatch(/^.*>\s+/m);
     expect(frame).toMatchSnapshot();
@@ -148,15 +148,19 @@ describe("stats screen e2e", () => {
     expect(head).toContain(">");
   });
 
-  test("mount sets activeScope to 'stats'; destroy restores prior scope", async () => {
+  test("renderState sets activeScope to 'stats'", async () => {
+    // Scope is set on every render rather than at mount/destroy. After destroy
+    // it stays as 'stats' until the next screen's first render takes over —
+    // the orchestrator (cli/run.ts) guarantees a subsequent mountReview which
+    // sets scope to 'review' immediately. Tests must not rely on destroy
+    // performing scope cleanup; that would require try/finally bookkeeping
+    // that exception-safe per-render avoids.
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { app, destroy } = await setup(store);
+    const { app } = await setup(store);
     expect(app.activeScope).toBe("stats");
-    destroy();
-    expect(app.activeScope).toBeUndefined();
   });
 
-  test("destroy restores 'review' scope when stats opened from review", async () => {
+  test("opening stats from review overwrites scope on first render", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { renderer, renderOnce } = await createTestRenderer({ width: 100, height: 40 });
     const app = createAppContext({
@@ -167,7 +171,7 @@ describe("stats screen e2e", () => {
       onQuit: () => {},
     });
     app.activeScope = "review";
-    const handle = mountStatsScreen({
+    mountStatsScreen({
       renderer,
       app,
       onDrill: () => {},
@@ -175,7 +179,5 @@ describe("stats screen e2e", () => {
     });
     await renderOnce();
     expect(app.activeScope as string).toBe("stats");
-    handle.destroy();
-    expect(app.activeScope as string).toBe("review");
   });
 });

@@ -6,6 +6,11 @@ export const paletteOpen: Command = {
   scope: "global",
   binding: ":",
   hidden: true,
+  footer: {
+    label: "palette",
+    order: 110,
+    scopes: ["review", "queue", "stats", "doc-view"],
+  },
   run: (ctx) => {
     const registry = ctx.commandRegistry;
     if (!registry) {

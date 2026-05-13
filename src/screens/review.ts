@@ -8,14 +8,17 @@ import { createChordResolver } from "../keymap/chord.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import type { GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
+import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
+import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { Markdown } from "../render/markdown.ts";
+import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import type { Db } from "../store/db.ts";
 import { issuesForRecord, type StoredIssue } from "../store/issues.ts";
@@ -78,14 +81,32 @@ export function mountReviewScreen(args: {
       lastDocViewActive = docViewActive;
       lastOverlayActive = overlayActive;
     }
-    if (app.docView) {
-      renderer.root.add(renderDocView(app, renderer.terminalHeight));
-      return;
-    }
-    const cursor = app.cursor;
-    const queueId = app.queueId ?? initialQueueId;
     const counts = progressCounts(app.db);
     const reviewedTotal = counts.accepted + counts.relabeled + counts.rejected;
+    const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
+
+    if (app.docView) {
+      const docViewStatus = docViewStatusSegments(app);
+      const docViewFooterHint = app.overlay
+        ? overlayFooterHint(app.overlay)
+        : flashFooterHint(flash);
+      renderer.root.add(
+        Chrome({
+          display: app.display,
+          app,
+          scope: "doc-view",
+          statusLeft: docViewStatus.left,
+          statusRight: docViewStatus.right,
+          footerHint: docViewFooterHint,
+          width: renderer.terminalWidth,
+          body: renderDocView(app, renderer.terminalHeight),
+        }),
+      );
+      return;
+    }
+
+    const cursor = app.cursor;
+    const queueId = app.queueId ?? initialQueueId;
     const bandRows = Math.max(8, renderer.terminalHeight - NON_BAND_ROWS);
     const mode = pickLayout(app.display.layout, renderer.terminalWidth);
     const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
@@ -96,7 +117,6 @@ export function mountReviewScreen(args: {
       startIndex: 0,
     };
     const record = cursor?.current() ?? null;
-    const flash = app.flash && app.flash.expiresAt > Date.now() ? app.flash : null;
     const history = recentReviewsWithText(app.db, 5);
     const marked = record ? hasTag(app.db, record.id, "marked") : false;
     const issues = record ? issuesForRecord(app.db, record.id) : [];
@@ -106,66 +126,67 @@ export function mountReviewScreen(args: {
     const queuePosition = queueTotal === 0 ? 0 : (cursor?.position ?? 0) + 1;
     const queueIndicator = queueTotal === 0 ? "0 / 0" : `${queuePosition} / ${queueTotal}`;
 
+    const statusLeft: Segment[] = [
+      { text: " LabelLens", tone: "bold" },
+      { text: "  ", tone: "dim" },
+      { text: basename(app.config.input.path), tone: "muted" },
+      { text: "  ", tone: "dim" },
+      { text: queueLabel, tone: "accent" },
+      { text: "  ", tone: "dim" },
+      { text: queueIndicator, tone: "default" },
+    ];
+    if (marked) {
+      statusLeft.push({ text: "   ● marked", tone: "warning" });
+    }
+    const statusRight: Segment[] = [
+      { text: `Reviewed: ${reviewedTotal} / ${counts.total}`, tone: "muted" },
+      { text: "  ·  ", tone: "dim" },
+      { text: `Skipped: ${counts.skipped}`, tone: "muted" },
+      { text: "  ·  ", tone: "dim" },
+      { text: `Pending: ${counts.pending} `, tone: "muted" },
+    ];
+
+    const body = Box(
+      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      mode === "split"
+        ? splitBody({
+            window,
+            record,
+            labels: app.config.labels,
+            history,
+            display: app.display,
+            contextStrip: contextStripFor(app, record),
+            issues,
+            totalRecords: counts.total,
+            predictionCount,
+          })
+        : stackBody({
+            window,
+            record,
+            labels: app.config.labels,
+            contextStrip: contextStripFor(app, record),
+            history,
+            display: app.display,
+            issues,
+            totalRecords: counts.total,
+            predictionCount,
+          }),
+      app.overlay ? renderOverlay(app.overlay) : Box({}),
+    );
+
+    const footerHint = app.overlay ? overlayFooterHint(app.overlay) : flashFooterHint(flash);
+
     renderer.root.add(
-      Box(
-        { flexDirection: "column", flexGrow: 1, padding: 1 },
-
-        Box(
-          { flexDirection: "row", justifyContent: "space-between" },
-          Text({
-            content: ` LabelLens · ${basename(app.config.input.path)} · ${queueLabel} · ${queueIndicator}${marked ? "   ● marked" : ""}`,
-            attributes: marked ? TextAttributes.BOLD : undefined,
-          }),
-          Text({
-            content: `Reviewed: ${reviewedTotal} / ${counts.total} · Skipped: ${counts.skipped} · Pending: ${counts.pending}`,
-            attributes: TextAttributes.DIM,
-          }),
-        ),
-
-        Box({ height: 1 }),
-
-        mode === "split"
-          ? splitBody({
-              window,
-              record,
-              labels: app.config.labels,
-              history,
-              display: app.display,
-              contextStrip: contextStripFor(app, record),
-              issues,
-              totalRecords: counts.total,
-              predictionCount,
-            })
-          : stackBody({
-              window,
-              record,
-              labels: app.config.labels,
-              contextStrip: contextStripFor(app, record),
-              history,
-              display: app.display,
-              issues,
-              totalRecords: counts.total,
-              predictionCount,
-            }),
-
-        app.overlay ? renderOverlay(app.overlay) : Box({}),
-
-        flash
-          ? Box(
-              { flexDirection: "row" },
-              Text({
-                content: ` ! ${flash.message}`,
-                attributes: TextAttributes.BOLD,
-              }),
-            )
-          : Box(
-              { flexDirection: "row" },
-              Text({
-                content: ` a accept · r relabel · x reject · s skip · m ${marked ? "unmark" : "mark"} · n note · u undo · j/k next/prev${app.config.task === "boundary" ? " · gd doc" : ""} · [/] queue · t stats · : cmd · ? help · gg guide · q quit`,
-                attributes: TextAttributes.DIM,
-              }),
-            ),
-      ),
+      Chrome({
+        display: app.display,
+        app,
+        scope: "review",
+        statusLeft,
+        statusRight,
+        footerHint,
+        width: renderer.terminalWidth,
+        body,
+      }),
     );
   };
 
@@ -614,4 +635,19 @@ function truncate(s: string, n: number): string {
 
 function basename(p: string): string {
   return p.split("/").pop() ?? p;
+}
+
+function docViewStatusSegments(app: AppContext): { left: Segment[]; right: Segment[] } {
+  const doc = app.docView!;
+  return {
+    left: [
+      { text: " Doc view", tone: "bold" },
+      { text: "  ", tone: "dim" },
+      { text: sanitizeStatusText(doc.documentId), tone: "accent" },
+    ],
+    right: [
+      { text: basename(app.config.input.path), tone: "muted" },
+      { text: " ", tone: "muted" },
+    ],
+  };
 }

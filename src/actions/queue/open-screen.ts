@@ -5,6 +5,7 @@ export const openQueueScreen: Command = {
   scope: "review",
   binding: "shift+q",
   palette: "Open queue screen",
+  footer: { label: "queues", order: 95 },
   enabled: () => true,
   run: (ctx) => {
     if (!ctx.openQueueScreen) {
