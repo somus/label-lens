@@ -1,6 +1,7 @@
 import type { AppContext } from "../app/context.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
+import { CHROME_ROW_OVERHEAD } from "../render/chrome/index.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { recordsInDoc } from "../store/queries.ts";
 import type { RecordWithPrimaryPrediction } from "../types.ts";
@@ -40,8 +41,8 @@ export function renderDocView(app: AppContext, terminalHeight: number): ReturnTy
       Text({ content: "Doc view: no document loaded.", attributes: TextAttributes.DIM }),
     );
   }
-  // Chrome reserves 4 rows (status bar + spacer + footer + padding).
-  const viewport = viewportHeight(terminalHeight - 4);
+  // Chrome reserves CHROME_ROW_OVERHEAD rows + 1 for the inline doc header.
+  const viewport = viewportHeight(terminalHeight - CHROME_ROW_OVERHEAD - 1);
   const maxScroll = Math.max(0, lines.rows.length - viewport);
   const scrollTop = Math.max(0, Math.min(app.docView.scrollTop, maxScroll));
   // Normalize stored state so subsequent commands see the same upper bound

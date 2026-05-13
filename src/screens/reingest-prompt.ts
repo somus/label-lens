@@ -28,18 +28,11 @@ export type ReingestPromptHandle = { destroy: () => void };
 export function mountReingestPrompt(args: {
   renderer: CliRenderer;
   counts: ReingestPromptCounts;
-  display?: ResolvedDisplay;
-  datasetName?: string;
+  display: ResolvedDisplay;
+  datasetName: string;
   onChoice: (choice: ReingestChoice) => void;
 }): ReingestPromptHandle {
-  const { renderer, counts, onChoice } = args;
-  const display: ResolvedDisplay = args.display ?? {
-    color: "mono",
-    banding: false,
-    theme: "light",
-    candidatePin: 0.4,
-    layout: "auto",
-  };
+  const { renderer, counts, display, onChoice } = args;
 
   const lines: string[] = ["Source file has changed since last review."];
   if (counts.predictionsOnly > 0) {
@@ -59,7 +52,7 @@ export function mountReingestPrompt(args: {
   const statusLeft: Segment[] = [
     { text: " LabelLens", tone: "bold" },
     { text: "  ", tone: "dim" },
-    { text: args.datasetName ?? "data", tone: "muted" },
+    { text: args.datasetName, tone: "muted" },
     { text: "  ", tone: "dim" },
     { text: "Re-ingest", tone: "warning" },
   ];

@@ -5,6 +5,7 @@ import {
   type ReingestChoice,
   type ReingestPromptCounts,
 } from "../../src/screens/reingest-prompt.ts";
+import { displayFor } from "../util/display.ts";
 
 async function setup(counts: ReingestPromptCounts) {
   const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
@@ -15,6 +16,8 @@ async function setup(counts: ReingestPromptCounts) {
   const handle = mountReingestPrompt({
     renderer,
     counts,
+    display: displayFor(),
+    datasetName: "test.jsonl",
     onChoice: (c) => {
       chosen = c;
     },

@@ -8,7 +8,6 @@ import { type Segment, StatusBar } from "./status-bar.ts";
 type FooterEntry = {
   binding: string;
   label: string;
-  enabled: boolean;
   order: number;
 };
 
@@ -20,7 +19,11 @@ function firstBinding(cmd: Command): string | null {
 function displayKey(binding: string): string {
   // "g d" → "gd" (chord), "shift+q" → "Q", "ctrl+d" → "^d".
   if (binding.includes(" ") && !binding.includes("+")) {
-    return binding.split(" ").join("");
+    const keys = binding.split(" ");
+    if (keys.length > 2) {
+      throw new Error(`displayKey: footer chord exceeds 2 keys: "${binding}"`);
+    }
+    return keys.join("");
   }
   const lower = binding.toLowerCase();
   const parts = lower.split("+");
@@ -54,7 +57,6 @@ export function collectFooterEntries(
     out.push({
       binding: displayKey(binding),
       label: cmd.footer.label,
-      enabled,
       order: cmd.footer.order ?? 1000,
     });
   }
@@ -63,15 +65,14 @@ export function collectFooterEntries(
 }
 
 export function entriesToSegments(entries: FooterEntry[]): Segment[] {
+  // collectFooterEntries drops disabled commands, so every entry here is
+  // active. If we ever want to render disabled-but-visible hints, restore the
+  // tone branching and stop filtering at collect time.
   const segs: Segment[] = [];
   entries.forEach((entry, i) => {
     if (i > 0) segs.push({ text: "  ", tone: "dim" });
-    const keyTone = entry.enabled ? "accent" : "dim";
-    segs.push({ text: `[${entry.binding}] `, tone: keyTone });
-    segs.push({
-      text: entry.label,
-      tone: entry.enabled ? "muted" : "dim",
-    });
+    segs.push({ text: `[${entry.binding}] `, tone: "accent" });
+    segs.push({ text: entry.label, tone: "muted" });
   });
   return segs;
 }

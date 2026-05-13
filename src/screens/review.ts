@@ -8,6 +8,7 @@ import { createChordResolver } from "../keymap/chord.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import type { GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
+import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
@@ -17,6 +18,7 @@ import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { Markdown } from "../render/markdown.ts";
+import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import type { Db } from "../store/db.ts";
 import { issuesForRecord, type StoredIssue } from "../store/issues.ts";
@@ -85,7 +87,9 @@ export function mountReviewScreen(args: {
 
     if (app.docView) {
       const docViewStatus = docViewStatusSegments(app);
-      const docViewFooterHint = overlayHint(app) ?? flashHint(flash);
+      const docViewFooterHint = app.overlay
+        ? overlayFooterHint(app.overlay)
+        : flashFooterHint(flash);
       renderer.root.add(
         Chrome({
           display: app.display,
@@ -94,6 +98,7 @@ export function mountReviewScreen(args: {
           statusLeft: docViewStatus.left,
           statusRight: docViewStatus.right,
           footerHint: docViewFooterHint,
+          width: renderer.terminalWidth,
           body: renderDocView(app, renderer.terminalHeight),
         }),
       );
@@ -169,7 +174,7 @@ export function mountReviewScreen(args: {
       app.overlay ? renderOverlay(app.overlay) : Box({}),
     );
 
-    const footerHint = overlayHint(app) ?? flashHint(flash);
+    const footerHint = app.overlay ? overlayFooterHint(app.overlay) : flashFooterHint(flash);
 
     renderer.root.add(
       Chrome({
@@ -179,6 +184,7 @@ export function mountReviewScreen(args: {
         statusLeft,
         statusRight,
         footerHint,
+        width: renderer.terminalWidth,
         body,
       }),
     );
@@ -631,70 +637,13 @@ function basename(p: string): string {
   return p.split("/").pop() ?? p;
 }
 
-function overlayHint(app: AppContext): Segment[] | undefined {
-  const overlay = app.overlay;
-  if (!overlay) return undefined;
-  switch (overlay.kind) {
-    case "palette":
-      return [
-        { text: "[enter] ", tone: "accent" },
-        { text: "run  ", tone: "muted" },
-        { text: "[↑↓] ", tone: "accent" },
-        { text: "navigate  ", tone: "muted" },
-        { text: "[^p/^n] ", tone: "accent" },
-        { text: "history  ", tone: "muted" },
-        { text: "[esc] ", tone: "accent" },
-        { text: "cancel", tone: "muted" },
-      ];
-    case "picker":
-      return [
-        { text: "[enter] ", tone: "accent" },
-        { text: "commit  ", tone: "muted" },
-        { text: "[1-9] ", tone: "accent" },
-        { text: "pick  ", tone: "muted" },
-        { text: "[esc] ", tone: "accent" },
-        { text: "cancel", tone: "muted" },
-      ];
-    case "note":
-      return [
-        { text: "[enter] ", tone: "accent" },
-        { text: "save  ", tone: "muted" },
-        { text: "[esc] ", tone: "accent" },
-        { text: "cancel", tone: "muted" },
-      ];
-    case "help":
-    case "guidelines":
-      return [
-        { text: "[↑↓] ", tone: "accent" },
-        { text: "scroll  ", tone: "muted" },
-        { text: "[esc] ", tone: "accent" },
-        { text: "close", tone: "muted" },
-      ];
-    case "assistant":
-      return [
-        { text: "[esc] ", tone: "accent" },
-        { text: "close assistant", tone: "muted" },
-      ];
-  }
-}
-
-function flashHint(
-  flash: { message: string; kind: "info" | "error" } | null,
-): Segment[] | undefined {
-  if (!flash) return undefined;
-  return [
-    { text: " ! ", tone: flash.kind === "error" ? "danger" : "warning" },
-    { text: flash.message, tone: "bold" },
-  ];
-}
-
 function docViewStatusSegments(app: AppContext): { left: Segment[]; right: Segment[] } {
   const doc = app.docView!;
   return {
     left: [
       { text: " Doc view", tone: "bold" },
       { text: "  ", tone: "dim" },
-      { text: doc.documentId, tone: "accent" },
+      { text: sanitizeStatusText(doc.documentId), tone: "accent" },
     ],
     right: [
       { text: basename(app.config.input.path), tone: "muted" },

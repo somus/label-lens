@@ -45,9 +45,24 @@ export async function runReview(): Promise<void> {
   // window. If the process exits before mounting any screen, the terminal
   // never gets primed and no probe responses leak into the parent shell.
   let renderer: CliRenderer | null = null;
+  let resolvedDisplay: import("../render/capability.ts").ResolvedDisplay | null = null;
   const ensureRenderer = async (): Promise<CliRenderer> => {
     if (!renderer) renderer = await createCliRenderer({ exitOnCtrlC: true });
     return renderer;
+  };
+  const ensureDisplay = async (): Promise<import("../render/capability.ts").ResolvedDisplay> => {
+    if (resolvedDisplay) return resolvedDisplay;
+    const r = await ensureRenderer();
+    resolvedDisplay = await bootstrapDisplay({
+      env: {
+        COLORTERM: process.env.COLORTERM,
+        TERM: process.env.TERM,
+        NO_COLOR: process.env.NO_COLOR,
+      },
+      themeProbe: { waitForThemeMode: (ms) => r.waitForThemeMode(ms) },
+      config: config.display,
+    });
+    return resolvedDisplay;
   };
 
   if (isEmpty) {
@@ -73,7 +88,8 @@ export async function runReview(): Promise<void> {
       writeFingerprint(db, inputPath, current);
     } else {
       const r = await ensureRenderer();
-      const choice = await promptForChoice(r, diff);
+      const display = await ensureDisplay();
+      const choice = await promptForChoice(r, diff, display, inputPath);
       if (choice === "cancel") {
         r.destroy();
         process.exit(0);
@@ -106,15 +122,7 @@ export async function runReview(): Promise<void> {
   }
 
   const r = await ensureRenderer();
-  const display = await bootstrapDisplay({
-    env: {
-      COLORTERM: process.env.COLORTERM,
-      TERM: process.env.TERM,
-      NO_COLOR: process.env.NO_COLOR,
-    },
-    themeProbe: { waitForThemeMode: (ms) => r.waitForThemeMode(ms) },
-    config: config.display,
-  });
+  const display = await ensureDisplay();
   const app = createAppContext({
     db,
     config,
@@ -176,10 +184,17 @@ export async function runReview(): Promise<void> {
   mountReview("pending");
 }
 
-function promptForChoice(renderer: CliRenderer, diff: DiffResult): Promise<ReingestChoice> {
+function promptForChoice(
+  renderer: CliRenderer,
+  diff: DiffResult,
+  display: import("../render/capability.ts").ResolvedDisplay,
+  inputPath: string,
+): Promise<ReingestChoice> {
   return new Promise((resolveChoice) => {
     const handle = mountReingestPrompt({
       renderer,
+      display,
+      datasetName: inputPath.split("/").pop() ?? inputPath,
       counts: {
         predictionsOnly: diff.predictionsOnly.length,
         orphans: diff.orphans.length,

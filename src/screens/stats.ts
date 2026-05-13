@@ -85,14 +85,15 @@ export function mountStatsScreen(args: {
   onCancel: () => void;
 }): StatsScreenHandle {
   const { renderer, app, onDrill, onCancel } = args;
-  const previousScope = app.activeScope;
-  app.activeScope = "stats";
 
   const { sections } = allStats(app.db);
   const lines = flatten(sections);
   let highlight = firstDrillable(lines);
 
   const renderState = () => {
+    // See queue.ts: scope set per-render so a render failure can't leave a
+    // stale value behind.
+    app.activeScope = "stats";
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
     const children: ReturnType<typeof Text>[] = [];
     lines.forEach((line, i) => {
@@ -139,6 +140,7 @@ export function mountStatsScreen(args: {
         statusLeft,
         statusRight,
         footerHint,
+        width: renderer.terminalWidth,
         body: Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...children),
       }),
     );
@@ -180,7 +182,6 @@ export function mountStatsScreen(args: {
     destroy: () => {
       renderer.keyInput.off("keypress", onKey);
       renderer.off("resize", onResize);
-      app.activeScope = previousScope;
     },
   };
 }

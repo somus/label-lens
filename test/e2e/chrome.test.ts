@@ -168,4 +168,26 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toContain("[enter] drill");
     expect(frame).toContain("[esc] back");
   });
+
+  test("status bar truncates and drops right cluster on narrow (60-col) terminals", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
+      width: 60,
+      height: 24,
+    });
+    const app = createAppContext({
+      db: store.db,
+      config: makeConfig(),
+      display: TRUECOLOR_LIGHT,
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    mountReviewScreen({ renderer, app });
+    await renderOnce();
+    const frame = captureCharFrame();
+    // Right cluster (Reviewed/Skipped/Pending counters) must not render at <80 cols.
+    expect(frame).not.toContain("Reviewed: 0 / 10");
+    // Left cluster must still anchor app + dataset.
+    expect(frame).toContain("LabelLens");
+  });
 });

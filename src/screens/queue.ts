@@ -21,8 +21,6 @@ export function mountQueueScreen(args: {
   onCancel: () => void;
 }): QueueScreenHandle {
   const { renderer, app, onSelect, onCancel } = args;
-  const previousScope = app.activeScope;
-  app.activeScope = "queue";
 
   const rows: Row[] = QUEUE_CYCLE.map((id) => {
     const def = resolveQueue(id);
@@ -33,10 +31,12 @@ export function mountQueueScreen(args: {
     0,
     rows.findIndex((r) => r.id === app.queueId),
   );
-  if (highlight < 0) highlight = 0;
   const longestLabel = rows.reduce((m, r) => Math.max(m, r.label.length), 0);
 
   const renderState = () => {
+    // Scope is set on every render so a thrown error mid-mount can't leave a
+    // stale value behind. The next screen's render takes over immediately.
+    app.activeScope = "queue";
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
 
     const statusLeft: Segment[] = [
@@ -77,6 +77,7 @@ export function mountQueueScreen(args: {
         statusLeft,
         statusRight,
         footerHint,
+        width: renderer.terminalWidth,
         body,
       }),
     );
@@ -114,7 +115,6 @@ export function mountQueueScreen(args: {
     destroy: () => {
       renderer.keyInput.off("keypress", onKey);
       renderer.off("resize", onResize);
-      app.activeScope = previousScope;
     },
   };
 }
