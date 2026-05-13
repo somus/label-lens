@@ -17,12 +17,15 @@ export type PaletteData = {
   labelCounts: Map<string, number>;
   topics: string[];
   formats: string[];
+  queueNames: string[];
 };
 
 export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
   const counts = new Map<string, number>();
   for (const [id, def] of Object.entries(BUILTIN_QUEUES)) {
-    counts.set(`:${id}`, queueCount(db, def));
+    const n = queueCount(db, def);
+    counts.set(`:${id}`, n);
+    counts.set(id, n);
   }
 
   const sources = db
@@ -72,5 +75,6 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     labelCounts,
     topics: manPageTopics(),
     formats: ["jsonl", "csv", "stats"],
+    queueNames: Object.keys(BUILTIN_QUEUES),
   };
 }

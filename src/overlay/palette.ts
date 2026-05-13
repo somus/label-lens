@@ -205,6 +205,10 @@ function tryOpenPicker(state: PaletteState): ReduceResult | null {
     case "format":
       candidates = data.formats;
       break;
+    case "queue":
+      candidates = data.queueNames;
+      candidateCounts = data.counts;
+      break;
     default:
       return null;
   }

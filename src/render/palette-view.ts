@@ -159,6 +159,27 @@ function renderPickerModal(
     entryChildren.push(
       Text({ content: "  type a value and press enter", attributes: TextAttributes.DIM }),
     );
+    if (picker.commandName === "palette.where") {
+      entryChildren.push(Text({ content: "", attributes: TextAttributes.DIM }));
+      entryChildren.push(
+        Text({
+          content: "  columns: status, final_label, prev_label,",
+          attributes: TextAttributes.DIM,
+        }),
+      );
+      entryChildren.push(
+        Text({
+          content: "  source, confidence, reason, issue_type",
+          attributes: TextAttributes.DIM,
+        }),
+      );
+      entryChildren.push(
+        Text({
+          content: "  example: source = 'llm' and confidence < 0.5",
+          attributes: TextAttributes.DIM,
+        }),
+      );
+    }
   }
 
   const titleText =

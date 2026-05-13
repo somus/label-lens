@@ -36,6 +36,7 @@ function parametric(stem: string, meta: PaletteMetadata, prefix?: string): Comma
 export const paletteQueue: Command = parametric("queue", {
   category: "queues",
   arity: 1,
+  pickerKind: "queue",
   description: "Switch to queue by name",
 });
 
