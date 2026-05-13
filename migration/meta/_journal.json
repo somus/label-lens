@@ -71,6 +71,13 @@
       "when": 1778900000000,
       "tag": "0009_records_with_primary_v3_orphan",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1779000000000,
+      "tag": "0010_woozy_reptil",
+      "breakpoints": true
     }
   ]
 }

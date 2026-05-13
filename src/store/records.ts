@@ -72,6 +72,11 @@ export function insertReview(
     source_of_truth: SourceOfTruth;
   },
 ): void {
+  const noteRow = db
+    .select({ note: records.note })
+    .from(records)
+    .where(eq(records.id, args.record_id))
+    .get();
   db.insert(reviews)
     .values({
       recordId: args.record_id,
@@ -80,6 +85,7 @@ export function insertReview(
       prevLabel: args.prev_label,
       reviewedAt: new Date().toISOString(),
       sourceOfTruth: args.source_of_truth,
+      note: noteRow?.note ?? null,
     })
     .run();
 }
