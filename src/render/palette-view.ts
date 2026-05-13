@@ -18,12 +18,31 @@ export function renderPalette(
   const t = resolveTheme(display);
   const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * 0.6)));
   const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
-  const topOffset = Math.max(1, Math.floor(termHeight * 0.15));
+  const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
+  const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
 
   if (state.mode === "pick" && state.picker) {
-    return renderPickerModal(state.picker, display, t, modalWidth, leftOffset, topOffset, border);
+    return renderPickerModal(
+      state.picker,
+      display,
+      t,
+      modalWidth,
+      modalHeight,
+      leftOffset,
+      topOffset,
+      border,
+    );
   }
-  return renderBrowseModal(state, display, t, modalWidth, leftOffset, topOffset, border);
+  return renderBrowseModal(
+    state,
+    display,
+    t,
+    modalWidth,
+    modalHeight,
+    leftOffset,
+    topOffset,
+    border,
+  );
 }
 
 function renderBrowseModal(
@@ -31,6 +50,7 @@ function renderBrowseModal(
   display: ResolvedDisplay,
   t: ReturnType<typeof resolveTheme>,
   modalWidth: number,
+  modalHeight: number,
   leftOffset: number,
   topOffset: number,
   border: "rounded" | "single",
@@ -99,8 +119,10 @@ function renderBrowseModal(
       top: topOffset,
       left: leftOffset,
       width: modalWidth,
+      height: modalHeight,
       zIndex: 100,
       shouldFill: true,
+      overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
     ...children,
@@ -112,6 +134,7 @@ function renderPickerModal(
   display: ResolvedDisplay,
   t: ReturnType<typeof resolveTheme>,
   modalWidth: number,
+  modalHeight: number,
   leftOffset: number,
   topOffset: number,
   border: "rounded" | "single",
@@ -155,8 +178,10 @@ function renderPickerModal(
       top: topOffset,
       left: leftOffset,
       width: modalWidth,
+      height: modalHeight,
       zIndex: 100,
       shouldFill: true,
+      overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
     ...children,

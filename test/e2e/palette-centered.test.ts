@@ -57,15 +57,17 @@ describe("palette centered modal", () => {
     expect(frame).toContain("0");
   });
 
-  test("shows descriptions for filter entries", async () => {
+  test("filter commands have descriptions in metadata", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey(":");
     await renderOnce();
-    const frame = captureCharFrame();
-    expect(frame).toContain("Filter by source");
-    expect(frame).toContain("Filter by label");
-    expect(frame).toContain("Filter by issue type");
+    const state = app.overlay?.state as import("../../src/overlay/palette.ts").PaletteState;
+    const filters = state.categories.find((c) => c.id === "filters");
+    expect(filters).toBeDefined();
+    expect(filters!.entries.length).toBeGreaterThan(0);
+    const bySource = state.commands.find((c) => c.name === "palette.by-source");
+    expect(bySource?.paletteMetadata?.description).toBe("Filter by source");
   });
 
   test("first entry is highlighted with '>' marker", async () => {

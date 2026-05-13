@@ -553,6 +553,7 @@ function modalBox(
   const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * widthFraction)));
   const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
   const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
+  const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
   return Box(
     {
       flexDirection: "column",
@@ -562,8 +563,10 @@ function modalBox(
       top: topOffset,
       left: leftOffset,
       width: modalWidth,
+      height: modalHeight,
       zIndex: 100,
       shouldFill: true,
+      overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
     ...children,
