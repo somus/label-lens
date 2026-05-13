@@ -40,7 +40,7 @@ function formatRow(row: StatRow): string {
     case "suggested-next":
       return `${row.queueId}   (score ${row.score.toFixed(2)})`;
     case "all-caught-up":
-      return "All caught up — try :export";
+      return "All records reviewed!";
   }
 }
 

@@ -84,6 +84,17 @@ describe("drillToQueue", () => {
         rate: 0.5,
         reviewed: 2,
       }),
-    ).toThrow();
+    ).toThrow(/single quotes and backslashes/);
+  });
+
+  test("labels containing backslashes are rejected with the same guidance", () => {
+    expect(() =>
+      drillToQueue({
+        kind: "correction-rate-by-label",
+        prevLabel: "a\\b",
+        rate: 0.5,
+        reviewed: 2,
+      }),
+    ).toThrow(/single quotes and backslashes/);
   });
 });

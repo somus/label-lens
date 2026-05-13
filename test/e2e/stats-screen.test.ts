@@ -155,4 +155,27 @@ describe("stats screen e2e", () => {
     destroy();
     expect(app.activeScope).toBeUndefined();
   });
+
+  test("destroy restores 'review' scope when stats opened from review", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { renderer, renderOnce } = await createTestRenderer({ width: 100, height: 40 });
+    const app = createAppContext({
+      db: store.db,
+      config: makeConfig(),
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    app.activeScope = "review";
+    const handle = mountStatsScreen({
+      renderer,
+      app,
+      onDrill: () => {},
+      onCancel: () => {},
+    });
+    await renderOnce();
+    expect(app.activeScope as string).toBe("stats");
+    handle.destroy();
+    expect(app.activeScope as string).toBe("review");
+  });
 });

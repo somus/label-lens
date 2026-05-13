@@ -201,7 +201,7 @@ export function correctionRateByLabel(db: TxOrDb, limit = 5): StatRow[] {
   }
   const out: StatRow[] = [];
   for (const [prevLabel, c] of counts) {
-    if (c.reviewed === 0) continue;
+    if (c.reviewed === 0 || c.relabeled === 0) continue;
     out.push({
       kind: "correction-rate-by-label",
       prevLabel,
@@ -332,9 +332,9 @@ export function drillToQueue(row: StatRow): QueueId | null {
     case "relabel-by-reason":
       return `by-reason:${row.reason}`;
     case "correction-rate-by-label": {
-      if (row.prevLabel.includes("'")) {
+      if (row.prevLabel.includes("'") || row.prevLabel.includes("\\")) {
         throw new Error(
-          `correction-rate-by-label drill needs an apostrophe-free label, got ${row.prevLabel}`,
+          `cannot drill into label "${row.prevLabel}" — single quotes and backslashes break the :where parser. Open the queue directly with :where final_label != prev_label and prev_label = '<label>'.`,
         );
       }
       return `where:final_label != prev_label and prev_label = '${row.prevLabel}'`;

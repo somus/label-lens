@@ -72,6 +72,8 @@ Recursive-descent parser over a strict whitelist. Columns: `status`, `final_labe
 
 When adding a queue, follow the file-per-queue convention in `src/store/queues/<name>.ts` and register it in `registry.ts`. Always read `effective_reviews`, never raw `reviews`, for current-state predicates (ADR 0007).
 
+**Stats screen** (PRD §10.8) opens from review via `t` and from any scope via `:stats`. Every aggregation row drills into a queue form — the screen is a navigable surface, not a dashboard. Aggregations live in `src/store/stats.ts` and read `effective_reviews` (ADR 0007); `drillToQueue(row)` maps each `StatRow` kind to a parseable queue id (`by-correction:`, `by-source:`, `by-reason:`, `by-issue:`, `where:`).
+
 **Palette is the primary user-facing surface for queue switching.** `:` opens the command palette (`src/actions/palette/open.ts`), and `palette.queue` / `palette.by-source` / `palette.where` etc. (in `src/actions/palette/queue.ts`) accept a free-form argument and feed it through `resolveQueue` via `switchQueue`. The per-queue commands in `src/actions/queue/switch.ts` (`queue.switch.pending`, …) stay in the registry for direct dispatch by name (cli boot, tests) but no longer carry a `palette` field, so the palette overlay surfaces a single parametric path per family rather than one entry per concrete id.
 
 ## Conventions

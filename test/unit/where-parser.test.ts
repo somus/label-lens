@@ -113,6 +113,11 @@ describe("where: parser", () => {
     expect(() => resolveQueue("where:status = issue_type")).toThrow(WhereParseError);
   });
 
+  test("rejects an unknown column on the rhs", () => {
+    expect(() => resolveQueue("where:status = pwn_column")).toThrow(WhereParseError);
+    expect(() => resolveQueue("where:status = pwn_column")).toThrow(/unknown column pwn_column/);
+  });
+
   test("rejects unknown column", () => {
     expect(() => resolveQueue("where:foo = 'bar'")).toThrow(WhereParseError);
     expect(() => resolveQueue("where:foo = 'bar'")).toThrow(/unknown column foo/);
