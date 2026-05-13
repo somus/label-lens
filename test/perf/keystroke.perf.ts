@@ -16,6 +16,10 @@ function makeConfig(): LabellensConfig {
   };
 }
 
+// Keystroke-to-render shouldn't scale with record count — the work is
+// scoped to the visible window, not the full queue. Medium (10K) gives a
+// realistic enough render context without paying large.jsonl's ingest cost
+// on every CI run.
 test("keystroke-to-render on medium fixture within envelope", async () => {
   using store = await openTmpStore({ prefix: "perf-keystroke-", ingest: "medium.jsonl" });
 

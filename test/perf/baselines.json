@@ -4,6 +4,5 @@
   "keystroke_j_ms": 19,
   "queue_switch_large_ms": 766,
   "signals_medium_ms": 134,
-  "stats_aggregate_large_ms": 5703,
-  "stats_render_large_ms": 5703
+  "stats_open_large_ms": 5703
 }

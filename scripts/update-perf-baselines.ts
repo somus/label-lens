@@ -51,6 +51,18 @@ for (const line of lines) {
   const row = JSON.parse(line) as { name: string; elapsed_ms: number };
   merged[row.name] = Math.round(row.elapsed_ms);
 }
+
+// Guard against partial-suite runs (test crashed mid-way, hang, etc.) writing
+// truncated baselines that then get committed. The number of perf files is
+// the source of truth — one assertPerf call per file by convention.
+if (Object.keys(merged).length !== perfFiles.length) {
+  console.error(
+    `expected ${perfFiles.length} captured metrics (one per .perf.ts file), got ${Object.keys(merged).length}: ${Object.keys(merged).sort().join(", ")}`,
+  );
+  rmSync(CAPTURE_PATH);
+  process.exit(1);
+}
+
 const sorted: Record<string, number> = {};
 for (const key of Object.keys(merged).sort()) sorted[key] = merged[key]!;
 

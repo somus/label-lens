@@ -21,7 +21,6 @@ remote host before tagging.
       renders within ~100ms by eye — no perceptible lag, no dropped chord.
 - [ ] Confirm the candidate band repaints cleanly (no half-drawn frames) when
       cycling through 20+ records quickly.
-- [ ] Confirm OSC 52 yank (`y`) round-trips to the local clipboard.
 
 If any check fails, capture the terminal type (`$TERM`, `$COLORTERM`) and the
 SSH client, file an issue, and block the release.

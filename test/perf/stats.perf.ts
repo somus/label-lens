@@ -7,7 +7,6 @@ import { mountStatsScreen } from "../../src/screens/stats.ts";
 import { queueRecords } from "../../src/store/queries.ts";
 import { resolveQueue } from "../../src/store/queues/registry.ts";
 import { insertReview } from "../../src/store/records.ts";
-import { allStats } from "../../src/store/stats.ts";
 import { DEFAULT_FIELDS, openTmpStore } from "../util/tmp.ts";
 import { assertPerf } from "./_util.ts";
 
@@ -22,7 +21,11 @@ function makeConfig(): LabellensConfig {
   };
 }
 
-test("stats aggregate + render on large fixture within envelope", async () => {
+// Measures user-felt cost of opening the stats screen: aggregation + first
+// frame. mountStatsScreen calls allStats internally, so a separate
+// "aggregate only" timing would just double-count the same work — and the
+// PRD §10.8 envelope is phrased around the open-to-first-frame experience.
+test("stats screen opens on large fixture within envelope", async () => {
   using store = await openTmpStore({ prefix: "perf-stats-", ingest: "large.jsonl" });
 
   // Seed reviews so stats has signal to aggregate over — empty reviews would
@@ -43,11 +46,6 @@ test("stats aggregate + render on large fixture within envelope", async () => {
     }
   });
 
-  const t0 = performance.now();
-  allStats(store.db);
-  const aggregateElapsed = performance.now() - t0;
-  assertPerf("stats_aggregate_large_ms", aggregateElapsed);
-
   const { renderer, renderOnce } = await createTestRenderer({ width: 100, height: 30 });
   const app = createAppContext({
     db: store.db,
@@ -57,9 +55,9 @@ test("stats aggregate + render on large fixture within envelope", async () => {
     onQuit: () => {},
   });
 
-  const t1 = performance.now();
+  const t0 = performance.now();
   mountStatsScreen({ renderer, app, onDrill: () => {}, onCancel: () => {} });
   await renderOnce();
-  const renderElapsed = performance.now() - t1;
-  assertPerf("stats_render_large_ms", renderElapsed);
+  const elapsed = performance.now() - t0;
+  assertPerf("stats_open_large_ms", elapsed);
 }, 120_000);
