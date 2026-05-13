@@ -95,6 +95,25 @@ function reviewRowToStored(row: typeof reviews.$inferSelect): StoredReview {
   };
 }
 
+/**
+ * Latest effective review per record, keyed by record_id. ADR 0007.
+ *
+ * Single bulk query — preferred over per-record `currentReview` calls for
+ * exporters and other batch-shaped consumers (PRD §16.1 envelope).
+ */
+export function latestEffectiveByRecord(db: TxOrDb): Map<string, StoredReview> {
+  const rows = db
+    .select()
+    .from(effectiveReviews)
+    .orderBy(asc(effectiveReviews.recordId), desc(effectiveReviews.id))
+    .all();
+  const out = new Map<string, StoredReview>();
+  for (const row of rows) {
+    if (!out.has(row.recordId)) out.set(row.recordId, effectiveRowToStored(row));
+  }
+  return out;
+}
+
 /** Latest effective review for a record. ADR 0007. */
 export function currentReview(db: TxOrDb, recordId: string): StoredReview | null {
   const row = db

@@ -1,0 +1,2 @@
+{"text": "Lunch at Cafe", "prediction": "food", "confidence": 0.9, "source": "llm:gpt-4", "user_id": "u-7", "category_hint": "restaurant"}
+{"text": "Train ticket", "prediction": "travel", "confidence": 0.8, "source": "llm:gpt-4", "user_id": "u-7", "tags": ["recurring", "essential"]}
