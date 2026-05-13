@@ -11,10 +11,10 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
-  Uber ride to airport                                                                              
-  Amazon order #12345                                                                               
-  Netflix monthly                                                                                   
-  Salary credit October                                                                             
+  █ Uber ride to airport                                                                            
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     
@@ -35,14 +35,14 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
                                                                                                     
                                                                                                     
                                                                                                     
-  Lunch at Zomato Bangalore                                                                         
+  █ Lunch at Zomato Bangalore                                                                       
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Uber ride to airport                                                                           │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
-  Amazon order #12345                                                                               
-  Netflix monthly                                                                                   
-  Salary credit October                                                                             
-  Rent transfer to landlord                                                                         
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
+  █ Rent transfer to landlord                                                                       
                                                                                                     
   src llm:gpt-4   →   travel  (88%)                                                                 
                                                                                                     
@@ -67,10 +67,10 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Lunch at Zomato Bangalore                                                                    │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
-  │ Uber ride to airport                                                                            
-  │ Amazon order #12345                                                                             
-  │ Netflix monthly                                                                                 
-  │ Salary credit October                                                                           
+  █ Uber ride to airport                                                                            
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     
@@ -95,10 +95,10 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Lunch at Zomato Bangalore                                                                    │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
-  │ Uber ride to airport                                                                            
-  │ Amazon order #12345                                                                             
-  │ Netflix monthly                                                                                 
-  │ Salary credit October                                                                           
+  █ Uber ride to airport                                                                            
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     
@@ -123,10 +123,10 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
-  Uber ride to airport                                                                              
-  Amazon order #12345                                                                               
-  Netflix monthly                                                                                   
-  Salary credit October                                                                             
+  █ Uber ride to airport                                                                            
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     
@@ -151,10 +151,10 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
-  Uber ride to airport                                                                              
-  Amazon order #12345                                                                               
-  Netflix monthly                                                                                   
-  Salary credit October                                                                             
+  █ Uber ride to airport                                                                            
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     
@@ -179,10 +179,10 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
-  Uber ride to airport                                                                              
-  Amazon order #12345                                                                               
-  Netflix monthly                                                                                   
-  Salary credit October                                                                             
+  █ Uber ride to airport                                                                            
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     

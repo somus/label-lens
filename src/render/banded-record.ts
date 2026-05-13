@@ -1,6 +1,8 @@
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
+import { confidenceGlyph } from "./confidence-bar.ts";
 import { Text, TextAttributes } from "./text.ts";
+import { borderForRole, resolveTheme } from "./theme.ts";
 
 export type BandSlot = "even" | "odd";
 
@@ -12,50 +14,52 @@ export type BandedRecordProps = {
   bandSlot: BandSlot;
   display: ResolvedDisplay;
   variant?: BandVariant;
+  /** Prediction confidence (0..1). When present, drives the left-edge bar
+   *  glyph so the user sees signal strength at a glance. Optional — null
+   *  falls back to a plain `│`. */
+  confidence?: number | null;
 };
 
 export function focusBoxStyle(display: ResolvedDisplay): "rounded" | "single" {
-  return display.color === "truecolor" || display.color === "256" ? "rounded" : "single";
+  return borderForRole(display, "focus") === "rounded" ? "rounded" : "single";
 }
 
-export function leftEdgeMarker(display: ResolvedDisplay, isFocused: boolean): string | null {
-  if (display.color === "truecolor" || display.color === "256") return null;
-  return isFocused ? "▶" : "│";
-}
-
-type Palette = {
-  bandEven: string;
-  bandOdd: string;
-  accent: string;
-};
-
-function paletteFor(display: ResolvedDisplay): Palette {
-  const dark = display.theme === "dark";
-  if (display.color === "truecolor") {
-    return dark
-      ? { bandEven: "#1f1f1f", bandOdd: "#252525", accent: "#7ec8ff" }
-      : { bandEven: "#f5f5f5", bandOdd: "#ebebeb", accent: "#0066cc" };
+/**
+ * Left-edge marker for non-focused rows. At truecolor/256 the banding
+ * does the visual lift; we still surface a confidence-bar glyph when a
+ * prediction confidence is available (otherwise an empty space so banding
+ * tells the story). At 16-color/mono we always show a glyph because there
+ * is no band tint to lean on.
+ */
+export function leftEdgeMarker(
+  display: ResolvedDisplay,
+  isFocused: boolean,
+  confidence?: number | null,
+): string | null {
+  if (isFocused) {
+    if (display.color === "truecolor" || display.color === "256") return null;
+    return "▶";
   }
-  if (display.color === "256") {
-    return dark
-      ? { bandEven: "#2a2a2a", bandOdd: "#3a3a3a", accent: "#7ec8ff" }
-      : { bandEven: "#eaeaea", bandOdd: "#d4d4d4", accent: "#0050a0" };
-  }
-  return { bandEven: "transparent", bandOdd: "transparent", accent: "white" };
+  const supportsBanding = display.color === "truecolor" || display.color === "256";
+  const hasConfidence = typeof confidence === "number" && Number.isFinite(confidence);
+  // At truecolor/256, banding does the visual lift — only surface a glyph
+  // when we have an actual confidence signal to convey.
+  if (supportsBanding && !hasConfidence) return null;
+  return hasConfidence ? confidenceGlyph(confidence) : "│";
 }
 
 export function bandColor(display: ResolvedDisplay, slot: BandSlot): string {
-  const p = paletteFor(display);
-  return slot === "even" ? p.bandEven : p.bandOdd;
+  const t = resolveTheme(display);
+  return slot === "even" ? t.bg.band.even : t.bg.band.odd;
 }
 
 export function accentColor(display: ResolvedDisplay): string {
-  return paletteFor(display).accent;
+  return resolveTheme(display).fg.accent;
 }
 
 export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
-  const { text, isFocused, bandSlot, display, variant = "queue" } = props;
-  const marker = leftEdgeMarker(display, isFocused);
+  const { text, isFocused, bandSlot, display, variant = "queue", confidence = null } = props;
+  const marker = leftEdgeMarker(display, isFocused, confidence);
   const prefix = marker === null ? "" : `${marker} `;
   const isContext = variant === "context";
 
@@ -71,7 +75,7 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
   if (isFocused) {
     opts.borderStyle = focusBoxStyle(display);
     if (display.color === "truecolor" || display.color === "256") {
-      opts.borderColor = accentColor(display);
+      opts.borderColor = resolveTheme(display).border.focus;
     }
   }
   const attrs =
