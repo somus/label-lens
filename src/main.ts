@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { ExportCliError, runExportCli } from "./cli/export.ts";
 import { runInit } from "./cli/init.ts";
+import { MigrateCliError, runMigrateCli } from "./cli/migrate.ts";
 import { runReview } from "./cli/run.ts";
 
 // Bun's `--define LABELLENS_VERSION=...` injects the release tag at compile
@@ -39,13 +40,28 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (cmd === "migrate") {
+    try {
+      await runMigrateCli({ args: rest, cwd: process.cwd() });
+    } catch (err) {
+      if (err instanceof MigrateCliError) {
+        console.error(`labellens migrate: ${err.message}`);
+        process.exit(err.code);
+      }
+      throw err;
+    }
+    return;
+  }
+
   if (cmd === undefined) {
     await runReview();
     return;
   }
 
   console.error(`labellens: unknown command '${cmd}'`);
-  console.error("usage: labellens [init <file.jsonl> | export [format]]");
+  console.error(
+    "usage: labellens [init <file.jsonl> | export [format] | migrate --rename <old>:<new>]",
+  );
   process.exit(2);
 }
 

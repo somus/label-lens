@@ -15,6 +15,7 @@ import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts
 import { mountStatsScreen } from "../screens/stats.ts";
 import { runSignals } from "../signals/run.ts";
 import { type Db, openDb } from "../store/db.ts";
+import { findUnknownLabels } from "../store/labels.ts";
 
 export async function runReview(): Promise<void> {
   const configPath = resolve("./labellens.config.json");
@@ -86,6 +87,21 @@ export async function runReview(): Promise<void> {
         writeFingerprint(db, inputPath, current);
       }
     }
+  }
+
+  const unknown = findUnknownLabels(db, config.labels);
+  if (unknown.length > 0) {
+    console.error("labellens: configured label set is missing values referenced by stored data.");
+    for (const u of unknown) {
+      console.error(`  '${u.label}' — ${u.count} record${u.count === 1 ? "" : "s"}`);
+    }
+    console.error("");
+    console.error("Either re-add the missing label(s) to labellens.config.json, or remap them:");
+    for (const u of unknown) {
+      console.error(`  labellens migrate --rename ${u.label}:<replacement>`);
+    }
+    db.$client.close();
+    process.exit(2);
   }
 
   const r = await ensureRenderer();
