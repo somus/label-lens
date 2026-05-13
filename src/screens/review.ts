@@ -161,7 +161,7 @@ export function mountReviewScreen(args: {
           : Box(
               { flexDirection: "row" },
               Text({
-                content: ` a accept · r relabel · x reject · s skip · m ${marked ? "unmark" : "mark"} · n note · u undo · j/k next/prev${app.config.task === "boundary" ? " · gd doc" : ""} · [/] queue · : cmd · ? help · gg guide · q quit`,
+                content: ` a accept · r relabel · x reject · s skip · m ${marked ? "unmark" : "mark"} · n note · u undo · j/k next/prev${app.config.task === "boundary" ? " · gd doc" : ""} · [/] queue · t stats · : cmd · ? help · gg guide · q quit`,
                 attributes: TextAttributes.DIM,
               }),
             ),
