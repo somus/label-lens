@@ -7,7 +7,7 @@ test/
 ├── unit/        — pure-TS modules + storage tests against a real bun:sqlite
 ├── e2e/         — screens driven via @opentui/core/testing's createTestRenderer
 ├── perf/        — envelope assertions on shared fixtures (issue #15)
-├── fixtures/    — committed JSONL datasets (tiny.jsonl now; #14 adds the rest)
+├── fixtures/    — committed JSONL datasets (tiny + small/medium/large + boundary; see test/fixtures/README.md)
 └── util/        — shared helpers (tmp-store, future fakes)
 ```
 
@@ -34,6 +34,19 @@ Options:
 - `prefix?: string` — temp-dir prefix (default `labellens-store-`).
 
 For tests that don't need a db, `tmpdir({ prefix })` returns just `{ path }` with the same disposal semantics.
+
+## Custom-size fixtures via the shared generator
+
+Need an in-memory dataset of N records without writing a new fixture file? Import the deterministic generator directly:
+
+```ts
+import { generateClassification, generateBoundary } from "../../scripts/fixtures/generator.ts";
+
+const { records, truth } = generateClassification({ seed: 7, count: 250 });
+const boundary = generateBoundary({ size: "large", seed: 1 });
+```
+
+Same mulberry32 PRNG that produces the committed fixtures. `truth` is an index-aligned label array (vendor truth for classification; hand-crafted line truth for boundary) — handy for source-accuracy assertions. Only use the committed JSONL fixtures when a test needs to round-trip through `ingestFile`.
 
 ## Keymap engine — pure unit tests
 

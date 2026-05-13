@@ -160,7 +160,7 @@ describe("exportJsonlString — default", () => {
       source_of_truth: "human",
     });
     const row = JSON.parse(lines(exportJsonlString(store.db))[0]!);
-    expect(row.meta).toEqual({ document_id: "doc-1" });
+    expect(row.meta).toEqual({ document_id: "resume-1" });
     expect((row.meta as Record<string, unknown>).meta).toBeUndefined();
   });
 
@@ -176,7 +176,7 @@ describe("exportJsonlString — default", () => {
     });
 
     const row = JSON.parse(lines(exportJsonlString(store.db))[0]!);
-    expect(row.document_id).toBe("doc-1");
+    expect(row.document_id).toBe("resume-1");
   });
 
   test("omits document_id when the record has none", async () => {

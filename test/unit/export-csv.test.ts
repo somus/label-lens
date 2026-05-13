@@ -52,7 +52,7 @@ describe("exportCsvString", () => {
     const csv = exportCsvString(store.db);
     const [header, row] = csv.split("\r\n");
     expect(header).toBe("id,text,label,reviewed_at,document_id");
-    expect(row!.endsWith(",doc-1")).toBe(true);
+    expect(row!.endsWith(",resume-1")).toBe(true);
   });
 
   test("omits document_id column when every exported row's document_id is null", async () => {
