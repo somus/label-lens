@@ -1,0 +1,8 @@
+# Generated fixtures are large + machine-emitted. Treat as binary so:
+#   - line-ending normalization stays off (boundary fixture relies on \n exactly)
+#   - git diff doesn't dump multi-MB textual diffs on regen
+# Hand-written tiny.jsonl stays text for normal review.
+test/fixtures/small.jsonl    binary
+test/fixtures/medium.jsonl   binary
+test/fixtures/large.jsonl    binary
+test/fixtures/boundary.jsonl binary

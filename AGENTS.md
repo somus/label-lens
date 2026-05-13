@@ -114,6 +114,8 @@ Signals (`flagged`, `by-issue:low_confidence`, `by-issue:source_disagreement`, `
 
 Underlying primitive is `bun run seed` (wipes + generates without launching the TUI). Use that when you want to regenerate data without entering the TUI.
 
+Record generation (vendor templates + mulberry32 PRNG) lives in `scripts/fixtures/generator.ts` and is shared between `seed-dev` (dev playground) and `scripts/gen-fixtures.ts` (committed `test/fixtures/{small,medium,large,boundary}.jsonl`). Both paths use the same deterministic source so dev data and test fixtures stay aligned. To regenerate the committed fixtures: `bun scripts/gen-fixtures.ts --all`.
+
 To exercise the compiled binary path (parser.worker bundling, real install layout) instead of source:
 
 ```sh
