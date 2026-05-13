@@ -11,10 +11,10 @@ exports[`review screen e2e initial render: progress strip + first record + prima
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Lunch at Zomato Bangalore                                                                    │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
-  │ Uber ride to airport                                                                            
-  │ Amazon order #12345                                                                             
-  │ Netflix monthly                                                                                 
-  │ Salary credit October                                                                           
+  █ Uber ride to airport                                                                            
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
                                                                                                     
   src llm:gpt-4   →   food  (92%)                                                                   
                                                                                                     
@@ -39,8 +39,8 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Uber ride to airport                                                                         │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
-  │ Amazon order #12345                                                                             
-  │ Netflix monthly                                                                                 
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
                                                                                                     
   src llm:gpt-4   →   travel  (88%)                                                                 
                                                                                                     
@@ -63,14 +63,14 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
                                                                                                     
                                                                                                     
                                                                                                     
-  │ Lunch at Zomato Bangalore                                                                       
+  █ Lunch at Zomato Bangalore                                                                       
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Uber ride to airport                                                                         │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
-  │ Amazon order #12345                                                                             
-  │ Netflix monthly                                                                                 
-  │ Salary credit October                                                                           
-  │ Rent transfer to landlord                                                                       
+  ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
+  █ Salary credit October                                                                           
+  █ Rent transfer to landlord                                                                       
                                                                                                     
   src llm:gpt-4   →   travel  (88%)                                                                 
                                                                                                     

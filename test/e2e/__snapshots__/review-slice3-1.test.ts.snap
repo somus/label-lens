@@ -15,12 +15,12 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
  │ Lunch at Zomato Bangalore                                                                                                        │ src llm:gpt-4   →   food  (92%)                                   
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
-  Uber ride to airport                                                                                                                1 food >                                                          
-  Amazon order #12345                                                                                                                 2 travel                                                          
-  Netflix monthly                                                                                                                     3 other                                                           
-  Salary credit October                                                                                                                                                                                 
-  Rent transfer to landlord                                                                                                                                                                             
-  Coffee at Blue Tokai                                                                                                                                                                                  
+  █ Uber ride to airport                                                                                                              1 food >                                                          
+  ▆ Amazon order #12345                                                                                                               2 travel                                                          
+  ▄ Netflix monthly                                                                                                                   3 other                                                           
+  █ Salary credit October                                                                                                                                                                               
+  █ Rent transfer to landlord                                                                                                                                                                           
+  ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
   [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
@@ -43,12 +43,12 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
  │ Lunch at Zomato Bangalore                                                                                                        │ src llm:gpt-4   →   food  (92%)                                   
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
-  Uber ride to airport                                                                                                                1 food >                                                          
-  Amazon order #12345                                                                                                                 2 travel                                                          
-  Netflix monthly                                                                                                                     3 other                                                           
-  Salary credit October                                                                                                                                                                                 
-  Rent transfer to landlord                                                                                                                                                                             
-  Coffee at Blue Tokai                                                                                                                                                                                  
+  █ Uber ride to airport                                                                                                              1 food >                                                          
+  ▆ Amazon order #12345                                                                                                               2 travel                                                          
+  ▄ Netflix monthly                                                                                                                   3 other                                                           
+  █ Salary credit October                                                                                                                                                                               
+  █ Rent transfer to landlord                                                                                                                                                                           
+  ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
   [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
@@ -71,12 +71,12 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐                                                                   
  │ ▶ Lunch at Zomato Bangalore                                                                                                      │ src llm:gpt-4   →   food  (92%)                                   
  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘                                                                   
-  │ Uber ride to airport                                                                                                              1 food >                                                          
-  │ Amazon order #12345                                                                                                               2 travel                                                          
-  │ Netflix monthly                                                                                                                   3 other                                                           
-  │ Salary credit October                                                                                                                                                                               
-  │ Rent transfer to landlord                                                                                                                                                                           
-  │ Coffee at Blue Tokai                                                                                                                                                                                
+  █ Uber ride to airport                                                                                                              1 food >                                                          
+  ▆ Amazon order #12345                                                                                                               2 travel                                                          
+  ▄ Netflix monthly                                                                                                                   3 other                                                           
+  █ Salary credit October                                                                                                                                                                               
+  █ Rent transfer to landlord                                                                                                                                                                           
+  ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
   [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
@@ -99,12 +99,12 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
  │ Lunch at Zomato Bangalore                                                                                                        │ src llm:gpt-4   →   food  (92%)                                   
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
-  Uber ride to airport                                                                                                                1 food >                                                          
-  Amazon order #12345                                                                                                                 2 travel                                                          
-  Netflix monthly                                                                                                                     3 other                                                           
-  Salary credit October                                                                                                                                                                                 
-  Rent transfer to landlord                                                                                                                                                                             
-  Coffee at Blue Tokai                                                                                                                                                                                  
+  █ Uber ride to airport                                                                                                              1 food >                                                          
+  ▆ Amazon order #12345                                                                                                               2 travel                                                          
+  ▄ Netflix monthly                                                                                                                   3 other                                                           
+  █ Salary credit October                                                                                                                                                                               
+  █ Rent transfer to landlord                                                                                                                                                                           
+  ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
   [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 

@@ -12,6 +12,7 @@ import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
+import { BadgeLine, type BadgeVariant } from "../render/badge.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
@@ -20,6 +21,7 @@ import { splitContextLines } from "../render/context-strip.ts";
 import { Markdown } from "../render/markdown.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Text, TextAttributes } from "../render/text.ts";
+import { borderForRole } from "../render/theme.ts";
 import type { Db } from "../store/db.ts";
 import { issuesForRecord, type StoredIssue } from "../store/issues.ts";
 import { type HistoryEntry, progressCounts, recentReviewsWithText } from "../store/queries.ts";
@@ -171,7 +173,7 @@ export function mountReviewScreen(args: {
             totalRecords: counts.total,
             predictionCount,
           }),
-      app.overlay ? renderOverlay(app.overlay) : Box({}),
+      app.overlay ? renderOverlay(app.overlay, app.display) : Box({}),
     );
 
     const footerHint = app.overlay ? overlayFooterHint(app.overlay) : flashFooterHint(flash);
@@ -269,7 +271,7 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
     { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
     bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
     predictionLine(record),
-    issueBadges(issues, totalRecords, predictionCount),
+    issueBadges(issues, totalRecords, predictionCount, display),
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
     noteLine(record),
     Box({ height: 1 }),
@@ -311,7 +313,7 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
         },
         historyBlock(history),
         predictionLine(record),
-        issueBadges(issues, totalRecords, predictionCount),
+        issueBadges(issues, totalRecords, predictionCount, display),
         record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
         noteLine(record),
       ),
@@ -323,19 +325,34 @@ function issueBadges(
   issues: StoredIssue[],
   totalRecords: number,
   predictionCount: number,
+  display: ResolvedDisplay,
 ): ReturnType<typeof Box> {
   if (issues.length === 0) return Box({});
   // Stable order so snapshots are deterministic regardless of insert order.
   const sorted = [...issues].sort((a, b) => a.type.localeCompare(b.type));
   return Box(
     { flexDirection: "column", marginTop: 1 },
-    ...sorted.map((i) =>
-      Text({
-        content: ` ! ${badgeCopy(i, totalRecords, predictionCount)}`,
-        attributes: TextAttributes.DIM,
+    ...sorted.map((issue) =>
+      BadgeLine({
+        display,
+        variant: badgeVariant(issue.type),
+        label: badgeCopy(issue, totalRecords, predictionCount),
       }),
     ),
   );
+}
+
+function badgeVariant(issueType: StoredIssue["type"]): BadgeVariant {
+  switch (issueType) {
+    case "low_confidence":
+      return "warning";
+    case "source_disagreement":
+      return "warning";
+    case "exact_duplicate":
+      return "info";
+    default:
+      return "neutral";
+  }
 }
 
 function badgeCopy(issue: StoredIssue, totalRecords: number, predictionCount: number): string {
@@ -442,6 +459,7 @@ function bandRegion(
           isFocused: false,
           bandSlot: slotFor(startIndex + i),
           display,
+          confidence: r.primaryPrediction?.confidence ?? null,
         }),
       );
 
@@ -461,6 +479,7 @@ function bandRegion(
           isFocused: false,
           bandSlot: slotFor(focusedAbsolute + 1 + i),
           display,
+          confidence: r.primaryPrediction?.confidence ?? null,
         }),
       );
 
@@ -518,27 +537,31 @@ function labelListBox(
   );
 }
 
-function renderOverlay(overlay: Overlay): ReturnType<typeof Box> {
+function renderOverlay(overlay: Overlay, display: ResolvedDisplay): ReturnType<typeof Box> {
+  const border = borderForRole(display, "overlay");
   switch (overlay.kind) {
     case "picker":
-      return renderPicker(overlay.state);
+      return renderPicker(overlay.state, border);
     case "note":
-      return renderNote(overlay.state);
+      return renderNote(overlay.state, border);
     case "assistant":
       return Box(
-        { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+        { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
         Text({ content: " assistant overlay (slice 11)" }),
       );
     case "palette":
-      return renderPalette(overlay.state);
+      return renderPalette(overlay.state, border);
     case "help":
-      return renderHelp(overlay.state);
+      return renderHelp(overlay.state, border);
     case "guidelines":
-      return renderGuidelines(overlay.state);
+      return renderGuidelines(overlay.state, border);
   }
 }
 
-function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
+function renderGuidelines(
+  state: GuidelinesState,
+  border: "rounded" | "single" | "double",
+): ReturnType<typeof Box> {
   // Slice the markdown source by line so the reducer's scroll counter
   // actually drives what the user sees. MarkdownRenderable doesn't expose
   // a viewport; line-slice keeps it simple and matches the up/down=1,
@@ -552,7 +575,7 @@ function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
   return Box(
     {
       flexDirection: "column",
-      borderStyle: "rounded",
+      borderStyle: border,
       padding: 1,
       marginTop: 1,
       flexGrow: 1,
@@ -566,11 +589,14 @@ function renderGuidelines(state: GuidelinesState): ReturnType<typeof Box> {
   );
 }
 
-function renderHelp(state: HelpState): ReturnType<typeof Box> {
+function renderHelp(
+  state: HelpState,
+  border: "rounded" | "single" | "double",
+): ReturnType<typeof Box> {
   const visible = state.entries.slice(state.scroll, state.scroll + HELP_PAGE);
   const more = state.entries.length - state.scroll - visible.length;
   return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
     Text({
       content: ` help · ${state.scope} · ${state.entries.length} commands${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
     }),
@@ -584,9 +610,12 @@ function renderHelp(state: HelpState): ReturnType<typeof Box> {
   );
 }
 
-function renderPalette(state: PaletteState): ReturnType<typeof Box> {
+function renderPalette(
+  state: PaletteState,
+  border: "rounded" | "single" | "double",
+): ReturnType<typeof Box> {
   return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
     Text({ content: ` :${state.filter}_` }),
     ...state.entries.slice(0, 12).map((e, i) =>
       Text({
@@ -601,9 +630,12 @@ function renderPalette(state: PaletteState): ReturnType<typeof Box> {
   );
 }
 
-function renderPicker(state: PickerState): ReturnType<typeof Box> {
+function renderPicker(
+  state: PickerState,
+  border: "rounded" | "single" | "double",
+): ReturnType<typeof Box> {
   return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
     Text({ content: ` relabel> ${state.filter}_` }),
     ...state.candidates.slice(0, 9).map((c: PickerCandidate, i) =>
       Text({
@@ -618,9 +650,12 @@ function renderPicker(state: PickerState): ReturnType<typeof Box> {
   );
 }
 
-function renderNote(state: NoteState): ReturnType<typeof Box> {
+function renderNote(
+  state: NoteState,
+  border: "rounded" | "single" | "double",
+): ReturnType<typeof Box> {
   return Box(
-    { flexDirection: "column", borderStyle: "rounded", padding: 1, marginTop: 1 },
+    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
     Text({ content: ` note> ${state.value}_` }),
     Text({
       content: " enter save · esc cancel",
