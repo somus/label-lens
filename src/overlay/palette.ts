@@ -153,10 +153,10 @@ function commitDirect(state: PaletteState): ReduceResult {
 
 function tryOpenPicker(state: PaletteState): ReduceResult | null {
   const entry = state.entries[state.highlight];
-  if (!entry || !state.pickerOptions) return null;
+  if (!entry) return null;
 
   const cmd = state.commands.find((c) => c.name === entry.commandName);
-  if (!cmd?.paletteMetadata?.pickerKind) return null;
+  if (!cmd?.paletteMetadata) return null;
   if (cmd.paletteMetadata.arity !== 1) return null;
 
   const sp = state.filter.indexOf(" ");
@@ -164,6 +164,19 @@ function tryOpenPicker(state: PaletteState): ReduceResult | null {
   if (hasArg) return null;
 
   const kind = cmd.paletteMetadata.pickerKind;
+
+  if (!kind) {
+    return {
+      overlay: packed({
+        ...state,
+        mode: "pick",
+        picker: openPicker(entry.commandName, "text", []),
+      }),
+      effects: [],
+    };
+  }
+
+  if (!state.pickerOptions) return null;
   const data = state.pickerOptions;
   let candidates: string[];
   let candidateCounts: Map<string, number> | undefined;

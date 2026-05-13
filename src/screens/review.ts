@@ -621,7 +621,10 @@ function renderGuidelines(
     termHeight,
     0.7,
     Text({ content: ` ${state.title}${titleSuffix}${moreAbove ? "   ↑ above" : ""}` }),
-    Markdown({ content: sliced }),
+    Box(
+      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      Markdown({ content: sliced }),
+    ),
     Text({
       content: " ↑/↓ scroll · pgup/pgdn page · esc close",
       attributes: TextAttributes.DIM,
@@ -645,11 +648,14 @@ function renderHelp(
     Text({
       content: ` help · ${state.scope} · ${state.entries.length} commands${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
     }),
-    ...visible.map((e) =>
-      Text({
-        content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
-        attributes: TextAttributes.DIM,
-      }),
+    Box(
+      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      ...visible.map((e) =>
+        Text({
+          content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
+          attributes: TextAttributes.DIM,
+        }),
+      ),
     ),
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
   );
@@ -673,11 +679,14 @@ function renderStatsOverlay(
       content: ` Stats${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
       attributes: TextAttributes.BOLD,
     }),
-    ...visible.map((line) =>
-      Text({
-        content: line.display,
-        attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
-      }),
+    Box(
+      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      ...visible.map((line) =>
+        Text({
+          content: line.display,
+          attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
+        }),
+      ),
     ),
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
   );

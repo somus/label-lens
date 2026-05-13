@@ -56,20 +56,17 @@ function renderBrowseModal(
   border: "rounded" | "single",
 ): ReturnType<typeof Box> {
   const innerWidth = modalWidth - 4;
-  const children: ReturnType<typeof Text>[] = [];
-
-  children.push(Text({ content: ` :${state.filter}_`, attributes: TextAttributes.BOLD }));
-  children.push(Text({ content: "" }));
+  const entryChildren: ReturnType<typeof Text>[] = [];
 
   const useColor = display.color === "truecolor" || display.color === "256";
   let flatIdx = 0;
 
   if (state.categories.length > 0) {
     for (const cat of state.categories) {
-      children.push(renderCategoryHeader(cat, useColor, t));
+      entryChildren.push(renderCategoryHeader(cat, useColor, t));
       for (const entry of cat.entries) {
         const isHighlighted = flatIdx === state.highlight;
-        children.push(
+        entryChildren.push(
           renderEntry(
             entry.palette,
             state.counts.get(entry.palette),
@@ -82,13 +79,13 @@ function renderBrowseModal(
         );
         flatIdx++;
       }
-      children.push(Text({ content: "" }));
+      entryChildren.push(Text({ content: "" }));
     }
   } else {
     for (let i = 0; i < state.entries.length && i < 16; i++) {
       const entry = state.entries[i]!;
       const isHighlighted = i === state.highlight;
-      children.push(
+      entryChildren.push(
         renderEntry(
           entry.palette,
           state.counts.get(entry.palette),
@@ -100,15 +97,13 @@ function renderBrowseModal(
         ),
       );
     }
-    children.push(Text({ content: "" }));
+    entryChildren.push(Text({ content: "" }));
   }
 
-  children.push(
-    Text({
-      content: " [enter] run · [↑↓] navigate · [^p/^n] history · [esc] close",
-      attributes: TextAttributes.DIM,
-    }),
-  );
+  const hintLine = Text({
+    content: " [enter] run · [↑↓] navigate · [^p/^n] history · [esc] close",
+    attributes: TextAttributes.DIM,
+  });
 
   return Box(
     {
@@ -125,7 +120,10 @@ function renderBrowseModal(
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
-    ...children,
+    Text({ content: ` :${state.filter}_`, attributes: TextAttributes.BOLD }),
+    Text({ content: "" }),
+    Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
+    hintLine,
   );
 }
 
@@ -141,12 +139,7 @@ function renderPickerModal(
 ): ReturnType<typeof Box> {
   const innerWidth = modalWidth - 4;
   const useColor = display.color === "truecolor" || display.color === "256";
-  const children: ReturnType<typeof Text>[] = [];
-
-  const titleText =
-    picker.filter.length > 0 ? ` ${picker.title} ${picker.filter}_` : ` ${picker.title} _`;
-  children.push(Text({ content: titleText, attributes: TextAttributes.BOLD }));
-  children.push(Text({ content: "" }));
+  const entryChildren: ReturnType<typeof Text>[] = [];
 
   const maxItems = 16;
   const visible = picker.candidates.slice(0, maxItems);
@@ -154,20 +147,26 @@ function renderPickerModal(
     const candidate = visible[i]!;
     const isHighlighted = i === picker.highlight;
     const count = picker.candidateCounts?.get(candidate);
-    children.push(renderEntry(candidate, count, undefined, isHighlighted, innerWidth, useColor, t));
+    entryChildren.push(
+      renderEntry(candidate, count, undefined, isHighlighted, innerWidth, useColor, t),
+    );
   }
 
-  if (visible.length === 0) {
-    children.push(Text({ content: "  no matches", attributes: TextAttributes.DIM }));
+  if (visible.length === 0 && picker.pickerKind !== "text") {
+    entryChildren.push(Text({ content: "  no matches", attributes: TextAttributes.DIM }));
+  }
+  if (picker.pickerKind === "text" && picker.candidates.length === 0) {
+    entryChildren.push(
+      Text({ content: "  type a value and press enter", attributes: TextAttributes.DIM }),
+    );
   }
 
-  children.push(Text({ content: "" }));
-
+  const titleText =
+    picker.filter.length > 0 ? ` ${picker.title} ${picker.filter}_` : ` ${picker.title} _`;
   const hint =
     picker.step === "from"
       ? " [enter/tab] select from · [↑↓] navigate · [esc] back"
       : " [enter] select · [↑↓] navigate · [esc] back";
-  children.push(Text({ content: hint, attributes: TextAttributes.DIM }));
 
   return Box(
     {
@@ -184,7 +183,10 @@ function renderPickerModal(
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
-    ...children,
+    Text({ content: titleText, attributes: TextAttributes.BOLD }),
+    Text({ content: "" }),
+    Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
+    Text({ content: hint, attributes: TextAttributes.DIM }),
   );
 }
 

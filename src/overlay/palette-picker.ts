@@ -55,7 +55,16 @@ export function reducePicker(picker: PickerField, event: OverlayEvent): PickerRe
 
   if (name === "return") {
     const entry = picker.candidates[picker.highlight];
-    if (!entry) return { kind: "noop" };
+    if (!entry) {
+      if (picker.pickerKind === "text" && picker.filter.trim().length > 0) {
+        return {
+          kind: "selected",
+          commandName: picker.commandName,
+          argument: picker.filter.trim(),
+        };
+      }
+      return { kind: "noop" };
+    }
 
     if (picker.step === "from") {
       return {
