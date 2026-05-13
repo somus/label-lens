@@ -4,7 +4,7 @@ export const statsShow: Command = {
   name: "stats.show",
   scope: "review",
   binding: "t",
-  palette: "Show stats",
+  hidden: true,
   footer: { label: "stats", order: 120 },
   run: (ctx) => {
     if (!ctx.openStatsScreen) {
@@ -18,7 +18,8 @@ export const statsShow: Command = {
 export const paletteStats: Command = {
   name: "palette.stats",
   scope: "global",
-  palette: "Stats",
+  palette: ":stats",
+  paletteMetadata: { category: "actions", description: "Review statistics" },
   run: (ctx) => {
     if (!ctx.openStatsScreen) {
       ctx.setFlash("Stats screen unavailable", "info", 1200);

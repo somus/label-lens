@@ -30,7 +30,7 @@ describe("stats command + palette wiring", () => {
     const cmd = reg.get("palette.stats");
     expect(cmd).toBe(paletteStats);
     expect(cmd?.scope).toBe("global");
-    expect(cmd?.palette).toBe("Stats");
+    expect(cmd?.palette).toBe(":stats");
   });
 
   test("stats.show calls openStatsScreen when wired", async () => {

@@ -186,6 +186,9 @@ function tryOpenPicker(state: PaletteState): ReduceResult | null {
     case "correction":
       candidates = [...new Set(data.corrections.map((c) => c.from))].sort();
       break;
+    case "topic":
+      candidates = data.topics;
+      break;
     default:
       return null;
   }

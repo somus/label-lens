@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { manPageTopics } from "../man/loader.ts";
 import type { Db } from "./db.ts";
 import { COMPUTED_SIGNAL_SOURCE } from "./issues.ts";
 import { queueCount } from "./queues/queue-counts.ts";
@@ -14,6 +15,7 @@ export type PaletteData = {
   corrections: Array<{ from: string; to: string }>;
   sourceCounts: Map<string, number>;
   labelCounts: Map<string, number>;
+  topics: string[];
 };
 
 export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
@@ -67,5 +69,6 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     corrections,
     sourceCounts,
     labelCounts,
+    topics: manPageTopics(),
   };
 }

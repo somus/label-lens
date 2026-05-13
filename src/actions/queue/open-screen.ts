@@ -4,7 +4,8 @@ export const openQueueScreen: Command = {
   name: "queue.openScreen",
   scope: "review",
   binding: "shift+q",
-  palette: "Open queue screen",
+  palette: ":queues",
+  paletteMetadata: { category: "actions", description: "Queue browser" },
   footer: { label: "queues", order: 95 },
   enabled: () => true,
   run: (ctx) => {
