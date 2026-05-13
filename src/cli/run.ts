@@ -108,8 +108,10 @@ export async function runReview(): Promise<void> {
       // Give the terminal time to drain in-flight OSC probe responses
       // (palette + theme queries OpenTUI fires on init) before we exit —
       // otherwise those bytes leak past process.exit into the parent shell
-      // and render as garbage in the prompt.
-      setTimeout(() => process.exit(0), 30);
+      // and render as garbage in the prompt. SSH or slow terminals can tune
+      // via LABELLENS_EXIT_DELAY_MS.
+      const delay = Number.parseInt(process.env.LABELLENS_EXIT_DELAY_MS ?? "", 10);
+      setTimeout(() => process.exit(0), Number.isFinite(delay) && delay >= 0 ? delay : 30);
     },
   });
   let reviewHandle: ReviewScreenHandle | null = null;

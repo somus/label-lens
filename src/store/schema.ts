@@ -151,6 +151,9 @@ export const recordsWithPrimary = sqliteView("records_with_primary", {
   contextAfter: text("context_after"),
   raw: text("raw").notNull(),
   note: text("note"),
+  // Sourced from base `records` table — LEFT JOIN to predictions can't null
+  // this column out. Safe to mark notNull. View definition lives in
+  // migration 0009.
   orphan: integer("orphan", { mode: "boolean" }).notNull(),
   documentId: text("document_id"),
   primaryPredictionId: integer("primary_prediction_id"),

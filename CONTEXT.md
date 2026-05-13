@@ -48,7 +48,7 @@ _Avoid_: Error, problem (overclaims; LabelLens never asserts label-correctness v
 Audit tag on each review entry: `human` or `human+assistant`. Tagged `human+assistant` whenever the assistant panel was viewed for that record before the action — not only when the suggestion was accepted.
 
 **Orphan**:
-A record whose content-hash id no longer matches anything in the current ingest (because source text or context changed and the id shifted). Stored as `records.orphan = 1`. Predictions, reviews, and tags stay attached — orphans are preserved, not destroyed. Excluded from every built-in queue except `orphans`. Set during smart re-ingest (ADR 0002, PRD §13).
+A record whose content-hash id no longer matches anything in the current ingest (because source text or context changed and the id shifted). Stored as `records.orphan = 1`. Predictions, reviews, and tags stay attached — orphans are preserved, not destroyed. Excluded from every built-in queue except `orphans`. Set during smart re-ingest (ADR 0002, PRD §13). Users needing stable identity across text edits provide an explicit `id` field in the JSONL (ADR 0001).
 
 **Queue**:
 A SQL-backed filter over records. Built-in: `pending`, `low-confidence`, `disagreements`, `flagged`, `marked`, `skipped`, `orphans`, `by-source:<s>`, `by-reason:<r>`, `by-label:<l>`, `by-issue:<t>`, `by-correction:<from>:<to>`. Power users compose with `:where`. Every built-in queue except `orphans` excludes orphan records.

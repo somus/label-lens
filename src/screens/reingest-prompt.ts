@@ -27,12 +27,20 @@ export function mountReingestPrompt(args: {
 }): ReingestPromptHandle {
   const { renderer, counts, onChoice } = args;
 
-  const lines: string[] = [
-    "Source file has changed since last review.",
-    `  ${pad(counts.predictionsOnly)} records — predictions[] changed only (text/context unchanged)`,
-    `  ${pad(counts.orphans)} records — text or context changed → ${counts.orphans} prior reviews would orphan`,
-    `  ${pad(counts.newRecords)} records — new (no matching prior record)`,
-  ];
+  const lines: string[] = ["Source file has changed since last review."];
+  if (counts.predictionsOnly > 0) {
+    lines.push(
+      `  ${pad(counts.predictionsOnly)} records — predictions[] changed only (text/context unchanged)`,
+    );
+  }
+  if (counts.orphans > 0) {
+    lines.push(
+      `  ${pad(counts.orphans)} records — text or context changed → ${counts.orphans} prior reviews would orphan`,
+    );
+  }
+  if (counts.newRecords > 0) {
+    lines.push(`  ${pad(counts.newRecords)} records — new (no matching prior record)`);
+  }
 
   const render = () => {
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
@@ -87,5 +95,5 @@ export function mountReingestPrompt(args: {
 }
 
 function pad(n: number): string {
-  return n.toString().padStart(4, " ");
+  return n.toString().padStart(6, " ");
 }

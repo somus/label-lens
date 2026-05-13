@@ -17,6 +17,8 @@ SELECT
   r.context_after   AS context_after,
   r.raw             AS raw,
   r.note            AS note,
+  -- orphan comes from records (NOT NULL DEFAULT 0); the LEFT JOIN below
+  -- cannot null it out, so the view's drizzle typing marks it notNull.
   r.orphan          AS orphan,
   COALESCE(
     json_extract(r.raw, '$.document_id'),

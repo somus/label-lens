@@ -5,6 +5,12 @@ import type { TxOrDb } from "../store/db.ts";
 import { type IngestFingerprint, ingestFingerprints } from "../store/schema.ts";
 
 export type Fingerprint = {
+  /**
+   * Compound `<mtimeMs>:<sizeBytes>` token. mtimeMs is millisecond-precision
+   * epoch (FAT32 / network mounts can round to 2 seconds, so we include file
+   * size as a secondary discriminator). Only used as a fast-path: contentSha256
+   * is the real authority on content equality.
+   */
   mtime: string;
   contentSha256: string;
 };
@@ -35,9 +41,8 @@ export function writeFingerprint(db: TxOrDb, sourcePath: string, fp: Fingerprint
 }
 
 /**
- * Streams the file once to compute its sha256. mtime comes from `statSync` —
- * cheap, no extra read. ISO string format keeps the row comparable across
- * filesystems.
+ * Streams the file once to compute its sha256. mtime + size form a cheap
+ * fast-path token; the sha256 is the source of truth for content equality.
  */
 export async function computeFingerprint(filePath: string): Promise<Fingerprint> {
   const hash = createHash("sha256");
@@ -47,7 +52,7 @@ export async function computeFingerprint(filePath: string): Promise<Fingerprint>
   }
   const stat = statSync(filePath);
   return {
-    mtime: stat.mtime.toISOString(),
+    mtime: `${stat.mtimeMs}:${stat.size}`,
     contentSha256: hash.digest("hex"),
   };
 }

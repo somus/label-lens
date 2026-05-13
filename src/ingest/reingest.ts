@@ -153,13 +153,15 @@ function coercePrediction(p: unknown): RecordPredictionInput {
 }
 
 /**
- * Stable fingerprint of a record's predictions[] for equality checks. Sorts
- * predictions deterministically and joins normalized field values so a
- * reorder or unrelated key shuffle doesn't trip the diff.
+ * Stable fingerprint of a record's predictions[] for equality checks. Each
+ * prediction is JSON-stringified (so arbitrary characters in label/source/
+ * reason can't collide with a delimiter), sorted lexicographically, and
+ * joined with ASCII RS. Reorder or unrelated key shuffle doesn't trip the
+ * diff.
  */
 function predictionsFingerprint(predictions: RecordPredictionInput[]): string {
   const parts = predictions
-    .map((p) => `${p.label}|${p.confidence ?? ""}|${p.source}|${p.reason ?? ""}`)
+    .map((p) => JSON.stringify([p.label, p.confidence ?? null, p.source, p.reason ?? null]))
     .sort();
   return parts.join("\x1e");
 }

@@ -80,6 +80,18 @@ describe("reingest-prompt screen e2e", () => {
     expect(chosen()).toBe("cancel");
   });
 
+  test("zero-count buckets are hidden from the prompt", async () => {
+    const { captureCharFrame } = await setup({
+      predictionsOnly: 5,
+      orphans: 0,
+      newRecords: 0,
+    });
+    const frame = captureCharFrame();
+    expect(frame).toContain("5 records — predictions[] changed only");
+    expect(frame).not.toContain("prior reviews would orphan");
+    expect(frame).not.toContain("records — new (no matching prior record)");
+  });
+
   test("escape → cancel", async () => {
     const { mockInput, renderOnce, chosen } = await setup({
       predictionsOnly: 1,
