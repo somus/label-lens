@@ -80,4 +80,27 @@ describe("drillToQueue contract: every stat row drills into a populated queue", 
     // Sanity: we exercised every drillable kind we expected to.
     expect(drilled).toBeGreaterThanOrEqual(6);
   });
+
+  test("labels with apostrophes round-trip through drillToQueue → resolveQueue → queueRecords", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ids = recordIds(store.db);
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "relabeled",
+      final_label: "food",
+      prev_label: "it's",
+      source_of_truth: "human",
+    });
+
+    const { sections } = allStats(store.db);
+    const labelRow = sections
+      .flatMap((s) => s.rows)
+      .find((r) => r.kind === "correction-rate-by-label" && r.prevLabel === "it's");
+    expect(labelRow).toBeDefined();
+
+    const queueId = drillToQueue(labelRow!);
+    expect(queueId).not.toBeNull();
+    const records = queueRecords(store.db, resolveQueue(queueId!).query);
+    expect(records.map((r) => r.id)).toContain(ids[0]!);
+  });
 });

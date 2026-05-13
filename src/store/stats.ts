@@ -332,12 +332,13 @@ export function drillToQueue(row: StatRow): QueueId | null {
     case "relabel-by-reason":
       return `by-reason:${row.reason}`;
     case "correction-rate-by-label": {
-      if (row.prevLabel.includes("'") || row.prevLabel.includes("\\")) {
-        throw new Error(
-          `cannot drill into label "${row.prevLabel}" — single quotes and backslashes break the :where parser. Open the queue directly with :where final_label != prev_label and prev_label = '<label>'.`,
-        );
-      }
-      return `where:final_label != prev_label and prev_label = '${row.prevLabel}'`;
+      // `drillToQueue` runs eagerly for every row at stats-screen mount, so a
+      // single reviewed label containing `'` or `\` must not crash open. The
+      // where-parser tokenizer treats `\X` as a literal X, so we escape `\`
+      // first (otherwise the subsequent `'`→`\'` rewrite produces sequences
+      // the tokenizer would re-collapse) and then escape `'`.
+      const escaped = row.prevLabel.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      return `where:final_label != prev_label and prev_label = '${escaped}'`;
     }
     case "imported-issue":
       return `by-issue:${row.issueType}`;

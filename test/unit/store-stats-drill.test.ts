@@ -76,25 +76,26 @@ describe("drillToQueue", () => {
     expect(drillToQueue({ kind: "all-caught-up" })).toBeNull();
   });
 
-  test("labels containing apostrophes blow up loudly instead of producing a broken where", () => {
-    expect(() =>
-      drillToQueue({
-        kind: "correction-rate-by-label",
-        prevLabel: "it's",
-        rate: 0.5,
-        reviewed: 2,
-      }),
-    ).toThrow(/single quotes and backslashes/);
+  test("labels containing apostrophes are escaped into a parseable :where form", () => {
+    const id = drillToQueue({
+      kind: "correction-rate-by-label",
+      prevLabel: "it's",
+      rate: 0.5,
+      reviewed: 2,
+    });
+    expect(id).toBe(String.raw`where:final_label != prev_label and prev_label = 'it\'s'`);
+    expect(() => resolveQueue(id!)).not.toThrow();
   });
 
-  test("labels containing backslashes are rejected with the same guidance", () => {
-    expect(() =>
-      drillToQueue({
-        kind: "correction-rate-by-label",
-        prevLabel: "a\\b",
-        rate: 0.5,
-        reviewed: 2,
-      }),
-    ).toThrow(/single quotes and backslashes/);
+  test("labels containing backslashes are escaped before the apostrophe pass", () => {
+    const id = drillToQueue({
+      kind: "correction-rate-by-label",
+      prevLabel: String.raw`a\b`,
+      rate: 0.5,
+      reviewed: 2,
+    });
+    // `\` doubles first; the apostrophe pass leaves the doubled backslashes alone.
+    expect(id).toBe(String.raw`where:final_label != prev_label and prev_label = 'a\\b'`);
+    expect(() => resolveQueue(id!)).not.toThrow();
   });
 });
