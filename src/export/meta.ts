@@ -1,3 +1,5 @@
+// Keep in sync with PRD §11.1 InputRecord. When that type gains a field, add
+// it here too so the new key doesn't leak through into the exported `meta`.
 const KNOWN_INPUT_FIELDS: ReadonlySet<string> = new Set([
   "id",
   "text",

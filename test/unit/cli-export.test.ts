@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { runExportCli } from "../../src/cli/export.ts";
+import { ExportCliError, runExportCli } from "../../src/cli/export.ts";
 import { ingestFile } from "../../src/ingest/ingest.ts";
 import { openDb } from "../../src/store/db.ts";
 import { insertReview } from "../../src/store/records.ts";
@@ -89,5 +89,43 @@ describe("runExportCli", () => {
     await runExportCli({ args: ["jsonl", "-o", overridePath], cwd: project.dir });
     expect(existsSync(overridePath)).toBe(true);
     expect(existsSync(project.outputPath)).toBe(false);
+  });
+
+  test("throws ExportCliError when labellens.config.json is missing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "labellens-cli-noconfig-"));
+    try {
+      await expect(runExportCli({ args: ["jsonl"], cwd: dir })).rejects.toBeInstanceOf(
+        ExportCliError,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("throws ExportCliError when .labellens/state.db is missing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "labellens-cli-nodb-"));
+    try {
+      writeFileSync(
+        join(dir, "labellens.config.json"),
+        JSON.stringify({
+          task: "classification",
+          labels: ["food"],
+          input: { path: "./missing.jsonl", format: "jsonl", fields: DEFAULT_FIELDS },
+          output: { path: "./out.jsonl", format: "jsonl" },
+        }),
+      );
+      await expect(runExportCli({ args: ["jsonl"], cwd: dir })).rejects.toThrow(
+        /no review state found/,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("throws ExportCliError when -o is missing its path argument", async () => {
+    using project = await seedProject("bad-args");
+    await expect(runExportCli({ args: ["jsonl", "-o"], cwd: project.dir })).rejects.toThrow(
+      /requires a path/,
+    );
   });
 });

@@ -1,7 +1,13 @@
-import { asc, eq } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import type { Db } from "../store/db.ts";
-import { records, reviews } from "../store/schema.ts";
+import { reviews } from "../store/schema.ts";
 
+// PRD §11.2 specifies a `note` field on ReviewEntry, but the current schema
+// stores `note` on `records` (mutable, per-record), not on `reviews`. Joining
+// `records.note` here would emit the *current* note on every historical review
+// row — corrupting the audit trail when a note is edited between reviews. We
+// omit `note` until the schema gains a per-review note column. Follow-up
+// tracked in #36.
 export function exportReviewLogString(db: Db): string {
   const rows = db
     .select({
@@ -13,10 +19,8 @@ export function exportReviewLogString(db: Db): string {
       reviewed_at: reviews.reviewedAt,
       source_of_truth: reviews.sourceOfTruth,
       compensates_review_id: reviews.compensatesReviewId,
-      note: records.note,
     })
     .from(reviews)
-    .innerJoin(records, eq(reviews.recordId, records.id))
     .orderBy(asc(reviews.reviewedAt), asc(reviews.id))
     .all();
   if (rows.length === 0) return "";

@@ -1,5 +1,5 @@
 import type { Db } from "../store/db.ts";
-import { currentReview, type QueueQuery, queueRecords } from "../store/queries.ts";
+import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { withOrphanFilter } from "./where.ts";
 
 export type ExportCsvOptions = {
@@ -8,8 +8,12 @@ export type ExportCsvOptions = {
   includeOrphans?: boolean;
 };
 
+// RFC 4180 CSV: fields containing comma, quote, or newline get quoted; embedded
+// quotes are doubled. https://datatracker.ietf.org/doc/html/rfc4180
 const NEEDS_QUOTE = /[",\r\n]/;
 
+// V1 follow-up: surface as `output.csv.multiLabelSeparator` in LabellensConfig
+// once the multi-label slice lands. Hardcoded `;` for MVP per PRD §11.3.
 const MULTI_LABEL_SEPARATOR = ";";
 
 export function formatCsvLabel(label: string | string[] | null): string {
@@ -38,9 +42,10 @@ type CsvRow = {
 export function exportCsvString(db: Db, opts: ExportCsvOptions = {}): string {
   const query = withOrphanFilter(opts.query, opts.includeOrphans ?? false);
   const records = queueRecords(db, query);
+  const reviewsByRecord = latestEffectiveByRecord(db);
   const data: CsvRow[] = [];
   for (const record of records) {
-    const review = currentReview(db, record.id);
+    const review = reviewsByRecord.get(record.id);
     if (!review) continue;
     const accepted = review.status === "accepted" || review.status === "relabeled";
     const rejected = review.status === "rejected";

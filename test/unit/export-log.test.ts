@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { exportReviewLogString } from "../../src/export/log.ts";
 import type { Db } from "../../src/store/db.ts";
 import { insertUndoEntry } from "../../src/store/queries.ts";
-import { insertReview, updateRecordNote } from "../../src/store/records.ts";
+import { insertReview } from "../../src/store/records.ts";
 import { openTmpStore } from "../util/tmp.ts";
 
 function recordIds(db: Db): string[] {
@@ -60,10 +60,9 @@ describe("exportReviewLogString", () => {
     expect(String(rows[1]!.reviewed_at) <= String(rows[2]!.reviewed_at)).toBe(true);
   });
 
-  test("surfaces the record's note column on the review row", async () => {
+  test("omits note (per-review note schema deferred — see follow-up issue)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ids = recordIds(store.db);
-    updateRecordNote(store.db, ids[0]!, "needs verification");
     insertReview(store.db, {
       record_id: ids[0]!,
       status: "accepted",
@@ -72,6 +71,6 @@ describe("exportReviewLogString", () => {
       source_of_truth: "human",
     });
     const [row] = lines(exportReviewLogString(store.db));
-    expect(row!.note).toBe("needs verification");
+    expect(Object.hasOwn(row!, "note")).toBe(false);
   });
 });

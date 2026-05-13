@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { runExportCli } from "./cli/export.ts";
+import { ExportCliError, runExportCli } from "./cli/export.ts";
 import { runInit } from "./cli/init.ts";
 import { runReview } from "./cli/run.ts";
 
@@ -27,7 +27,15 @@ async function main(): Promise<void> {
   }
 
   if (cmd === "export") {
-    await runExportCli({ args: rest, cwd: process.cwd() });
+    try {
+      await runExportCli({ args: rest, cwd: process.cwd() });
+    } catch (err) {
+      if (err instanceof ExportCliError) {
+        console.error(`labellens export: ${err.message}`);
+        process.exit(err.code);
+      }
+      throw err;
+    }
     return;
   }
 

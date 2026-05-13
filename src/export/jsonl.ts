@@ -1,5 +1,5 @@
 import type { Db } from "../store/db.ts";
-import { currentReview, type QueueQuery, queueRecords } from "../store/queries.ts";
+import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { projectMeta } from "./meta.ts";
 import { withOrphanFilter } from "./where.ts";
 
@@ -12,9 +12,10 @@ export type ExportJsonlOptions = {
 export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string {
   const query = withOrphanFilter(opts.query, opts.includeOrphans ?? false);
   const records = queueRecords(db, query);
+  const reviewsByRecord = latestEffectiveByRecord(db);
   const lines: string[] = [];
   for (const record of records) {
-    const review = currentReview(db, record.id);
+    const review = reviewsByRecord.get(record.id);
     if (!review) continue;
     const accepted = review.status === "accepted" || review.status === "relabeled";
     const rejected = review.status === "rejected";

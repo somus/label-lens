@@ -82,7 +82,7 @@ When adding a queue, follow the file-per-queue convention in `src/store/queues/<
 - **Skipped is its own state, not a flavor of pending.** ADR 0003.
 - **Source data is immutable.** Never write back to the user's JSONL. State lives in `.labellens/state.db`.
 - **Source-of-truth = `human+assistant`** whenever the assistant panel was viewed for a record, not only when accepted. ADR 0004.
-- **"Current" Review state always reads from `effective_reviews`.** Never re-derive the "non-undone, non-compensated" predicate inline. ADR 0007. Audit-log queries (history strip) intentionally read raw `reviews`.
+- **"Current" Review state always reads from `effective_reviews`.** Never re-derive the "non-undone, non-compensated" predicate inline. ADR 0007. Audit-log queries (history strip, **review-log export**) intentionally read raw `reviews`. Exports that need per-record current state should use `latestEffectiveByRecord` (one bulk query) over per-row `currentReview` calls — see `src/export/jsonl.ts` and PRD §16.1.
 - **Modal sub-surfaces go through the Overlay seam.** Picker, Note, and the slice-11 Assistant share `src/overlay/`: a pure reducer per overlay + an `applyEffects` interpreter against AppContext. Don't add bespoke key handlers in screens.
 - **No native modules besides `bun:sqlite`.** Pure-TS deps only — keeps the compiled binary clean.
 - **Heavy CPU work runs in a Bun `Worker`.** Hashing, signal computation, embeddings. Main thread stays responsive.

@@ -34,7 +34,12 @@ export function performExport(
 ): RunExportResult {
   const basePath = opts.outputPath ?? config.output.path;
   const paths = deriveExportPaths(basePath);
-  const queryForScope = scopeQuery(opts.queueId ?? null);
+  const queueId = opts.queueId ?? null;
+  const queryForScope = scopeQuery(queueId);
+  // The `orphans` queue's own predicate is `orphan = true`. AND'ing the default
+  // `orphan = 0` filter into it would zero out every row, so scoping to that
+  // queue implies the equivalent of `--include-orphans`.
+  const includeOrphans = opts.includeOrphans || queueId === "orphans";
   let body: string;
   let path: string;
   switch (opts.format) {
@@ -42,7 +47,7 @@ export function performExport(
       body = exportJsonlString(db, {
         query: queryForScope,
         includeRejected: opts.includeRejected,
-        includeOrphans: opts.includeOrphans,
+        includeOrphans,
       });
       path = paths.jsonl;
       break;
@@ -50,7 +55,7 @@ export function performExport(
       body = exportCsvString(db, {
         query: queryForScope,
         includeRejected: opts.includeRejected,
-        includeOrphans: opts.includeOrphans,
+        includeOrphans,
       });
       path = paths.csv;
       break;
@@ -97,7 +102,11 @@ export function parseExportArgument(argument: string | undefined): {
     if (t === "--include-rejected") includeRejected = true;
     else if (t === "--include-orphans") includeOrphans = true;
     else if (t === "-o" || t === "--output") {
-      outputPath = tokens[++i];
+      const next = tokens[++i];
+      if (next === undefined) {
+        return { includeRejected, includeOrphans, error: `${t} requires a path argument` };
+      }
+      outputPath = next;
     } else if (!t.startsWith("--") && format === undefined) {
       if (!isFormat(t)) return { includeRejected, includeOrphans, error: `unknown format: ${t}` };
       format = t;
@@ -112,6 +121,9 @@ function isFormat(s: string): s is ExportFormat {
   return s === "jsonl" || s === "csv" || s === "review-log" || s === "stats";
 }
 
+// Scope is `global` so the binding fires from any screen. If a future slice
+// wants screen-specific `e` semantics (e.g. inline label edit on the stats
+// screen), narrow this to `review` and add explicit per-scope export commands.
 export const exportCommand: Command = {
   name: "export.run",
   scope: "global",

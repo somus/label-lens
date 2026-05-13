@@ -181,6 +181,34 @@ describe("`e` binding", () => {
     expect(existsSync(outPath)).toBe(false); // didn't write jsonl
   });
 
+  test("orphans queue scope implies --include-orphans (no double-filter)", async () => {
+    using tmp = mkTmpDir();
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ids = recordIds(store.db);
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    store.db.run(sql`UPDATE records SET orphan = 1 WHERE id = ${ids[0]}`);
+    const outPath = join(tmp.dir, "reviewed.jsonl");
+    const app = createAppContext({
+      db: store.db,
+      config: makeConfig(outPath),
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    enterReview(app, "orphans");
+    const reg = buildRegistry([exportCommand]);
+    await dispatch(reg, "review", app, "export.run");
+    const rows = readFileSync(outPath, "utf8").trim().split("\n");
+    expect(rows).toHaveLength(1);
+    expect(JSON.parse(rows[0]!).id).toBe(ids[0]);
+  });
+
   test("honors the active queue's where clause when scoping the export", async () => {
     using tmp = mkTmpDir();
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
