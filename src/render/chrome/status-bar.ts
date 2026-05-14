@@ -13,7 +13,16 @@ import { resolveTheme } from "../theme.ts";
  *   3. Resolve via `tokens.fg.*` so capability/theme adapt automatically.
  * Mono and 16-color paths must degrade to dim/bold attributes — no `fg()`.
  */
-export type Tone = "default" | "muted" | "dim" | "accent" | "bold" | "warning" | "danger";
+export type Tone =
+  | "default"
+  | "muted"
+  | "dim"
+  | "accent"
+  | "bold"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info";
 
 export type Segment = {
   text: string;
@@ -38,10 +47,14 @@ function chunkFor(seg: Segment, display: ResolvedDisplay): TextChunk {
       return supportsFg ? boldFn(fgFn(tokens.fg.accent)(seg.text)) : boldFn(seg.text);
     case "bold":
       return boldFn(seg.text);
+    case "success":
+      return supportsFg ? boldFn(fgFn(tokens.fg.success)(seg.text)) : boldFn(seg.text);
     case "warning":
       return supportsFg ? boldFn(fgFn(tokens.fg.warning)(seg.text)) : boldFn(seg.text);
     case "danger":
       return supportsFg ? boldFn(fgFn(tokens.fg.danger)(seg.text)) : boldFn(seg.text);
+    case "info":
+      return supportsFg ? boldFn(fgFn(tokens.fg.info)(seg.text)) : boldFn(seg.text);
     default: {
       const _exhaustive: never = tone;
       throw new Error(`unhandled tone: ${_exhaustive}`);

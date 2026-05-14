@@ -1,4 +1,5 @@
 import type { AppContext } from "../app/context.ts";
+import { flash } from "../render/anim.ts";
 import { predicateQueue } from "../store/queues/predicate.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import type { QueueId } from "../store/queues/registry.ts";
@@ -35,7 +36,17 @@ export function applyEffects(
           prev_label: effect.prevLabel,
           source_of_truth: effect.sourceOfTruth,
         });
-        app.getCursor(queueId).refresh();
+        const cursor = app.getCursor(queueId);
+        cursor.refresh();
+        if (effect.status === "accepted") app.motion.play("footer.accept", flash(80, "success"));
+        else if (effect.status === "relabeled") {
+          app.motion.play("footer.relabel", flash(80, "accent"));
+        } else if (effect.status === "rejected") {
+          app.motion.play("footer.reject", flash(80, "danger"));
+        }
+        if (cursor.total === 0 && app.display.motion) {
+          app.setFlash("queue complete", "info", 1200);
+        }
         break;
       }
       case "updateNote":

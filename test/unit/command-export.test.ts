@@ -70,7 +70,7 @@ describe(":export <format>", () => {
     const app = createAppContext({
       db: store.db,
       config: makeConfig(outPath),
-      display: defaultDisplay(),
+      display: { ...defaultDisplay(), motion: true },
       requestRender: () => {},
       onQuit: () => {},
     });
@@ -81,6 +81,11 @@ describe(":export <format>", () => {
     const contents = readFileSync(outPath, "utf8");
     expect(contents).toContain("food");
     expect(app.flash?.message).toContain(outPath);
+    expect(app.motion.snapshot("export.complete")).toMatchObject({
+      active: true,
+      kind: "flash",
+      tone: "info",
+    });
   });
 
   test("supports csv, review-log, and stats formats writing to derived sibling paths", async () => {

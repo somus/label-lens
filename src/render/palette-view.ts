@@ -3,6 +3,7 @@ import type { Command } from "../actions/command.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import type { CategoryGroup } from "../overlay/palette-categories.ts";
 import type { PickerField } from "../overlay/palette-picker.ts";
+import { lerpHex } from "./anim.ts";
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
 import { type Segment, segmentsToStyledText } from "./chrome/status-bar.ts";
@@ -12,11 +13,30 @@ import { borderForRole, resolveTheme } from "./theme.ts";
 
 const PICKER_PROGRESS_WIDTH = 8;
 
+function modalChrome(
+  t: ReturnType<typeof resolveTheme>,
+  useColor: boolean,
+  fading: boolean,
+  fadeProgress: number,
+): { backgroundColor: string | undefined; borderColor: string | undefined } {
+  const hasOverlayBg = t.bg.overlay !== "transparent";
+  const hasChromeBg = t.bg.chrome !== "transparent";
+  const canLerp = useColor && fading && hasChromeBg;
+  const backgroundColor = hasOverlayBg
+    ? canLerp
+      ? lerpHex(t.bg.chrome, t.bg.overlay, fadeProgress)
+      : t.bg.overlay
+    : undefined;
+  const borderColor = canLerp ? lerpHex(t.bg.chrome, t.border.subtle, fadeProgress) : undefined;
+  return { backgroundColor, borderColor };
+}
+
 export function renderPalette(
   state: PaletteState,
   display: ResolvedDisplay,
   termWidth: number,
   termHeight: number,
+  fadeProgress = 1,
 ): ReturnType<typeof Box> {
   const border = borderForRole(display, "overlay");
   const t = resolveTheme(display);
@@ -35,6 +55,7 @@ export function renderPalette(
       leftOffset,
       topOffset,
       border,
+      fadeProgress,
     );
   }
   return renderBrowseModal(
@@ -46,6 +67,7 @@ export function renderPalette(
     leftOffset,
     topOffset,
     border,
+    fadeProgress,
   );
 }
 
@@ -58,16 +80,18 @@ function renderBrowseModal(
   leftOffset: number,
   topOffset: number,
   border: "rounded" | "single",
+  fadeProgress: number,
 ): ReturnType<typeof Box> {
   const innerWidth = modalWidth - 4;
   const entryChildren: ReturnType<typeof Text>[] = [];
 
   const useColor = display.color === "truecolor" || display.color === "256";
+  const fading = display.motion && fadeProgress < 0.99;
   let flatIdx = 0;
 
   if (state.categories.length > 0) {
     for (const cat of state.categories) {
-      entryChildren.push(renderCategoryHeader(cat, useColor, t));
+      entryChildren.push(renderCategoryHeader(cat, useColor, t, fading));
       for (const entry of cat.entries) {
         const isHighlighted = flatIdx === state.highlight;
         entryChildren.push(
@@ -79,6 +103,7 @@ function renderBrowseModal(
             innerWidth,
             useColor,
             t,
+            fading,
           ),
         );
         flatIdx++;
@@ -98,6 +123,7 @@ function renderBrowseModal(
           innerWidth,
           useColor,
           t,
+          fading,
         ),
       );
     }
@@ -122,9 +148,12 @@ function renderBrowseModal(
       zIndex: 100,
       shouldFill: true,
       overflow: "hidden",
-      backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
+      ...modalChrome(t, useColor, fading, fadeProgress),
     },
-    Text({ content: ` :${state.filter}_`, attributes: TextAttributes.BOLD }),
+    Text({
+      content: ` :${state.filter}_`,
+      attributes: fading ? TextAttributes.DIM : TextAttributes.BOLD,
+    }),
     Text({ content: "" }),
     Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
     hintLine,
@@ -140,6 +169,7 @@ function renderPickerModal(
   leftOffset: number,
   topOffset: number,
   border: "rounded" | "single",
+  _fadeProgress = 1,
 ): ReturnType<typeof Box> {
   const innerWidth = modalWidth - 4;
   const useColor = display.color === "truecolor" || display.color === "256";
@@ -233,12 +263,13 @@ function renderCategoryHeader(
   cat: CategoryGroup,
   useColor: boolean,
   t: ReturnType<typeof resolveTheme>,
+  fading = false,
 ): ReturnType<typeof Text> {
   // Icons land in truecolor/256 only — 16/mono drop them (see ADR/issue #46).
   const header = useColor ? ` ${cat.icon} ${cat.label}` : ` ${cat.label}`;
   if (useColor) {
     return Text({
-      content: new StyledText([dimFn(fgFn(t.fg.muted)(header))]),
+      content: new StyledText([dimFn(fgFn(fading ? t.fg.dim : t.fg.muted)(header))]),
       attributes: TextAttributes.NONE,
     });
   }
@@ -253,6 +284,7 @@ function renderEntry(
   innerWidth: number,
   useColor: boolean,
   t: ReturnType<typeof resolveTheme>,
+  fading = false,
 ): ReturnType<typeof Text> {
   const prefix = highlighted ? " > " : "   ";
   const label = name.startsWith(":") ? name.slice(1) : name;
@@ -268,18 +300,18 @@ function renderEntry(
   const gap = Math.max(2, innerWidth - leftText.length - right.length);
   const line = `${leftText}${" ".repeat(gap)}${right}`;
 
-  if (useColor && highlighted) {
+  if (useColor && highlighted && !fading) {
     return Text({
       content: new StyledText([boldFn(fgFn(t.fg.accent)(line))]),
       attributes: TextAttributes.NONE,
     });
   }
-  if (highlighted) {
+  if (highlighted && !fading) {
     return Text({ content: line, attributes: TextAttributes.BOLD });
   }
   if (useColor) {
     return Text({
-      content: new StyledText([fgFn(t.fg.default)(line)]),
+      content: new StyledText([fgFn(fading ? t.fg.dim : t.fg.default)(line)]),
       attributes: TextAttributes.NONE,
     });
   }

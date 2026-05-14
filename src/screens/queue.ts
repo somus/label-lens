@@ -183,6 +183,7 @@ export function mountQueueScreen(args: {
   };
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
+    app.noteInput();
     switch (event.name) {
       case "j":
       case "down":

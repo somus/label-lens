@@ -1,5 +1,6 @@
 import { labelName } from "../../config/config.ts";
 import { openPaletteV2 } from "../../overlay/palette.ts";
+import { fadeIn } from "../../render/anim.ts";
 import type { Command } from "../command.ts";
 
 export const paletteOpen: Command = {
@@ -31,5 +32,6 @@ export const paletteOpen: Command = {
         labels: ctx.config.labels.map(labelName),
       }),
     });
+    ctx.motion.play("palette.open", fadeIn(150));
   },
 };

@@ -8,6 +8,7 @@ export type DisplayConfig = {
   theme?: "light" | "dark" | "auto";
   candidatePin?: number;
   layout?: "auto" | "stack" | "split";
+  motion?: "auto" | "on" | "off";
 };
 
 export type BoundaryConfig = {
@@ -60,6 +61,7 @@ export function defaultConfig(args: {
       theme: "auto",
       candidatePin: 0.4,
       layout: "auto",
+      motion: "auto",
     },
   };
 }

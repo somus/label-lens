@@ -36,6 +36,7 @@ Users override via `labellens.config.json` `display.*`:
 - `banding: "auto" | "on" | "off"` — banded background tint per record. Always off at 16 / mono regardless of override.
 - `theme: "auto" | "light" | "dark"` — auto uses `renderer.waitForThemeMode(200)` with a `light` fallback on timeout / null / rejection.
 - `candidatePin: 0.05..0.95` — viewport pin position; default 0.4 = 40% from top of band region.
+- `motion: "auto" | "on" | "off"` — animation feedback (fades, flashes, progress tweens). Auto enables for truecolor / 256-color terminals; forced off at 16 / mono regardless of override.
 
 Live theme switching mid-session is a V1 follow-up (PRD §14.5).
 

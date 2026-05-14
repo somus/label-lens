@@ -1,3 +1,4 @@
+import { fadeIn } from "../../render/anim.ts";
 import { insertUndoEntry, latestReview } from "../../store/queries.ts";
 import type { Command } from "../command.ts";
 
@@ -15,5 +16,6 @@ export const undo: Command = {
     insertUndoEntry(ctx.db, target.record_id);
     ctx.cursor?.refresh();
     ctx.cursor?.seek(target.record_id);
+    ctx.motion.play("record.restore", fadeIn(200));
   },
 };

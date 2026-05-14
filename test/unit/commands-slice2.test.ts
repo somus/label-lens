@@ -20,12 +20,21 @@ const config: LabellensConfig = {
 };
 
 function makeApp(db: Db, queueId: string = "pending"): AppContext {
+  // Freeze the motion clock so snapshot() assertions don't race the 80ms
+  // flash duration on slow CI runners. Tests that exercise motion expiry
+  // should construct their own controller via createMotionController.
+  const motionNow = 1_000;
   const app = createAppContext({
     db,
     config,
-    display: defaultDisplay(),
+    display: { ...defaultDisplay(), motion: true },
     requestRender: () => {},
     onQuit: () => {},
+    motionOptions: {
+      now: () => motionNow,
+      setInterval: () => 0,
+      clearInterval: () => {},
+    },
   });
   enterReview(app, queueId);
   return app;
@@ -60,6 +69,17 @@ describe("record.reject", () => {
     );
     expect(remaining[0]?.n).toBe(0);
   });
+
+  test("starts reject footer feedback", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    await dispatch(defaultRegistry(), "review", app, "record.reject");
+    expect(app.motion.snapshot("footer.reject")).toMatchObject({
+      active: true,
+      kind: "flash",
+      tone: "danger",
+    });
+  });
 });
 
 describe("record.relabelByIndex", () => {
@@ -83,6 +103,17 @@ describe("record.relabelByIndex", () => {
     expect(cur?.status).toBe("relabeled");
     expect(cur?.final_label).toBe("travel");
     expect(cur?.prev_label).toBe("food");
+  });
+
+  test("starts relabel footer feedback", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    await dispatch(defaultRegistry(), "review", app, "record.relabelByIndex.2");
+    expect(app.motion.snapshot("footer.relabel")).toMatchObject({
+      active: true,
+      kind: "flash",
+      tone: "accent",
+    });
   });
 
   test("out-of-range index flashes error and writes nothing", async () => {
@@ -250,6 +281,10 @@ describe("record.undo", () => {
     expect(app.cursor!.current()?.id).not.toBe(id);
     await dispatch(defaultRegistry(), "review", app, "record.undo");
     expect(app.cursor!.current()?.id).toBe(id);
+    expect(app.motion.snapshot("record.restore")).toMatchObject({
+      active: true,
+      kind: "fadeIn",
+    });
   });
 
   test("flashes 'Nothing to undo' when no review exists", async () => {
@@ -307,6 +342,11 @@ describe("queue cycling", () => {
     const app = makeApp(store.db);
     await dispatch(defaultRegistry(), "review", app, "queue.next");
     expect(app.flash?.message).toContain("Skipped");
+    expect(app.motion.snapshot("status.queue")).toMatchObject({
+      active: true,
+      kind: "flash",
+      tone: "info",
+    });
   });
 
   test("skip then queue-cycle reaches the skipped record", async () => {
@@ -367,5 +407,18 @@ describe("record.skip", () => {
     await dispatch(defaultRegistry(), "review", app, "record.skip");
     expect(currentReview(store.db, id)?.status).toBe("skipped");
     expect(app.cursor!.current()?.id).not.toBe(id);
+  });
+});
+
+describe("record.accept motion", () => {
+  test("starts accept footer feedback", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    await dispatch(defaultRegistry(), "review", app, "record.accept");
+    expect(app.motion.snapshot("footer.accept")).toMatchObject({
+      active: true,
+      kind: "flash",
+      tone: "success",
+    });
   });
 });

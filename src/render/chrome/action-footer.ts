@@ -1,6 +1,7 @@
 import type { Command, CommandRegistry } from "../../actions/command.ts";
 import type { AppContext } from "../../app/context.ts";
 import type { Scope } from "../../keymap/engine.ts";
+import type { FeedbackTone } from "../anim.ts";
 import type { Box } from "../box.ts";
 import type { ResolvedDisplay } from "../capability.ts";
 import { type Segment, StatusBar } from "./status-bar.ts";
@@ -79,9 +80,25 @@ export function splitFooterEntries(entries: FooterEntry[]): {
   return { primary, utility };
 }
 
-export function entriesToSegments(entries: FooterEntry[]): Segment[] {
+function footerMotionKey(entry: FooterEntry): string {
+  if (entry.label === "accept") return "footer.accept";
+  if (entry.label === "reject") return "footer.reject";
+  if (entry.label === "relabel") return "footer.relabel";
+  return `footer.${entry.label}`;
+}
+
+function feedbackTone(tone: FeedbackTone | Segment["tone"] | null): Segment["tone"] {
+  if (tone === "success" || tone === "danger" || tone === "info" || tone === "accent") {
+    return tone;
+  }
+  return "accent";
+}
+
+export function entriesToSegments(entries: FooterEntry[], app?: AppContext): Segment[] {
   const segs: Segment[] = [];
   entries.forEach((entry, i) => {
+    const motion = app?.motion.snapshot(footerMotionKey(entry));
+    const activeTone = motion?.active ? feedbackTone(motion.tone) : null;
     if (i > 0) segs.push({ text: " ┊", tone: "dim" });
     if (entry.disabled) {
       // Tone-only signal so the footer stays within its single-row budget
@@ -91,8 +108,8 @@ export function entriesToSegments(entries: FooterEntry[]): Segment[] {
       segs.push({ text: `[${entry.binding}] `, tone: "dim" });
       segs.push({ text: entry.label, tone: "dim" });
     } else {
-      segs.push({ text: `[${entry.binding}] `, tone: "accent" });
-      segs.push({ text: entry.label, tone: "muted" });
+      segs.push({ text: `[${entry.binding}] `, tone: activeTone ?? "accent" });
+      segs.push({ text: entry.label, tone: activeTone ?? "muted" });
     }
   });
   return segs;
@@ -155,8 +172,8 @@ export function ActionFooter(props: ActionFooterProps): ReturnType<typeof Box> {
   }
   const entries = collectFooterEntries(registry, scope, app);
   const { primary, utility } = splitFooterEntries(entries);
-  const primarySegs = entriesToSegments(primary);
-  const utilitySegs = entriesToSegments(utility);
+  const primarySegs = entriesToSegments(primary, app);
+  const utilitySegs = entriesToSegments(utility, app);
   // If the combined clusters would overlap (flexbox space-between has no
   // collision detection), collapse into a single left cluster with `┊` between
   // groups. Otherwise route primary→left, utility→right.

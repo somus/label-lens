@@ -132,12 +132,15 @@ export function mountReviewScreen(args: {
     const queuePosition = queueTotal === 0 ? 0 : (cursor?.position ?? 0) + 1;
     const queueIndicator = queueTotal === 0 ? "0 / 0" : `${queuePosition} / ${queueTotal}`;
 
+    const queueMotion = app.motion.snapshot("status.queue");
+    const queueTone = queueMotion.active ? "info" : "accent";
+
     const statusLeft: Segment[] = [
       { text: " LabelLens", tone: "bold" },
       { text: "  ", tone: "dim" },
       { text: basename(app.config.input.path), tone: "muted" },
       { text: "  ", tone: "dim" },
-      { text: queueLabel, tone: "accent" },
+      { text: queueLabel, tone: queueTone },
       { text: "  ", tone: "dim" },
       { text: queueIndicator, tone: "default" },
     ];
@@ -178,7 +181,7 @@ export function mountReviewScreen(args: {
             predictionCount,
           }),
       app.overlay
-        ? renderOverlay(app.overlay, app.display, renderer.terminalWidth, renderer.terminalHeight)
+        ? renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight)
         : Box({}),
     );
 
@@ -201,6 +204,7 @@ export function mountReviewScreen(args: {
   app.requestRender = renderState;
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
+    app.noteInput();
     if (app.overlay) {
       const result = reduceOverlay(app.overlay, { kind: "key", event });
       app.overlay = result.overlay;
@@ -579,10 +583,11 @@ function modalBox(
 
 function renderOverlay(
   overlay: Overlay,
-  display: ResolvedDisplay,
+  app: AppContext,
   termWidth: number,
   termHeight: number,
 ): ReturnType<typeof Box> {
+  const display = app.display;
   switch (overlay.kind) {
     case "picker":
       return renderPicker(overlay.state, display, termWidth, termHeight);
@@ -597,7 +602,13 @@ function renderOverlay(
         Text({ content: " assistant overlay (slice 11)" }),
       );
     case "palette":
-      return renderPaletteV2(overlay.state, display, termWidth, termHeight);
+      return renderPaletteV2(
+        overlay.state,
+        display,
+        termWidth,
+        termHeight,
+        app.motion.snapshot("palette.open").progress,
+      );
     case "filter-builder":
       return renderFilterBuilder(overlay.state, display, termWidth, termHeight);
     case "help":

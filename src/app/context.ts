@@ -2,6 +2,11 @@ import type { CommandRegistry } from "../actions/command.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import type { Overlay } from "../overlay/types.ts";
+import {
+  createMotionController,
+  type MotionController,
+  type MotionSchedulerOptions,
+} from "../render/anim.ts";
 import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Db } from "../store/db.ts";
 import type { QueueId } from "../store/queues/registry.ts";
@@ -42,6 +47,8 @@ export type AppContext = {
   flash: FlashMessage | null;
   setFlash(message: string, kind: FlashKind, ttlMs?: number): void;
   clearFlash(): void;
+  motion: MotionController;
+  noteInput(): void;
   requestRender(): void;
   onQuit(): void;
   overlay: Overlay | null;
@@ -87,10 +94,19 @@ export function createAppContext(args: {
   display: ResolvedDisplay;
   requestRender: () => void;
   onQuit: () => void;
+  motionOptions?: Pick<MotionSchedulerOptions, "now" | "setInterval" | "clearInterval">;
 }): AppContext {
   const cursors = new Map<QueueId, Cursor>();
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
-  const ctx: AppContext = {
+  let inputPendingUntil = 0;
+  let ctx: AppContext;
+  const motion = createMotionController({
+    enabled: args.display.motion,
+    requestRender: () => ctx.requestRender(),
+    isInputPending: () => Date.now() < inputPendingUntil,
+    ...args.motionOptions,
+  });
+  ctx = {
     db: args.db,
     config: args.config,
     flash: null,
@@ -150,6 +166,10 @@ export function createAppContext(args: {
       }
       ctx.flash = null;
       ctx.requestRender();
+    },
+    motion,
+    noteInput() {
+      inputPendingUntil = Date.now() + 16;
     },
     openOverlay(o) {
       ctx.overlay = o;

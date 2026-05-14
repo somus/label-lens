@@ -29,7 +29,7 @@ describe("defaultConfig", () => {
     expect(cfg.labels).toEqual(["food", "other", "travel"]);
   });
 
-  test("populates display defaults: candidatePin=0.4, color/banding/theme/layout=auto", () => {
+  test("populates display defaults: candidatePin=0.4, color/banding/theme/layout/motion=auto", () => {
     const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS });
     expect(cfg.display).toEqual({
       color: "auto",
@@ -37,6 +37,7 @@ describe("defaultConfig", () => {
       theme: "auto",
       candidatePin: 0.4,
       layout: "auto",
+      motion: "auto",
     });
   });
 });
@@ -66,10 +67,16 @@ describe("LabellensConfig display key shape", () => {
       labels: ["food"],
       input: { path: "/x", format: "jsonl" as const, fields: FIELDS },
       output: { path: "/y", format: "jsonl" as const },
-      display: { color: "mono" as const, banding: "off" as const, candidatePin: 0.3 },
+      display: {
+        color: "mono" as const,
+        banding: "off" as const,
+        candidatePin: 0.3,
+        motion: "off" as const,
+      },
     };
     expect(cfg.display.color).toBe("mono");
     expect(cfg.display.banding).toBe("off");
     expect(cfg.display.candidatePin).toBe(0.3);
+    expect(cfg.display.motion).toBe("off");
   });
 });
