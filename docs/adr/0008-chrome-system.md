@@ -36,7 +36,7 @@ Adding a new tone requires touching one switch statement (`chunkFor` in `status-
 
 ## Footer derivation
 
-Commands declare `footer: { label: string; order?: number; scopes?: Scope[] }`. The action footer collects every `Command` whose `scope` (or `footer.scopes`) intersects the current screen and whose `enabled(ctx)` returns true. Disabled commands disappear so the footer stays relevant — a `[gd] doc` hint never appears in classification mode because `showDoc.enabled` is false there.
+Commands declare `footer: { label: string; order?: number; scopes?: Scope[] }`. The action footer collects every `Command` whose `scope` (or `footer.scopes`) intersects the current screen. Disabled commands (those whose `enabled(ctx)` returns false) stay visible but render dimmed with an `(unavailable)` suffix so the binding stays discoverable — e.g. `[gd] doc (unavailable)` appears in classification mode rather than vanishing. Issue #42.
 
 Primary review actions get footer markers: accept, reject, relabel, skip, note, palette, help, stats, queues, doc (boundary-only). Secondary keys (`m`, `u`, `j`, `]`, `[`) stay reachable through `?` help and the command palette, so the footer stays scannable at 100-column widths.
 
@@ -60,5 +60,6 @@ Below 80 columns the StatusBar drops its right cluster (progress counters) and t
 - Adding a primary action means adding `footer:` to its Command definition. No host screen change.
 - Adding an overlay means a switch case in `overlay/hints.ts`. No host screen change.
 - Adding a tone means a switch case in `status-bar.ts`'s `chunkFor`. TypeScript enforces.
+- A command's `disabledMessage` is flashed by `dispatch` only when the user attempts to invoke the disabled key; the footer itself surfaces just the `(unavailable)` suffix, not the reason.
 - The reingest prompt screen renders chrome inline (not through the `Chrome` wrapper) because it runs before the command registry is wired. This is a documented exception, not a pattern to copy.
 - Future capability work (mouse, live theme switching mid-session, ambient sparklines, motion) hangs off the token + chrome system without touching screens.

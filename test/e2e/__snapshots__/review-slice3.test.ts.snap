@@ -22,8 +22,8 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
- help                                                                                               
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
+ palette  [t] stats  [?] help                                                                       
                                                                                                     
 "
 `;
@@ -50,8 +50,8 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   2 travel >                                                                                        
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
- help                                                                                               
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
+ palette  [t] stats  [?] help                                                                       
                                                                                                     
 "
 `;
@@ -78,8 +78,8 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + â
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
- help                                                                                               
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
+ palette  [t] stats  [?] help                                                                       
                                                                                                     
 "
 `;
@@ -106,8 +106,8 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
- help                                                                                               
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
+ palette  [t] stats  [?] help                                                                       
                                                                                                     
 "
 `;
@@ -134,8 +134,8 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
- help                                                                                               
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
+ palette  [t] stats  [?] help                                                                       
                                                                                                     
 "
 `;
@@ -162,8 +162,8 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
- help                                                                                               
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
+ palette  [t] stats  [?] help                                                                       
                                                                                                     
 "
 `;
@@ -190,8 +190,8 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?]  
- help                                                                                               
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
+ palette  [t] stats  [?] help                                                                       
                                                                                                     
 "
 `;

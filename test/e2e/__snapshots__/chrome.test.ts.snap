@@ -8,7 +8,6 @@ exports[`chrome — status bar + action footer review chrome renders on truecolo
                                                                                                                         
                                                                                                                         
                                                                                                                         
-                                                                                                                        
  ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                                          │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ 
@@ -23,7 +22,8 @@ exports[`chrome — status bar + action footer review chrome renders on truecolo
   2 travel                                                                                                              
   3 other                                                                                                               
                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:] palette  [t] stats   
+ [?] help                                                                                                               
                                                                                                                         
 "
 `;
@@ -36,7 +36,6 @@ exports[`chrome — status bar + action footer review chrome renders on 256-colo
                                                                                                                         
                                                                                                                         
                                                                                                                         
-                                                                                                                        
  ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                                          │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ 
@@ -51,7 +50,8 @@ exports[`chrome — status bar + action footer review chrome renders on 256-colo
   2 travel                                                                                                              
   3 other                                                                                                               
                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:] palette  [t] stats   
+ [?] help                                                                                                               
                                                                                                                         
 "
 `;
@@ -64,7 +64,6 @@ exports[`chrome — status bar + action footer review chrome renders on 16-color
                                                                                                                         
                                                                                                                         
                                                                                                                         
-                                                                                                                        
  ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Lunch at Zomato Bangalore                                                                                        │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ 
@@ -79,7 +78,8 @@ exports[`chrome — status bar + action footer review chrome renders on 16-color
   2 travel                                                                                                              
   3 other                                                                                                               
                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:] palette  [t] stats   
+ [?] help                                                                                                               
                                                                                                                         
 "
 `;
@@ -92,7 +92,6 @@ exports[`chrome — status bar + action footer review chrome renders on mono 1`]
                                                                                                                         
                                                                                                                         
                                                                                                                         
-                                                                                                                        
  ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Lunch at Zomato Bangalore                                                                                        │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ 
@@ -107,7 +106,8 @@ exports[`chrome — status bar + action footer review chrome renders on mono 1`]
   2 travel                                                                                                              
   3 other                                                                                                               
                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:] palette  [t] stats   
+ [?] help                                                                                                               
                                                                                                                         
 "
 `;
