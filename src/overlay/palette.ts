@@ -91,48 +91,38 @@ function packed(state: PaletteState): Overlay {
   return { kind: "palette", state };
 }
 
+function recallHistory(
+  state: PaletteState,
+  historyIdx: number | null,
+  filter: string,
+): ReduceResult {
+  const entries = filteredEntries(state.allEntries, filter);
+  return {
+    overlay: packed({
+      ...state,
+      historyIdx,
+      filter,
+      entries,
+      categories: categorize(entries, state.commands),
+      highlight: 0,
+    }),
+    effects: [],
+  };
+}
+
 function cycleHistory(state: PaletteState, direction: -1 | 1): ReduceResult {
   if (state.history.length === 0) return { overlay: packed(state), effects: [] };
   const inHistory = state.historyIdx !== null;
   if (direction === -1) {
     const nextIdx = inHistory ? Math.max(state.historyIdx! - 1, 0) : state.history.length - 1;
-    const recalled = state.history[nextIdx]!;
-    return {
-      overlay: packed({
-        ...state,
-        historyIdx: nextIdx,
-        filter: recalled,
-        entries: filteredEntries(state.allEntries, recalled),
-        highlight: 0,
-      }),
-      effects: [],
-    };
+    return recallHistory(state, nextIdx, state.history[nextIdx]!);
   }
   if (!inHistory) return { overlay: packed(state), effects: [] };
   const nextIdx = state.historyIdx! + 1;
   if (nextIdx >= state.history.length) {
-    return {
-      overlay: packed({
-        ...state,
-        historyIdx: null,
-        filter: "",
-        entries: filteredEntries(state.allEntries, ""),
-        highlight: 0,
-      }),
-      effects: [],
-    };
+    return recallHistory(state, null, "");
   }
-  const recalled = state.history[nextIdx]!;
-  return {
-    overlay: packed({
-      ...state,
-      historyIdx: nextIdx,
-      filter: recalled,
-      entries: filteredEntries(state.allEntries, recalled),
-      highlight: 0,
-    }),
-    effects: [],
-  };
+  return recallHistory(state, nextIdx, state.history[nextIdx]!);
 }
 
 function commitDirect(state: PaletteState): ReduceResult {

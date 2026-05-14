@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { manPageTopics } from "../man/loader.ts";
 import type { Db } from "./db.ts";
-import { COMPUTED_SIGNAL_SOURCE } from "./issues.ts";
 import { queueCount } from "./queues/queue-counts.ts";
 import { BUILTIN_QUEUES } from "./queues/registry.ts";
 import { recordsWithPrimary } from "./schema.ts";
@@ -41,9 +40,7 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     .map((r) => r.reason);
 
   const issueTypes = db
-    .all<{ type: string }>(
-      sql`SELECT DISTINCT type FROM issues WHERE source IS NULL OR source != ${COMPUTED_SIGNAL_SOURCE} ORDER BY type`,
-    )
+    .all<{ type: string }>(sql`SELECT DISTINCT type FROM issues ORDER BY type`)
     .map((r) => r.type);
 
   const corrections = db.all<{ from: string; to: string }>(
