@@ -38,6 +38,8 @@ Adding a new tone requires touching one switch statement (`chunkFor` in `status-
 
 Commands declare `footer: { label: string; order?: number; scopes?: Scope[] }`. The action footer collects every `Command` whose `scope` (or `footer.scopes`) intersects the current screen. Disabled commands (those whose `enabled(ctx)` returns false) stay visible but render in the `dim` tone (no text suffix) so the binding stays discoverable while the footer stays within its single-row budget — e.g. `[gd] doc` appears in classification mode rendered dimmed rather than vanishing. The `dim`-vs-`accent` contrast carries the signal across capabilities: on truecolor/256 it's a foreground-color difference, on 16/mono it's dim-attribute vs bold-attribute on the key. Issue #42.
 
+`Chrome` (and `ActionFooter`) also support a registry-less mode for screens that mount before `AppContext` is wired: omit `app`/`scope`, pass `footerHint` directly, and the footer renders the hint verbatim. Used by the reingest prompt. Issue #43.
+
 Primary review actions get footer markers: accept, reject, relabel, skip, note, palette, help, stats, queues, doc (boundary-only). Secondary keys (`m`, `u`, `j`, `]`, `[`) stay reachable through `?` help and the command palette, so the footer stays scannable at 100-column widths.
 
 ## Overlay hint ownership
@@ -61,5 +63,5 @@ Below 80 columns the StatusBar drops its right cluster (progress counters) and t
 - Adding an overlay means a switch case in `overlay/hints.ts`. No host screen change.
 - Adding a tone means a switch case in `status-bar.ts`'s `chunkFor`. TypeScript enforces.
 - A command's `disabledMessage` is flashed by `dispatch` only when the user attempts to invoke the disabled key; the footer itself surfaces just the tone (`dim`), not the reason.
-- The reingest prompt screen renders chrome inline (not through the `Chrome` wrapper) because it runs before the command registry is wired. This is a documented exception, not a pattern to copy.
+- The reingest prompt mounts before the command registry exists and routes through `Chrome` in registry-less mode (issue #43). No separate inline layout to keep in sync.
 - Future capability work (mouse, live theme switching mid-session, ambient sparklines, motion) hangs off the token + chrome system without touching screens.

@@ -83,27 +83,41 @@ export function entriesToSegments(entries: FooterEntry[]): Segment[] {
   return segs;
 }
 
-export type ActionFooterProps = {
-  display: ResolvedDisplay;
-  app: AppContext;
-  scope: Scope;
-  /** Override — when set, renders this segment list instead of derived hints. */
-  hint?: Segment[];
-};
+export type ActionFooterProps =
+  | {
+      display: ResolvedDisplay;
+      app: AppContext;
+      scope: Scope;
+      /** Override — when set, renders this segment list instead of derived hints. */
+      hint?: Segment[];
+    }
+  | {
+      display: ResolvedDisplay;
+      app?: undefined;
+      scope?: undefined;
+      /** Required in registry-less mode (pre-AppContext screens, e.g. reingest). */
+      hint: Segment[];
+    };
 
 /**
  * Bottom chrome strip. Reads `Command.footer` markers from the active registry
  * filtered by scope. Disabled commands stay visible but render dimmed so the
  * user still learns the key. When `hint` is passed, it replaces the derived
  * entries (used by overlays + flash messages).
+ *
+ * Registry-less mode: when `app`/`scope` are omitted, `hint` is required and
+ * the row renders verbatim. Used by screens that mount before AppContext is
+ * wired (ADR 0008).
  */
 export function ActionFooter(props: ActionFooterProps): ReturnType<typeof Box> {
-  const { display, app, scope, hint } = props;
+  const { display, hint } = props;
   if (hint) {
     return StatusBar({ display, left: [{ text: " " }, ...hint] });
   }
-  const registry = app.commandRegistry;
-  if (!registry) {
+  const app = props.app;
+  const scope = props.scope;
+  const registry = app?.commandRegistry;
+  if (!registry || !app || !scope) {
     return StatusBar({ display, left: [{ text: " " }] });
   }
   const entries = collectFooterEntries(registry, scope, app);
