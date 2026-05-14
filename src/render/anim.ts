@@ -41,13 +41,15 @@ export type MotionSchedulerOptions = {
 };
 
 const MIN_FRAME_MS = 33;
-const INACTIVE: MotionSnapshot = {
+// Returned by reference from snapshot() in the hot path (every render queries
+// the footer / status entries). Frozen so callers can't mutate the singleton.
+const INACTIVE: MotionSnapshot = Object.freeze({
   active: false,
   kind: null,
   progress: 1,
   tone: null,
   value: null,
-};
+}) as MotionSnapshot;
 
 export function fadeIn(durationMs = 200): MotionToken {
   return { kind: "fadeIn", durationMs };
@@ -120,14 +122,14 @@ export function createMotionController(options: MotionSchedulerOptions): MotionC
       options.requestRender();
     },
     snapshot(key) {
-      if (!options.enabled || destroyed) return { ...INACTIVE };
+      if (!options.enabled || destroyed) return INACTIVE;
       const item = running.get(key);
-      if (!item) return { ...INACTIVE };
+      if (!item) return INACTIVE;
       const t = now();
       if (item.endsAt <= t) {
         running.delete(key);
         stopTimerIfIdle();
-        return { ...INACTIVE };
+        return INACTIVE;
       }
       const progress = Math.max(
         0,
