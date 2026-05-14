@@ -9,6 +9,7 @@ type FooterEntry = {
   binding: string;
   label: string;
   order: number;
+  disabled: boolean;
 };
 
 function firstBinding(cmd: Command): string | null {
@@ -49,15 +50,14 @@ export function collectFooterEntries(
     if (!inScope) continue;
     const binding = firstBinding(cmd);
     if (!binding) continue;
-    // Drop disabled commands entirely — keeps the footer relevant. Commands
-    // whose run handler does a runtime check (e.g. accept-with-no-prediction)
-    // should leave `enabled` permissive so the binding stays advertised.
+    // Disabled commands stay visible (rendered dimmed with an `(unavailable)`
+    // suffix by entriesToSegments) so the binding stays discoverable. ADR 0008.
     const enabled = cmd.enabled ? cmd.enabled(ctx) : true;
-    if (!enabled) continue;
     out.push({
       binding: displayKey(binding),
       label: cmd.footer.label,
       order: cmd.footer.order ?? 1000,
+      disabled: !enabled,
     });
   }
   out.sort((a, b) => a.order - b.order);
@@ -65,14 +65,20 @@ export function collectFooterEntries(
 }
 
 export function entriesToSegments(entries: FooterEntry[]): Segment[] {
-  // collectFooterEntries drops disabled commands, so every entry here is
-  // active. If we ever want to render disabled-but-visible hints, restore the
-  // tone branching and stop filtering at collect time.
   const segs: Segment[] = [];
   entries.forEach((entry, i) => {
     if (i > 0) segs.push({ text: "  ", tone: "dim" });
-    segs.push({ text: `[${entry.binding}] `, tone: "accent" });
-    segs.push({ text: entry.label, tone: "muted" });
+    if (entry.disabled) {
+      // Tone-only signal so the footer stays within its single-row budget
+      // (ADR 0008). Dim renders distinctly from accent (truecolor/256) or via
+      // attribute on 16/mono (dim vs bold). disabledMessage explains *why* on
+      // attempt; the footer just signals availability.
+      segs.push({ text: `[${entry.binding}] `, tone: "dim" });
+      segs.push({ text: entry.label, tone: "dim" });
+    } else {
+      segs.push({ text: `[${entry.binding}] `, tone: "accent" });
+      segs.push({ text: entry.label, tone: "muted" });
+    }
   });
   return segs;
 }

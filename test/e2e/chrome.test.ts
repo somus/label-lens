@@ -114,8 +114,9 @@ describe("chrome — status bar + action footer", () => {
     // intentionally excluded from the footer to keep it scannable.
     expect(frame).not.toContain("[m] mark");
     expect(frame).not.toContain("[u] undo");
-    // Boundary-only command must NOT appear in classification mode.
-    expect(frame).not.toContain("[gd] doc");
+    // Boundary-only command stays visible in classification mode (rendered
+    // dimmed via tone) so the binding remains discoverable (ADR 0008).
+    expect(frame).toContain("[gd] doc");
   });
 
   test("review chrome renders on truecolor", async () => {

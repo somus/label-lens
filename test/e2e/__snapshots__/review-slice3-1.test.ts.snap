@@ -23,7 +23,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t] stats  [?] help                                                                                       
                                                                                                                                                                                                         
 "
 `;
@@ -51,7 +51,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t] stats  [?] help                                                                                       
                                                                                                                                                                                                         
 "
 `;
@@ -79,7 +79,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t] stats  [?] help                                                                                       
                                                                                                                                                                                                         
 "
 `;
@@ -107,7 +107,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [Q] queues  [:] palette  [t] stats  [?] help                                                                                                 
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t] stats  [?] help                                                                                       
                                                                                                                                                                                                         
 "
 `;
