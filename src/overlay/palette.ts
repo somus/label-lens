@@ -3,6 +3,7 @@ import type { Scope } from "../keymap/engine.ts";
 import type { Db } from "../store/db.ts";
 import type { PaletteData } from "../store/palette-data.ts";
 import { fetchPaletteData } from "../store/palette-data.ts";
+import { openFilterBuilder, stateToPredicate } from "./filter-builder.ts";
 import { type CategoryGroup, categorize, flattenForNav } from "./palette-categories.ts";
 import { openPicker, type PickerField, reducePicker } from "./palette-picker.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
@@ -154,6 +155,18 @@ function tryOpenPicker(state: PaletteState): ReduceResult | null {
   if (hasArg) return null;
 
   const kind = cmd.paletteMetadata.pickerKind;
+
+  if (entry.commandName === "palette.where") {
+    if (!state.pickerOptions) return null;
+    const filterState = openFilterBuilder(state.pickerOptions);
+    const predicate = stateToPredicate(filterState);
+    return {
+      overlay: { kind: "filter-builder", state: filterState },
+      effects: predicate
+        ? [{ kind: "scheduleFilterPreview", predicate, revision: filterState.revision }]
+        : [],
+    };
+  }
 
   if (!kind) {
     return {

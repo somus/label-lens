@@ -216,7 +216,7 @@ Users prioritize what to review:
 | `by-label:<l>`              | Filter to one label                                  |
 | `by-issue:<t>`              | Filter to records with a specific issue type         |
 | `by-correction:<from>:<to>` | Records where review flipped label `<from>` → `<to>` (joins reviews). Backs the stats drilldown (§10.8). |
-| `where:<expr>`              | Power-user predicate over indexed columns: e.g. `:where source='llm:gpt-4' and confidence<0.3`. Compiles to SQL `WHERE`. |
+| `where:<expr>`              | Power-user predicate over indexed columns. Bare `:where` opens the visual filter builder; `:where <expr>` accepts a raw expression such as `source='llm:gpt-4' and confidence<0.3`. Compiles to SQL `WHERE`. |
 
 Queues are SQL queries over indexed columns. Switching queues is instant. Stats-screen drilldown (§10.8) compiles every aggregation row into one of these queue forms — no ad-hoc per-stat filter spec.
 
@@ -801,26 +801,31 @@ Each screen registers its own commands at mount; the palette is the filtered sub
 
 | Palette                    | Effect                                                 |
 | -------------------------- | ------------------------------------------------------ |
+| `:queue`                   | Open the Queue screen                                  |
 | `:queue <name>`            | Switch to a named queue, e.g., `:queue low-confidence` |
 | `:by-source <s>`           | Filter to records from a specific source               |
 | `:by-reason <r>`           | Filter to a single failure mode                        |
 | `:by-label <l>`            | Filter to records carrying one label                   |
 | `:by-issue <type>`         | Filter to records with a specific issue type           |
 | `:marked`                  | Show records the reviewer has tagged                   |
-| `:stats`                   | Open the stats screen                                  |
+| `:stats`                   | Open the Stats screen                                  |
+| `:where`                   | Open the visual filter builder                         |
+| `:where <expr>`            | Switch to a raw `where:<expr>` queue                   |
 | `:export [format]`         | Export current queue or whole dataset                  |
 | `:guidelines`              | Open the guidelines viewer                             |
 | `:assistant on` / `off`    | Toggle the LLM assistant                               |
 | `:reload`                  | Re-read the source file (re-ingestion prompt)          |
+| `:help`                    | Open contextual help for the active screen             |
+| `:help topics`             | Open the long-form help topic picker                   |
 | `:help <topic>`            | Open a help man-page in `less`                         |
 
 **History.** The palette remembers recent commands; `↑` / `↓` cycle through recent entries the way every shell does. History is per-session in MVP; persistent across sessions is V1.
 
 The palette is a thin layer over commands that also have direct keys; nothing is *only* reachable via `:`. Commands and their short forms are autocompleted as the user types.
 
-**Contextual help (`?`).** Pressing `?` opens an overlay listing the commands whose `scope` matches the current screen, plus globals. The review screen, queue screen, stats screen, and assistant panel each show different keys — not a global cheat sheet. (k9s, lazygit, and tig all use this pattern; visidata does the same.) Hidden commands (`hidden: true`) are excluded from the help overlay even when their scope matches.
+**Contextual help (`?` / `:help`).** Pressing `?` or entering bare `:help` opens an overlay listing the commands whose `scope` matches the current screen, plus globals. The review screen, queue screen, stats screen, and assistant panel each show different keys — not a global cheat sheet. (k9s, lazygit, and tig all use this pattern; visidata does the same.) Hidden commands (`hidden: true`) are excluded from the help overlay even when their scope matches.
 
-**Long-form help via man pages (aerc pattern).** LabelLens ships its tutorial and how-tos as installable man pages (`man labellens-tutorial`, `man labellens-config`, `man labellens-keymap`, `man labellens-assistant`). From inside the TUI, `:help <topic>` runs `less` on the same content. This means the help system is also useful outside the TUI and integrates cleanly with the man infrastructure on Unix-like systems.
+**Long-form help via man pages (aerc pattern).** LabelLens ships its tutorial and how-tos as installable man pages (`man labellens-tutorial`, `man labellens-config`, `man labellens-keymap`, `man labellens-assistant`). From inside the TUI, `:help topics` opens the topic picker and `:help <topic>` runs `less` on the same content. This means the help system is also useful outside the TUI and integrates cleanly with the man infrastructure on Unix-like systems.
 
 ## 15. Keyboard model
 

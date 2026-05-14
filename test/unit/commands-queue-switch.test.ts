@@ -63,4 +63,25 @@ describe("queue.switch commands", () => {
     expect(app.queueId).toBe("by-source:llm:gpt-4");
     expect(app.cursor!.queueId).toBe("by-source:llm:gpt-4");
   });
+
+  test("queue.openScreen and bare palette.queue use the same Queue screen callback", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    let opened = 0;
+    app.openQueueScreen = () => {
+      opened += 1;
+    };
+
+    await dispatch(defaultRegistry(), "review", app, "queue.openScreen");
+    await dispatch(defaultRegistry(), "review", app, "palette.queue");
+
+    expect(opened).toBe(2);
+  });
+
+  test("palette.queue with an argument still switches directly", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    await dispatch(defaultRegistry(), "review", app, "palette.queue", "low-confidence");
+    expect(app.queueId).toBe("low-confidence");
+  });
 });

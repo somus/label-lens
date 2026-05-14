@@ -3,7 +3,9 @@ import { sql } from "drizzle-orm";
 import { type AppContext, createAppContext, enterReview } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { applyEffects } from "../../src/overlay/effects.ts";
+import { openFilterBuilder, stateToPredicate } from "../../src/overlay/filter-builder.ts";
 import { defaultDisplay } from "../../src/render/capability.ts";
+import { fetchPaletteData } from "../../src/store/palette-data.ts";
 import { currentReview } from "../../src/store/queries.ts";
 import { DEFAULT_FIELDS, openTmpStore } from "../util/tmp.ts";
 
@@ -111,5 +113,43 @@ describe("applyEffects", () => {
     const app = ctx(store.db);
     applyEffects(app, "pending", [{ kind: "runCommand", commandName: "x.y" }]);
     expect(app.flash?.kind).toBe("error");
+  });
+
+  test("scheduleFilterPreview updates the active filter builder with a debounced count", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = ctx(store.db);
+    const data = fetchPaletteData(store.db, ["food", "travel"]);
+    const state = openFilterBuilder(data);
+    const predicate = stateToPredicate(state)!;
+    app.overlay = { kind: "filter-builder", state };
+    applyEffects(app, "pending", [
+      { kind: "scheduleFilterPreview", predicate, revision: state.revision },
+    ]);
+    await new Promise((r) => setTimeout(r, 240));
+    expect(app.overlay?.kind).toBe("filter-builder");
+    if (app.overlay?.kind === "filter-builder") {
+      expect(app.overlay.state.preview).toEqual({
+        kind: "ready",
+        count: data.sourceCounts.get(data.sources[0]!) ?? 0,
+      });
+    }
+  });
+
+  test("scheduleFilterPreview ignores stale revisions", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = ctx(store.db);
+    const state = openFilterBuilder(fetchPaletteData(store.db, ["food", "travel"]));
+    const predicate = stateToPredicate(state)!;
+    app.overlay = {
+      kind: "filter-builder",
+      state: { ...state, revision: state.revision + 1 },
+    };
+    applyEffects(app, "pending", [
+      { kind: "scheduleFilterPreview", predicate, revision: state.revision },
+    ]);
+    await new Promise((r) => setTimeout(r, 240));
+    if (app.overlay?.kind === "filter-builder") {
+      expect(app.overlay.state.preview).toEqual({ kind: "pending" });
+    }
   });
 });

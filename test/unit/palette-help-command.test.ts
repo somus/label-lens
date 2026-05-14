@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { paletteHelp } from "../../src/actions/palette/help.ts";
+import { defaultRegistry } from "../../src/actions/registry.ts";
 import { type AppContext, createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import type { GuidelinesState } from "../../src/overlay/guidelines.ts";
+import type { HelpState } from "../../src/overlay/help.ts";
 import { defaultDisplay } from "../../src/render/capability.ts";
 import { DEFAULT_FIELDS, openTmpStore } from "../util/tmp.ts";
 
@@ -43,11 +45,14 @@ describe("palette.help command", () => {
     expect(ctx.overlay).toBeNull();
   });
 
-  test("with no argument, flashes the list of available topics", async () => {
+  test("with no argument, opens the same contextual help overlay as '?'", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ctx = makeCtx(store.db);
+    ctx.commandRegistry = defaultRegistry();
+    ctx.activeScope = "review";
     await paletteHelp.run(ctx);
-    expect(ctx.flash?.message).toContain("topics");
-    expect(ctx.flash?.message).toContain("keymap");
+    expect(ctx.overlay?.kind).toBe("help");
+    const state = ctx.overlay!.state as HelpState;
+    expect(state.scope).toBe("review");
   });
 });

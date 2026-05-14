@@ -44,6 +44,24 @@ describe("guidelines e2e", () => {
     expect(app.overlay?.kind).toBe("guidelines");
   });
 
+  test(":guidelines opens the same guidelines overlay", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { app, mockInput, renderOnce } = await setup(store, makeConfig("# Inline\n\n- rule one"));
+    mockInput.pressKey(":");
+    await renderOnce();
+    for (const ch of "guidelines") {
+      mockInput.pressKey(ch);
+      await renderOnce();
+    }
+    mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
+    await renderOnce();
+    expect(app.overlay?.kind).toBe("guidelines");
+    if (app.overlay?.kind === "guidelines") {
+      expect(app.overlay.state.content).toContain("rule one");
+    }
+  });
+
   test("missing config field shows the placeholder", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { app, mockInput, renderOnce } = await setup(store, makeConfig());

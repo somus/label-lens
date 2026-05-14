@@ -47,6 +47,27 @@ describe("stats command + palette wiring", () => {
     expect(app.overlay?.kind).toBe("stats");
   });
 
+  test("stats.show and palette.stats use the same Stats screen callback when mounted", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = createAppContext({
+      db: store.db,
+      config: makeConfig(),
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    let opened = 0;
+    app.openStatsScreen = () => {
+      opened += 1;
+    };
+
+    await dispatch(defaultRegistry(), "review", app, "stats.show");
+    await dispatch(defaultRegistry(), "review", app, "palette.stats");
+
+    expect(opened).toBe(2);
+    expect(app.overlay).toBeNull();
+  });
+
   test("palette.stats opens stats overlay in any scope (global)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = createAppContext({
