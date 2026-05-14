@@ -1,7 +1,7 @@
 import type { CliRenderer } from "@opentui/core";
 import { Box } from "../render/box.ts";
 import type { ResolvedDisplay } from "../render/capability.ts";
-import { type Segment, StatusBar } from "../render/chrome/index.ts";
+import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 
 export type ReingestChoice = "refresh" | "fresh" | "cancel";
@@ -22,8 +22,8 @@ export type ReingestPromptHandle = { destroy: () => void };
  *   [f] Fresh re-ingest, back up .labellens/ → .labellens.bak/   (legacy)
  *   [c] Cancel
  *
- * Mounts before AppContext is wired up, so we render chrome inline rather than
- * via the Chrome wrapper (which needs a registry).
+ * Mounts before AppContext is wired up, so the Chrome wrapper is invoked in
+ * registry-less mode (footerHint required, no scope/app). ADR 0008.
  */
 export function mountReingestPrompt(args: {
   renderer: CliRenderer;
@@ -68,26 +68,27 @@ export function mountReingestPrompt(args: {
 
   const render = () => {
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
+    const body = Box(
+      { flexDirection: "column", flexGrow: 1 },
+      ...lines.map((line) => Text({ content: ` ${line}` })),
+      Box({ height: 1 }),
+      Text({
+        content: "  [r] Refresh predictions, keep reviews, accept orphans + new records",
+        attributes: TextAttributes.BOLD,
+      }),
+      Text({
+        content: "  [f] Fresh re-ingest, back up .labellens/ → .labellens.bak/   (legacy)",
+      }),
+      Text({ content: "  [c] Cancel" }),
+    );
     renderer.root.add(
-      Box(
-        { flexDirection: "column", flexGrow: 1, padding: 1 },
-        StatusBar({ display, left: statusLeft }),
-        Box({ height: 1 }),
-        Box(
-          { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-          ...lines.map((line) => Text({ content: ` ${line}` })),
-          Box({ height: 1 }),
-          Text({
-            content: "  [r] Refresh predictions, keep reviews, accept orphans + new records",
-            attributes: TextAttributes.BOLD,
-          }),
-          Text({
-            content: "  [f] Fresh re-ingest, back up .labellens/ → .labellens.bak/   (legacy)",
-          }),
-          Text({ content: "  [c] Cancel" }),
-        ),
-        StatusBar({ display, left: footerHint }),
-      ),
+      Chrome({
+        display,
+        statusLeft,
+        footerHint,
+        width: renderer.terminalWidth,
+        body,
+      }),
     );
   };
 

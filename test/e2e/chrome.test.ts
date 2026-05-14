@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
+import { Box } from "../../src/render/box.ts";
 import type { ResolvedDisplay } from "../../src/render/capability.ts";
+import { Chrome, type Segment } from "../../src/render/chrome/index.ts";
+import { Text } from "../../src/render/text.ts";
 import { mountQueueScreen } from "../../src/screens/queue.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
 import { mountStatsScreen } from "../../src/screens/stats.ts";
@@ -168,6 +171,40 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toContain("[j/k] navigate");
     expect(frame).toContain("[enter] drill");
     expect(frame).toContain("[esc] back");
+  });
+
+  test("hint-only mode renders status + body + footer with no AppContext or scope", async () => {
+    const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
+      width: 100,
+      height: 12,
+    });
+    const statusLeft: Segment[] = [
+      { text: " LabelLens", tone: "bold" },
+      { text: "  ", tone: "dim" },
+      { text: "Re-ingest", tone: "warning" },
+    ];
+    const footerHint: Segment[] = [
+      { text: "[r] ", tone: "accent" },
+      { text: "refresh  ", tone: "muted" },
+      { text: "[c] ", tone: "accent" },
+      { text: "cancel", tone: "muted" },
+    ];
+    const body = Box({ flexDirection: "column", flexGrow: 1 }, Text({ content: " hello body" }));
+    renderer.root.add(
+      Chrome({
+        display: TRUECOLOR_LIGHT,
+        statusLeft,
+        footerHint,
+        body,
+      }),
+    );
+    await renderOnce();
+    const frame = captureCharFrame();
+    expect(frame).toContain("LabelLens");
+    expect(frame).toContain("Re-ingest");
+    expect(frame).toContain("hello body");
+    expect(frame).toContain("[r] refresh");
+    expect(frame).toContain("[c] cancel");
   });
 
   test("status bar truncates and drops right cluster on narrow (60-col) terminals", async () => {

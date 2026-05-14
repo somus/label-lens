@@ -23,7 +23,7 @@ exports[`reingest-prompt screen e2e renders PRD §13 block with counts 1`] = `
                                                                                                     
                                                                                                     
                                                                                                     
-  [r] refresh  [f] fresh  [c] cancel                                                                
+   [r] refresh  [f] fresh  [c] cancel                                                               
                                                                                                     
 "
 `;

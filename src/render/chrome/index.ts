@@ -26,32 +26,50 @@ export { StatusBar } from "./status-bar.ts";
  */
 export const CHROME_ROW_OVERHEAD = 3;
 
-export type ChromeProps = {
-  display: ResolvedDisplay;
-  app: AppContext;
-  scope: Scope;
-  statusLeft: Segment[];
-  statusRight?: Segment[];
-  footerHint?: Segment[];
-  /** Terminal width in columns; forwarded to StatusBar for narrow-terminal
-   *  truncation. Tests can omit it. */
-  width?: number;
-  body: ReturnType<typeof Box>;
-};
+export type ChromeProps =
+  | {
+      display: ResolvedDisplay;
+      app: AppContext;
+      scope: Scope;
+      statusLeft: Segment[];
+      statusRight?: Segment[];
+      footerHint?: Segment[];
+      /** Terminal width in columns; forwarded to StatusBar for narrow-terminal
+       *  truncation. Tests can omit it. */
+      width?: number;
+      body: ReturnType<typeof Box>;
+    }
+  | {
+      display: ResolvedDisplay;
+      app?: undefined;
+      scope?: undefined;
+      statusLeft: Segment[];
+      statusRight?: Segment[];
+      /** Required in registry-less mode — footer renders verbatim. */
+      footerHint: Segment[];
+      width?: number;
+      body: ReturnType<typeof Box>;
+    };
 
 /**
  * Slice-1 chrome wrapper. Renders top status bar + body + bottom action footer.
  * Each screen passes its own status segments; the footer derives from the
  * active command registry filtered by scope. Pass `footerHint` to override the
  * derived hints (used by overlays and flash messages).
+ *
+ * Registry-less mode: omit `app`/`scope` and pass `footerHint` directly. Used
+ * by screens that mount before AppContext is wired (reingest prompt, ADR 0008).
  */
 export function Chrome(props: ChromeProps): ReturnType<typeof Box> {
-  const { display, app, scope, statusLeft, statusRight, footerHint, width, body } = props;
+  const { display, statusLeft, statusRight, footerHint, width, body } = props;
+  const footer = props.app
+    ? ActionFooter({ display, app: props.app, scope: props.scope, hint: footerHint })
+    : ActionFooter({ display, hint: footerHint as Segment[] });
   return Box(
     { flexDirection: "column", flexGrow: 1, padding: 1 },
     StatusBar({ display, left: statusLeft, right: statusRight, width }),
     Box({ height: 1 }),
     Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, body),
-    ActionFooter({ display, app, scope, hint: footerHint }),
+    footer,
   );
 }
