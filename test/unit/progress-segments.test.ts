@@ -3,7 +3,14 @@ import type { ResolvedDisplay } from "../../src/render/capability.ts";
 import { progressSegments } from "../../src/render/progress-segments.ts";
 
 function display(color: ResolvedDisplay["color"]): ResolvedDisplay {
-  return { color, banding: false, theme: "light", candidatePin: 0.4, layout: "auto" };
+  return {
+    color,
+    banding: false,
+    theme: "light",
+    candidatePin: 0.4,
+    layout: "auto",
+    motion: false,
+  };
 }
 
 describe("progressSegments", () => {

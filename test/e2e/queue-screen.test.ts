@@ -55,7 +55,14 @@ async function setup(
 }
 
 function display(color: ResolvedDisplay["color"]): ResolvedDisplay {
-  return { color, banding: false, theme: "light", candidatePin: 0.4, layout: "auto" };
+  return {
+    color,
+    banding: false,
+    theme: "light",
+    candidatePin: 0.4,
+    layout: "auto",
+    motion: false,
+  };
 }
 
 describe("queue screen e2e", () => {

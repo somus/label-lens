@@ -7,6 +7,7 @@ import { exportJsonlString } from "../../export/jsonl.ts";
 import { exportReviewLogString } from "../../export/log.ts";
 import { deriveExportPaths } from "../../export/paths.ts";
 import { exportStatsMarkdown } from "../../export/stats.ts";
+import { flash } from "../../render/anim.ts";
 import type { Db } from "../../store/db.ts";
 import type { QueueQuery } from "../../store/queries.ts";
 import { type QueueId, resolveQueue } from "../../store/queues/registry.ts";
@@ -142,6 +143,7 @@ export const exportCommand: Command = {
     const format = ctx.config.output.format === "csv" ? "csv" : "jsonl";
     try {
       const result = runExport(ctx, { format });
+      ctx.motion.play("export.complete", flash(2000, "info"));
       ctx.setFlash(`Exported to ${result.path}`, "info", 4000);
     } catch (err) {
       ctx.setFlash(`Export failed: ${err instanceof Error ? err.message : String(err)}`, "error");
@@ -174,6 +176,7 @@ export const paletteExportCommand: Command = {
         includeOrphans: parsed.includeOrphans,
         outputPath: parsed.outputPath,
       });
+      ctx.motion.play("export.complete", flash(2000, "info"));
       ctx.setFlash(`Exported to ${result.path}`, "info", 4000);
     } catch (err) {
       ctx.setFlash(`Export failed: ${err instanceof Error ? err.message : String(err)}`, "error");

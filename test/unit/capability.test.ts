@@ -92,6 +92,7 @@ describe("resolveDisplay", () => {
       theme: "dark",
       candidatePin: 0.4,
       layout: "auto",
+      motion: true,
     });
   });
 
@@ -171,6 +172,54 @@ describe("resolveDisplay", () => {
         config: { layout: "stack" },
       }).layout,
     ).toBe("stack");
+  });
+
+  test("display.motion auto follows color capability", () => {
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "truecolor" },
+        detectedTheme: "light",
+        config: { motion: "auto" },
+      }).motion,
+    ).toBe(true);
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "256" },
+        detectedTheme: "light",
+        config: { motion: "auto" },
+      }).motion,
+    ).toBe(true);
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "16" },
+        detectedTheme: "light",
+        config: { motion: "auto" },
+      }).motion,
+    ).toBe(false);
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "mono" },
+        detectedTheme: "light",
+        config: { motion: "auto" },
+      }).motion,
+    ).toBe(false);
+  });
+
+  test("display.motion forced on/off overrides color capability", () => {
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "mono" },
+        detectedTheme: "light",
+        config: { motion: "on" },
+      }).motion,
+    ).toBe(true);
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "truecolor" },
+        detectedTheme: "light",
+        config: { motion: "off" },
+      }).motion,
+    ).toBe(false);
   });
 });
 

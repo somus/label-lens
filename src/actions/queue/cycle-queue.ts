@@ -1,4 +1,5 @@
 import type { AppContext } from "../../app/context.ts";
+import { flash } from "../../render/anim.ts";
 import { QUEUE_CYCLE, resolveQueue } from "../../store/queues/registry.ts";
 import type { Command } from "../command.ts";
 
@@ -17,6 +18,7 @@ function step(ctx: AppContext, delta: 1 | -1): void {
   if (cached) cursor.refresh();
   ctx.cursor = cursor;
   ctx.queueId = next;
+  ctx.motion.play("status.queue", flash(120, "info"));
   ctx.setFlash(`Queue: ${resolveQueue(next).label}`, "info", 1500);
   ctx.requestRender();
 }

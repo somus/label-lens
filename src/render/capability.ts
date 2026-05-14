@@ -20,6 +20,7 @@ export type ResolvedDisplay = {
   theme: "light" | "dark";
   candidatePin: number;
   layout: Layout;
+  motion: boolean;
 };
 
 const SPLIT_MIN_WIDTH = 160;
@@ -68,7 +69,14 @@ export function resolveDisplay(args: {
   const pin = args.config?.candidatePin ?? 0.4;
   const candidatePin = Math.max(0.05, Math.min(0.95, pin));
   const layout: Layout = args.config?.layout ?? "auto";
-  return { color, banding, theme, candidatePin, layout };
+  const motionMode = args.config?.motion ?? "auto";
+  const motion =
+    motionMode === "on"
+      ? true
+      : motionMode === "off"
+        ? false
+        : color === "truecolor" || color === "256";
+  return { color, banding, theme, candidatePin, layout, motion };
 }
 
 export type ThemeProbe = {
@@ -83,6 +91,7 @@ export function defaultDisplay(): ResolvedDisplay {
     theme: "light",
     candidatePin: 0.4,
     layout: "auto",
+    motion: false,
   };
 }
 
