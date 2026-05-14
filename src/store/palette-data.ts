@@ -74,7 +74,7 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     sourceCounts,
     labelCounts,
     topics: manPageTopics(),
-    formats: ["jsonl", "csv", "stats"],
+    formats: ["jsonl", "csv", "review-log", "stats"],
     queueNames: Object.keys(BUILTIN_QUEUES),
   };
 }
