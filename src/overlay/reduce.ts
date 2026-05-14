@@ -1,3 +1,4 @@
+import { reduceFilterBuilder } from "./filter-builder.ts";
 import { reduceGuidelines } from "./guidelines.ts";
 import { reduceHelp } from "./help.ts";
 import { reduceNote } from "./note.ts";
@@ -18,6 +19,8 @@ export function reduceOverlay(overlay: Overlay, event: OverlayEvent): ReduceResu
       return { overlay: null, effects: [{ kind: "close" }] };
     case "palette":
       return reducePalette(overlay.state, event);
+    case "filter-builder":
+      return reduceFilterBuilder(overlay.state, event);
     case "help":
       return reduceHelp(overlay.state, event);
     case "guidelines":

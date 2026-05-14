@@ -2,7 +2,12 @@ import { openStatsOverlay } from "../../overlay/stats-overlay.ts";
 import { allStats } from "../../store/stats.ts";
 import type { Command } from "../command.ts";
 
-function openStats(ctx: import("../../app/context.ts").AppContext): void {
+export function openStats(ctx: import("../../app/context.ts").AppContext): void {
+  if (ctx.openStatsScreen) {
+    ctx.openStatsScreen();
+    return;
+  }
+
   const { sections } = allStats(ctx.db);
   ctx.openOverlay({ kind: "stats", state: openStatsOverlay(sections) });
 }

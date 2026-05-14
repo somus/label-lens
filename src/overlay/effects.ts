@@ -1,4 +1,6 @@
 import type { AppContext } from "../app/context.ts";
+import { predicateQueue } from "../store/queues/predicate.ts";
+import { queueCount } from "../store/queues/queue-counts.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { insertReview, updateRecordNote } from "../store/records.ts";
 import type { Effect } from "./types.ts";
@@ -53,6 +55,32 @@ export function applyEffects(
         break;
       case "pushPaletteHistory":
         app.pushPaletteHistory(effect.entry);
+        break;
+      case "scheduleFilterPreview":
+        setTimeout(() => {
+          const overlay = app.overlay;
+          if (overlay?.kind !== "filter-builder") return;
+          if (overlay.state.revision !== effect.revision) return;
+          try {
+            overlay.state = {
+              ...overlay.state,
+              preview: {
+                kind: "ready",
+                count: queueCount(app.db, predicateQueue(effect.predicate)),
+              },
+            };
+          } catch (err) {
+            overlay.state = {
+              ...overlay.state,
+              preview: { kind: "error", message: err instanceof Error ? err.message : String(err) },
+            };
+          }
+          try {
+            app.requestRender();
+          } catch {
+            // Tests can dispose the sqlite handle before a debounce fires.
+          }
+        }, 200);
         break;
     }
   }

@@ -17,6 +17,11 @@ export type PaletteData = {
   topics: string[];
   formats: string[];
   queueNames: string[];
+  filterValues: {
+    finalLabels: string[];
+    prevLabels: string[];
+    confidences: string[];
+  };
   /** Total record count — denominator for queue progress bars in pickers. */
   totalRecords: number;
 };
@@ -63,6 +68,18 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     labelCounts.set(row.label, row.n);
   }
 
+  const finalLabels = db
+    .all<{ label: string }>(
+      sql`SELECT DISTINCT final_label AS label FROM effective_reviews WHERE final_label IS NOT NULL ORDER BY label`,
+    )
+    .map((r) => r.label);
+
+  const prevLabels = db
+    .all<{ label: string }>(
+      sql`SELECT DISTINCT prev_label AS label FROM effective_reviews WHERE prev_label IS NOT NULL ORDER BY label`,
+    )
+    .map((r) => r.label);
+
   return {
     counts,
     sources,
@@ -75,6 +92,11 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     topics: manPageTopics(),
     formats: ["jsonl", "csv", "review-log", "stats"],
     queueNames: Object.keys(BUILTIN_QUEUES),
+    filterValues: {
+      finalLabels: [...new Set([...labels, ...finalLabels])].sort(),
+      prevLabels: [...new Set([...labels, ...prevLabels])].sort(),
+      confidences: [],
+    },
     totalRecords: db.select({ n: sql<number>`COUNT(*)` }).from(records).get()?.n ?? 0,
   };
 }

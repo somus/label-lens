@@ -33,12 +33,27 @@ function parametric(stem: string, meta: PaletteMetadata, prefix?: string): Comma
   };
 }
 
-export const paletteQueue: Command = parametric("queue", {
-  category: "queues",
-  arity: 1,
-  pickerKind: "queue",
-  description: "Switch to queue by name",
-});
+export const paletteQueue: Command = {
+  name: "palette.queue",
+  scope: "global",
+  palette: ":queue",
+  paletteMetadata: {
+    category: "queues",
+    description: "Open queues, or switch by name",
+  },
+  run: (ctx, argument) => {
+    const arg = argument?.trim() ?? "";
+    if (arg.length === 0) {
+      if (!ctx.openQueueScreen) {
+        ctx.setFlash("Queue screen unavailable", "info", 1200);
+        return;
+      }
+      ctx.openQueueScreen();
+      return;
+    }
+    trySwitch(ctx, arg);
+  },
+};
 
 export const paletteBySource: Command = parametric(
   "by-source",

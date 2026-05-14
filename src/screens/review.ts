@@ -18,6 +18,7 @@ import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { splitContextLines } from "../render/context-strip.ts";
+import { renderFilterBuilder } from "../render/filter-view.ts";
 import { Markdown } from "../render/markdown.ts";
 import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
@@ -68,6 +69,7 @@ export function mountReviewScreen(args: {
   app.commandRegistry = registry;
   app.activeScope = "review";
   const bindings = bindingsFor([...registry.values()]);
+  let mounted = true;
 
   const chord = createChordResolver(bindings);
   const dispatchCommand = (name: string, argument?: string): Promise<void> =>
@@ -76,6 +78,7 @@ export function mountReviewScreen(args: {
   let lastOverlayActive = false;
 
   const renderState = () => {
+    if (!mounted) return;
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
     const docViewActive = app.docView !== null;
     const overlayActive = app.overlay !== null;
@@ -203,7 +206,7 @@ export function mountReviewScreen(args: {
       app.overlay = result.overlay;
       const queueId = app.queueId ?? initialQueueId;
       applyEffects(app, queueId, result.effects, dispatchCommand);
-      renderState();
+      if (mounted) renderState();
       return;
     }
     const scope = app.docView ? "doc-view" : "review";
@@ -226,6 +229,7 @@ export function mountReviewScreen(args: {
 
   return {
     destroy: () => {
+      mounted = false;
       renderer.keyInput.off("keypress", onKey);
       renderer.off("resize", onResize);
     },
@@ -594,6 +598,8 @@ function renderOverlay(
       );
     case "palette":
       return renderPaletteV2(overlay.state, display, termWidth, termHeight);
+    case "filter-builder":
+      return renderFilterBuilder(overlay.state, display, termWidth, termHeight);
     case "help":
       return renderHelp(overlay.state, display, termWidth, termHeight);
     case "guidelines":

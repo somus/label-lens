@@ -1,121 +1,22 @@
-import { type AnyColumn, type SQL, sql } from "drizzle-orm";
+import {
+  isPredicateColumn,
+  OPERATORS,
+  type Predicate,
+  type PredicateColumn,
+  type PredicateOperator,
+  type PredicateValue,
+  predicateQueue,
+  WhereParseError,
+} from "./queues/predicate.ts";
 import type { QueueDefinition } from "./queues/registry.ts";
-import { recordsWithPrimary } from "./schema.ts";
 
-export class WhereParseError extends Error {
-  constructor(
-    message: string,
-    public readonly position?: number,
-  ) {
-    super(message);
-    this.name = "WhereParseError";
-  }
-}
-
-type Operand =
-  /** Bare drizzle column reference. */
-  | { kind: "col"; col: AnyColumn }
-  /** A scalar SQL fragment that can stand on either side of a binary operator. */
-  | { kind: "sql"; sql: SQL };
-
-type ColumnDef = {
-  /** Returns the SQL operand to compare against, given the comparison value. */
-  operand: (value: string | number) => Operand;
-  /**
-   * Optional override that builds the entire predicate (used for `issue_type`
-   * which compiles to `EXISTS (...)` rather than `column op value`).
-   */
-  buildPredicate?: (op: Operator, value: string | number | (string | number)[]) => SQL;
-};
-
-const COLUMNS: Record<string, ColumnDef> = {
-  status: {
-    // Untouched records have no row in `effective_reviews`; the bare subquery
-    // would return NULL and `NULL = 'pending'` is NULL (not true) under SQL
-    // three-valued logic, so `where:status = 'pending'` would match nothing
-    // and `where:status != 'skipped'` would silently drop pending rows.
-    // PRD §10.2 lists `pending` as a first-class state — COALESCE the
-    // subquery to `'pending'` so status filters behave per spec.
-    operand: () => ({
-      kind: "sql",
-      sql: sql`COALESCE(
-        (
-          SELECT er.status FROM effective_reviews er
-          WHERE er.record_id = ${recordsWithPrimary.id}
-          ORDER BY er.id DESC LIMIT 1
-        ),
-        'pending'
-      )`,
-    }),
-  },
-  final_label: {
-    operand: () => ({
-      kind: "sql",
-      sql: sql`(
-        SELECT er.final_label FROM effective_reviews er
-        WHERE er.record_id = ${recordsWithPrimary.id}
-        ORDER BY er.id DESC LIMIT 1
-      )`,
-    }),
-  },
-  prev_label: {
-    operand: () => ({
-      kind: "sql",
-      sql: sql`(
-        SELECT er.prev_label FROM effective_reviews er
-        WHERE er.record_id = ${recordsWithPrimary.id}
-        ORDER BY er.id DESC LIMIT 1
-      )`,
-    }),
-  },
-  source: { operand: () => ({ kind: "col", col: recordsWithPrimary.primarySource }) },
-  confidence: {
-    operand: () => ({ kind: "col", col: recordsWithPrimary.primaryConfidence }),
-  },
-  reason: { operand: () => ({ kind: "col", col: recordsWithPrimary.primaryReason }) },
-  // `orphan` is exposed so the power-user `where:` form can filter the orphan
-  // bucket explicitly. Built-in queues already exclude orphans; `where:` does
-  // NOT auto-exclude (escape hatch should be transparent). PRD §10.3, slice 9.
-  orphan: { operand: () => ({ kind: "col", col: recordsWithPrimary.orphan }) },
-  issue_type: {
-    operand: () => {
-      throw new WhereParseError("issue_type uses dedicated EXISTS path");
-    },
-    buildPredicate: (op, value) => {
-      if (op !== "=" && op !== "!=" && op !== "in") {
-        throw new WhereParseError(`unsupported operator for issue_type: ${op}`);
-      }
-      const values = Array.isArray(value) ? value : [value];
-      for (const v of values) {
-        if (typeof v !== "string") {
-          throw new WhereParseError("issue_type values must be strings");
-        }
-      }
-      const placeholders = values.map((v) => sql`${v}`);
-      const list = sql.join(placeholders, sql`, `);
-      const exists =
-        op === "in"
-          ? sql`EXISTS (
-              SELECT 1 FROM issues i
-              WHERE i.record_id = ${recordsWithPrimary.id} AND i.type IN (${list})
-            )`
-          : sql`EXISTS (
-              SELECT 1 FROM issues i
-              WHERE i.record_id = ${recordsWithPrimary.id} AND i.type = ${values[0]}
-            )`;
-      return op === "!=" ? sql`NOT ${exists}` : exists;
-    },
-  },
-};
-
-const OPERATORS = ["!=", "<=", ">=", "=", "<", ">", "in"] as const;
-type Operator = (typeof OPERATORS)[number];
+export { WhereParseError } from "./queues/predicate.ts";
 
 type Token =
   | { kind: "ident"; value: string; pos: number }
   | { kind: "string"; value: string; pos: number }
   | { kind: "number"; value: number; pos: number }
-  | { kind: "op"; value: Operator; pos: number }
+  | { kind: "op"; value: PredicateOperator; pos: number }
   | { kind: "lparen"; pos: number }
   | { kind: "rparen"; pos: number }
   | { kind: "comma"; pos: number }
@@ -200,8 +101,7 @@ function tokenize(input: string): Token[] {
       else tokens.push({ kind: "ident", value: s, pos: start });
       continue;
     }
-    // operators (longest match first)
-    let matched: Operator | null = null;
+    let matched: PredicateOperator | null = null;
     for (const op of OPERATORS) {
       if (op === "in") continue;
       if (input.startsWith(op, i)) {
@@ -224,27 +124,27 @@ class Parser {
 
   constructor(private readonly tokens: Token[]) {}
 
-  parseExpr(): SQL {
+  parseExpr(): Predicate {
     let left = this.parseAnd();
     while (this.peek()?.kind === "or") {
       this.advance();
       const right = this.parseAnd();
-      left = sql`(${left} OR ${right})`;
+      left = { kind: "or", left, right };
     }
     return left;
   }
 
-  private parseAnd(): SQL {
+  private parseAnd(): Predicate {
     let left = this.parseTerm();
     while (this.peek()?.kind === "and") {
       this.advance();
       const right = this.parseTerm();
-      left = sql`(${left} AND ${right})`;
+      left = { kind: "and", left, right };
     }
     return left;
   }
 
-  private parseTerm(): SQL {
+  private parseTerm(): Predicate {
     const tok = this.peek();
     if (!tok) throw new WhereParseError("unexpected end of expression");
     if (tok.kind === "lparen") {
@@ -258,7 +158,7 @@ class Parser {
     return this.parsePredicate();
   }
 
-  private parsePredicate(): SQL {
+  private parsePredicate(): Predicate {
     const colTok = this.peek();
     if (colTok?.kind !== "ident") {
       throw new WhereParseError(
@@ -267,9 +167,7 @@ class Parser {
       );
     }
     this.advance();
-    const colName = colTok.value;
-    const colDef = COLUMNS[colName];
-    if (!colDef) throw new WhereParseError(`unknown column ${colName}`, colTok.pos);
+    const column = parseColumn(colTok.value, colTok.pos);
 
     const opTok = this.peek();
     if (opTok?.kind !== "op") {
@@ -284,7 +182,7 @@ class Parser {
       const open = this.peek();
       if (open?.kind !== "lparen") throw new WhereParseError("expected '(' after 'in'", open?.pos);
       this.advance();
-      const values: (string | number)[] = [];
+      const values: PredicateValue[] = [];
       while (this.peek()?.kind !== "rparen") {
         const v = this.peek();
         if (v?.kind !== "string" && v?.kind !== "number") {
@@ -296,11 +194,7 @@ class Parser {
       }
       this.advance();
       if (values.length === 0) throw new WhereParseError("'in' list is empty", opTok.pos);
-      if (colDef.buildPredicate) return colDef.buildPredicate(op, values);
-      const operand = colDef.operand(values[0]!);
-      const left = operand.kind === "col" ? sql`${operand.col}` : operand.sql;
-      const placeholders = values.map((v) => sql`${v}`);
-      return sql`${left} IN (${sql.join(placeholders, sql`, `)})`;
+      return { kind: "in", column, values };
     }
 
     const valTok = this.peek();
@@ -310,27 +204,15 @@ class Parser {
     this.advance();
 
     if (valTok.kind === "ident") {
-      const rhsName = valTok.value;
-      const rhsDef = COLUMNS[rhsName];
-      if (!rhsDef) throw new WhereParseError(`unknown column ${rhsName}`, valTok.pos);
-      if (rhsDef.buildPredicate || colDef.buildPredicate) {
-        throw new WhereParseError(
-          "column-vs-column comparison is not supported for issue_type",
-          valTok.pos,
-        );
-      }
-      const leftOperand = colDef.operand("");
-      const rightOperand = rhsDef.operand("");
-      const left = leftOperand.kind === "col" ? sql`${leftOperand.col}` : leftOperand.sql;
-      const right = rightOperand.kind === "col" ? sql`${rightOperand.col}` : rightOperand.sql;
-      return binaryColumnPredicate(left, op, right);
+      return {
+        kind: "comparison",
+        column,
+        operator: op,
+        value: { kind: "column", column: parseColumn(valTok.value, valTok.pos) },
+      };
     }
 
-    const value = valTok.value;
-    if (colDef.buildPredicate) return colDef.buildPredicate(op, value);
-    const operand = colDef.operand(value);
-    const left = operand.kind === "col" ? sql`${operand.col}` : operand.sql;
-    return binaryPredicate(left, op, value);
+    return { kind: "comparison", column, operator: op, value: valTok.value };
   }
 
   private peek(): Token | undefined {
@@ -346,53 +228,20 @@ class Parser {
   }
 }
 
-function binaryColumnPredicate(left: SQL, op: Operator, right: SQL): SQL {
-  switch (op) {
-    case "=":
-      return sql`${left} = ${right}`;
-    case "!=":
-      return sql`${left} != ${right}`;
-    case "<":
-      return sql`${left} < ${right}`;
-    case "<=":
-      return sql`${left} <= ${right}`;
-    case ">":
-      return sql`${left} > ${right}`;
-    case ">=":
-      return sql`${left} >= ${right}`;
-    case "in":
-      throw new WhereParseError("internal: 'in' handled separately");
-  }
+function parseColumn(value: string, pos: number): PredicateColumn {
+  if (!isPredicateColumn(value)) throw new WhereParseError(`unknown column ${value}`, pos);
+  return value;
 }
 
-function binaryPredicate(left: SQL, op: Operator, value: string | number): SQL {
-  switch (op) {
-    case "=":
-      return sql`${left} = ${value}`;
-    case "!=":
-      return sql`${left} != ${value}`;
-    case "<":
-      return sql`${left} < ${value}`;
-    case "<=":
-      return sql`${left} <= ${value}`;
-    case ">":
-      return sql`${left} > ${value}`;
-    case ">=":
-      return sql`${left} >= ${value}`;
-    case "in":
-      throw new WhereParseError("internal: 'in' handled separately");
-  }
-}
-
-export function parseWhere(expr: string): QueueDefinition {
+export function parseWherePredicate(expr: string): Predicate {
   const tokens = tokenize(expr);
   if (tokens.length === 0) throw new WhereParseError("empty where expression");
   const parser = new Parser(tokens);
-  const where = parser.parseExpr();
+  const predicate = parser.parseExpr();
   if (!parser.done()) throw new WhereParseError("trailing input after expression");
-  return {
-    id: `where:${expr}`,
-    label: `Where: ${expr}`,
-    query: { where },
-  };
+  return predicate;
+}
+
+export function parseWhere(expr: string): QueueDefinition {
+  return predicateQueue(parseWherePredicate(expr), expr);
 }

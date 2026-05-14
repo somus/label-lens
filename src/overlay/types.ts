@@ -1,5 +1,7 @@
 import type { KeyEvent } from "../keymap/engine.ts";
+import type { Predicate } from "../store/queues/predicate.ts";
 import type { ReviewStatus, SourceOfTruth } from "../types.ts";
+import type { FilterBuilderState } from "./filter-builder.ts";
 import type { GuidelinesState } from "./guidelines.ts";
 import type { HelpState } from "./help.ts";
 import type { PaletteState } from "./palette.ts";
@@ -37,6 +39,7 @@ export type Overlay =
   | { kind: "note"; state: NoteState }
   | { kind: "assistant"; state: AssistantState }
   | { kind: "palette"; state: PaletteState }
+  | { kind: "filter-builder"; state: FilterBuilderState }
   | { kind: "help"; state: HelpState }
   | { kind: "guidelines"; state: GuidelinesState }
   | { kind: "stats"; state: StatsOverlayState };
@@ -66,7 +69,8 @@ export type Effect =
   | { kind: "updateNote"; recordId: string; value: string }
   | { kind: "markAssistantViewed"; recordId: string }
   | { kind: "runCommand"; commandName: string; argument?: string }
-  | { kind: "pushPaletteHistory"; entry: string };
+  | { kind: "pushPaletteHistory"; entry: string }
+  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number };
 
 export type ReduceResult = {
   overlay: Overlay | null;

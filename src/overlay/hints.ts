@@ -31,6 +31,17 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
         { text: "close", tone: "muted" },
       ];
     }
+    case "filter-builder":
+      return [
+        { text: "[enter] ", tone: "accent" },
+        { text: "apply  ", tone: "muted" },
+        { text: "[←→/↑↓] ", tone: "accent" },
+        { text: "edit  ", tone: "muted" },
+        { text: "[^j/^k] ", tone: "accent" },
+        { text: "row  ", tone: "muted" },
+        { text: "[esc] ", tone: "accent" },
+        { text: "cancel", tone: "muted" },
+      ];
     case "picker":
       return [
         { text: "[enter] ", tone: "accent" },
