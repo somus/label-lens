@@ -13,6 +13,8 @@ export type FooterSpec = {
   label: string;
   order?: number;
   scopes?: Scope[];
+  /** Cluster for the footer chrome. `primary` → left, `utility` → right. Default `primary`. */
+  group?: "primary" | "utility";
 };
 
 export type PaletteCategory = "queues" | "filters" | "actions" | "help";

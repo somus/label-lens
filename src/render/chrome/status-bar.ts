@@ -53,6 +53,17 @@ export function segmentsToStyledText(segs: Segment[], display: ResolvedDisplay):
   return new StyledText(segs.map((seg) => chunkFor(seg, display)));
 }
 
+/**
+ * `│` chip separator for status-bar segment composition. Callers append it
+ * between logical segments (`LabelLens │ dataset │ Queues`) instead of the
+ * earlier double-space dim gap, so the segments read as distinct chips.
+ * Not yet adopted by every screen — kept exported so the next status-bar
+ * refresh (overall-progress hint, velocity hint) can compose it consistently.
+ */
+export function sep(): Segment {
+  return { text: " │ ", tone: "dim" };
+}
+
 export type StatusBarProps = {
   display: ResolvedDisplay;
   left: Segment[];

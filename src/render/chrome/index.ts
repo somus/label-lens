@@ -63,8 +63,8 @@ export type ChromeProps =
 export function Chrome(props: ChromeProps): ReturnType<typeof Box> {
   const { display, statusLeft, statusRight, footerHint, width, body } = props;
   const footer = props.app
-    ? ActionFooter({ display, app: props.app, scope: props.scope, hint: footerHint })
-    : ActionFooter({ display, hint: footerHint as Segment[] });
+    ? ActionFooter({ display, app: props.app, scope: props.scope, hint: footerHint, width })
+    : ActionFooter({ display, hint: footerHint as Segment[], width });
   return Box(
     { flexDirection: "column", flexGrow: 1, padding: 1 },
     StatusBar({ display, left: statusLeft, right: statusRight, width }),

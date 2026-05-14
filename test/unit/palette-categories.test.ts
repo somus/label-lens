@@ -73,6 +73,15 @@ describe("categorize", () => {
     const labels = groups.map((g) => g.label);
     expect(labels).toEqual(["Queues", "Filters", "Actions", "Help"]);
   });
+
+  test("attaches a Unicode icon per category for capability-aware rendering", () => {
+    const groups = categorize(entries, commands);
+    const byId = Object.fromEntries(groups.map((g) => [g.id, g]));
+    expect(byId.queues?.icon).toBe("⊞");
+    expect(byId.filters?.icon).toBe("◇");
+    expect(byId.actions?.icon).toBe("▸");
+    expect(byId.help?.icon).toBe("?");
+  });
 });
 
 describe("flattenForNav", () => {

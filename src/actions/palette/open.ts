@@ -11,6 +11,7 @@ export const paletteOpen: Command = {
     label: "palette",
     order: 110,
     scopes: ["review", "queue", "stats", "doc-view"],
+    group: "utility",
   },
   run: (ctx) => {
     const registry = ctx.commandRegistry;

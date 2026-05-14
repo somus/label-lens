@@ -5,8 +5,12 @@ import type { CategoryGroup } from "../overlay/palette-categories.ts";
 import type { PickerField } from "../overlay/palette-picker.ts";
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
+import { type Segment, segmentsToStyledText } from "./chrome/status-bar.ts";
+import { progressSegments } from "./progress-segments.ts";
 import { Text, TextAttributes } from "./text.ts";
 import { borderForRole, resolveTheme } from "./theme.ts";
+
+const PICKER_PROGRESS_WIDTH = 8;
 
 export function renderPalette(
   state: PaletteState,
@@ -143,13 +147,27 @@ function renderPickerModal(
 
   const maxItems = 16;
   const visible = picker.candidates.slice(0, maxItems);
+  const isQueuePicker = picker.pickerKind === "queue" && picker.totalForProgress !== undefined;
   for (let i = 0; i < visible.length; i++) {
     const candidate = visible[i]!;
     const isHighlighted = i === picker.highlight;
     const count = picker.candidateCounts?.get(candidate);
-    entryChildren.push(
-      renderEntry(candidate, count, undefined, isHighlighted, innerWidth, useColor, t),
-    );
+    if (isQueuePicker && count !== undefined) {
+      entryChildren.push(
+        renderQueueEntry(
+          candidate,
+          count,
+          picker.totalForProgress as number,
+          isHighlighted,
+          innerWidth,
+          display,
+        ),
+      );
+    } else {
+      entryChildren.push(
+        renderEntry(candidate, count, undefined, isHighlighted, innerWidth, useColor, t),
+      );
+    }
   }
 
   if (visible.length === 0 && picker.pickerKind !== "text") {
@@ -216,13 +234,15 @@ function renderCategoryHeader(
   useColor: boolean,
   t: ReturnType<typeof resolveTheme>,
 ): ReturnType<typeof Text> {
+  // Icons land in truecolor/256 only — 16/mono drop them (see ADR/issue #46).
+  const header = useColor ? ` ${cat.icon} ${cat.label}` : ` ${cat.label}`;
   if (useColor) {
     return Text({
-      content: new StyledText([dimFn(fgFn(t.fg.muted)(` ${cat.label}`))]),
+      content: new StyledText([dimFn(fgFn(t.fg.muted)(header))]),
       attributes: TextAttributes.NONE,
     });
   }
-  return Text({ content: ` ${cat.label}`, attributes: TextAttributes.DIM });
+  return Text({ content: header, attributes: TextAttributes.DIM });
 }
 
 function renderEntry(
@@ -264,6 +284,42 @@ function renderEntry(
     });
   }
   return Text({ content: line, attributes: TextAttributes.DIM });
+}
+
+function renderQueueEntry(
+  name: string,
+  count: number,
+  total: number,
+  highlighted: boolean,
+  innerWidth: number,
+  display: ResolvedDisplay,
+): ReturnType<typeof Text> {
+  const useColor = display.color === "truecolor" || display.color === "256";
+  const prefix = highlighted ? " > " : "   ";
+  const label = name.startsWith(":") ? name.slice(1) : name;
+  const countText = String(count);
+  const countTone: Segment["tone"] = count > 0 ? "accent" : "dim";
+  const labelTone: Segment["tone"] = highlighted ? "accent" : count > 0 ? "default" : "dim";
+  const progress = progressSegments(count, total, PICKER_PROGRESS_WIDTH, display);
+  const fixedRight = `${countText.padStart(4, " ")} `;
+  const progressLength = progress.reduce((n, s) => n + s.text.length, 0);
+  const gap = Math.max(
+    1,
+    innerWidth - prefix.length - label.length - fixedRight.length - progressLength,
+  );
+  const segs: Segment[] = [
+    { text: prefix, tone: highlighted ? "accent" : "default" },
+    { text: label, tone: labelTone },
+    { text: " ".repeat(gap), tone: "dim" },
+    { text: fixedRight.slice(0, -1), tone: countTone },
+    { text: " ", tone: "dim" },
+    ...progress,
+  ];
+  return Text({
+    content: useColor ? segmentsToStyledText(segs, display) : segs.map((s) => s.text).join(""),
+    attributes: highlighted ? TextAttributes.BOLD : TextAttributes.NONE,
+    wrapMode: "char",
+  });
 }
 
 function entryDescription(commandName: string, commands: Command[]): string | undefined {
