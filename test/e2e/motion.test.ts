@@ -62,21 +62,17 @@ describe("motion feedback", () => {
     expect(frame).toContain("Reviewed:");
   });
 
-  test("last pending decision fills progress and flashes queue complete", async () => {
+  test("last pending decision flashes queue complete", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const keep = store.db.all<{ id: string }>(
       sql`SELECT id FROM records ORDER BY row_index LIMIT 1`,
     )[0]!.id;
     store.db.run(sql`DELETE FROM records WHERE id != ${keep}`);
-    const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
+    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
 
     mockInput.pressKey("a");
     await renderOnce();
 
-    expect(app.motion.snapshot("progress.queue")).toMatchObject({
-      active: true,
-      kind: "progressTick",
-    });
     expect(captureCharFrame()).toContain("queue complete");
   });
 

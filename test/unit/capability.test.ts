@@ -205,14 +205,7 @@ describe("resolveDisplay", () => {
     ).toBe(false);
   });
 
-  test("display.motion forced on/off overrides color capability", () => {
-    expect(
-      resolveDisplay({
-        detectedColor: { color: "mono" },
-        detectedTheme: "light",
-        config: { motion: "on" },
-      }).motion,
-    ).toBe(true);
+  test("display.motion 'off' wins over capability; 'on' cannot re-enable 16 / mono", () => {
     expect(
       resolveDisplay({
         detectedColor: { color: "truecolor" },
@@ -220,6 +213,29 @@ describe("resolveDisplay", () => {
         config: { motion: "off" },
       }).motion,
     ).toBe(false);
+    // Capability is load-bearing: motion machinery has nothing to render at
+    // 16 / mono, so 'on' is clamped to the capability ceiling.
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "mono" },
+        detectedTheme: "light",
+        config: { motion: "on" },
+      }).motion,
+    ).toBe(false);
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "16" },
+        detectedTheme: "light",
+        config: { motion: "on" },
+      }).motion,
+    ).toBe(false);
+    expect(
+      resolveDisplay({
+        detectedColor: { color: "truecolor" },
+        detectedTheme: "light",
+        config: { motion: "on" },
+      }).motion,
+    ).toBe(true);
   });
 });
 

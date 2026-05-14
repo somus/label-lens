@@ -1,6 +1,5 @@
 import type { AppContext } from "../app/context.ts";
-import { flash, progressTick } from "../render/anim.ts";
-import { progressCounts } from "../store/queries.ts";
+import { flash } from "../render/anim.ts";
 import { predicateQueue } from "../store/queues/predicate.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import type { QueueId } from "../store/queues/registry.ts";
@@ -30,9 +29,6 @@ export function applyEffects(
         app.closeOverlay();
         break;
       case "commitDecision": {
-        const beforeCounts = progressCounts(app.db);
-        const beforeReviewed =
-          beforeCounts.accepted + beforeCounts.relabeled + beforeCounts.rejected;
         insertReview(app.db, {
           record_id: effect.recordId,
           status: effect.status,
@@ -48,14 +44,8 @@ export function applyEffects(
         } else if (effect.status === "rejected") {
           app.motion.play("footer.reject", flash(80, "danger"));
         }
-        const afterCounts = progressCounts(app.db);
-        const afterReviewed = afterCounts.accepted + afterCounts.relabeled + afterCounts.rejected;
-        if (afterReviewed !== beforeReviewed) {
-          app.motion.play("progress.reviewed", progressTick(beforeReviewed, afterReviewed));
-        }
-        if (cursor.total === 0) {
-          app.motion.play("progress.queue", progressTick(0, 1));
-          if (app.display.motion) app.setFlash("queue complete", "info", 1200);
+        if (cursor.total === 0 && app.display.motion) {
+          app.setFlash("queue complete", "info", 1200);
         }
         break;
       }

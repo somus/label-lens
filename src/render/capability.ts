@@ -70,12 +70,11 @@ export function resolveDisplay(args: {
   const candidatePin = Math.max(0.05, Math.min(0.95, pin));
   const layout: Layout = args.config?.layout ?? "auto";
   const motionMode = args.config?.motion ?? "auto";
-  const motion =
-    motionMode === "on"
-      ? true
-      : motionMode === "off"
-        ? false
-        : color === "truecolor" || color === "256";
+  const supportsMotion = color === "truecolor" || color === "256";
+  // Motion is always off at 16 / mono — the fade/flash machinery has nothing
+  // to render at those capability levels. `on` cannot override capability,
+  // matching the `banding` clamp above.
+  const motion = motionMode === "off" ? false : supportsMotion;
   return { color, banding, theme, candidatePin, layout, motion };
 }
 
