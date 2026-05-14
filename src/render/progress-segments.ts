@@ -17,10 +17,14 @@ export function progressSegments(
   const ratio = total > 0 ? Math.max(0, Math.min(1, filled / total)) : 0;
   const percent = Math.round(ratio * 100);
   const barTone = filled > 0 && total > 0 ? "accent" : "dim";
+  // Percent padded to 4 chars (`  0%` … `100%`) so callers laying out rows with
+  // varying counts get aligned bracket + bar columns. Trailing `%` after the
+  // padded digits keeps the unit glued to the number.
+  const percentText = `${String(percent).padStart(3, " ")}%`;
   return [
     { text: "[", tone: "dim" },
     { text: bar, tone: barTone },
     { text: "] ", tone: "dim" },
-    { text: `${percent}%`, tone: "muted" },
+    { text: percentText, tone: "muted" },
   ];
 }

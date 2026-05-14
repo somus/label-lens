@@ -6,13 +6,13 @@ exports[`queue screen e2e renders all built-in queues with counts 1`] = `
                                                                                                     
   Review Queues                                                                                     
   > Pending           10  [########] 100%  Awaiting your label                                      
-    Skipped            0  [--------] 0%  Reviewed but punted                                        
-    Marked             0  [--------] 0%  Flagged for follow-up via [m]                              
+    Skipped            0  [--------]   0%  Reviewed but punted                                      
+    Marked             0  [--------]   0%  Flagged for follow-up via [m]                            
                                                                                                     
   Signal Queues                                                                                     
     Low confidence    10  [########] 100%  Predictions with the weakest scores                      
-    Disagreements      1  [#-------] 10%  Sources predict different labels                          
-    Flagged            1  [#-------] 10%  Imported or computed signals                              
+    Disagreements      1  [#-------]  10%  Sources predict different labels                         
+    Flagged            1  [#-------]  10%  Imported or computed signals                             
                                                                                                     
                                                                                                     
                                                                                                     
