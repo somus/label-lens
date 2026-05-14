@@ -3,6 +3,7 @@ import { reduceHelp } from "./help.ts";
 import { reduceNote } from "./note.ts";
 import { reducePalette } from "./palette.ts";
 import { reducePicker } from "./picker.ts";
+import { reduceStatsOverlay } from "./stats-overlay.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 /** Top-level dispatch over the Overlay union. */
@@ -21,5 +22,7 @@ export function reduceOverlay(overlay: Overlay, event: OverlayEvent): ReduceResu
       return reduceHelp(overlay.state, event);
     case "guidelines":
       return reduceGuidelines(overlay.state, event);
+    case "stats":
+      return reduceStatsOverlay(overlay.state, event);
   }
 }

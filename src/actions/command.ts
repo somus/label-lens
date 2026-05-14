@@ -15,11 +15,29 @@ export type FooterSpec = {
   scopes?: Scope[];
 };
 
+export type PaletteCategory = "queues" | "filters" | "actions" | "help";
+
+export type PaletteMetadata = {
+  category?: PaletteCategory;
+  description?: string;
+  arity?: 0 | 1;
+  pickerKind?:
+    | "source"
+    | "label"
+    | "reason"
+    | "issue"
+    | "correction"
+    | "topic"
+    | "format"
+    | "queue";
+};
+
 export type Command<Ctx extends ActionContext = ActionContext> = {
   name: string;
   scope: Scope;
   binding?: string | string[];
   palette?: string;
+  paletteMetadata?: PaletteMetadata;
   hidden?: boolean;
   footer?: FooterSpec;
   /** Message flashed when run is gated by `enabled === false`. */

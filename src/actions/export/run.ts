@@ -153,6 +153,12 @@ export const paletteExportCommand: Command = {
   name: "palette.export",
   scope: "global",
   palette: ":export",
+  paletteMetadata: {
+    category: "actions",
+    arity: 1,
+    pickerKind: "format",
+    description: "Export reviewed data",
+  },
   run: (ctx, argument) => {
     const parsed = parseExportArgument(argument);
     if (parsed.error) {

@@ -9,7 +9,7 @@ import { applyEffects } from "../overlay/effects.ts";
 import type { GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
-import type { PaletteState } from "../overlay/palette.ts";
+
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { BadgeLine, type BadgeVariant } from "../render/badge.ts";
@@ -19,9 +19,10 @@ import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { Markdown } from "../render/markdown.ts";
+import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Text, TextAttributes } from "../render/text.ts";
-import { borderForRole } from "../render/theme.ts";
+import { borderForRole, resolveTheme } from "../render/theme.ts";
 import type { Db } from "../store/db.ts";
 import { issuesForRecord, type StoredIssue } from "../store/issues.ts";
 import { type HistoryEntry, progressCounts, recentReviewsWithText } from "../store/queries.ts";
@@ -173,7 +174,9 @@ export function mountReviewScreen(args: {
             totalRecords: counts.total,
             predictionCount,
           }),
-      app.overlay ? renderOverlay(app.overlay, app.display) : Box({}),
+      app.overlay
+        ? renderOverlay(app.overlay, app.display, renderer.terminalWidth, renderer.terminalHeight)
+        : Box({}),
     );
 
     const footerHint = app.overlay ? overlayFooterHint(app.overlay) : flashFooterHint(flash);
@@ -537,51 +540,91 @@ function labelListBox(
   );
 }
 
-function renderOverlay(overlay: Overlay, display: ResolvedDisplay): ReturnType<typeof Box> {
+function modalBox(
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+  widthFraction: number,
+  // biome-ignore lint/suspicious/noExplicitAny: mixed VNode children (Text, Markdown, etc.)
+  ...children: any[]
+): ReturnType<typeof Box> {
   const border = borderForRole(display, "overlay");
+  const t = resolveTheme(display);
+  const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * widthFraction)));
+  const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
+  const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
+  const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
+  return Box(
+    {
+      flexDirection: "column",
+      borderStyle: border,
+      padding: 1,
+      position: "absolute",
+      top: topOffset,
+      left: leftOffset,
+      width: modalWidth,
+      height: modalHeight,
+      zIndex: 100,
+      shouldFill: true,
+      overflow: "hidden",
+      backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
+    },
+    ...children,
+  );
+}
+
+function renderOverlay(
+  overlay: Overlay,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
   switch (overlay.kind) {
     case "picker":
-      return renderPicker(overlay.state, border);
+      return renderPicker(overlay.state, display, termWidth, termHeight);
     case "note":
-      return renderNote(overlay.state, border);
+      return renderNote(overlay.state, display, termWidth, termHeight);
     case "assistant":
-      return Box(
-        { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
+      return modalBox(
+        display,
+        termWidth,
+        termHeight,
+        0.5,
         Text({ content: " assistant overlay (slice 11)" }),
       );
     case "palette":
-      return renderPalette(overlay.state, border);
+      return renderPaletteV2(overlay.state, display, termWidth, termHeight);
     case "help":
-      return renderHelp(overlay.state, border);
+      return renderHelp(overlay.state, display, termWidth, termHeight);
     case "guidelines":
-      return renderGuidelines(overlay.state, border);
+      return renderGuidelines(overlay.state, display, termWidth, termHeight);
+    case "stats":
+      return renderStatsOverlay(overlay.state, display, termWidth, termHeight);
   }
 }
 
 function renderGuidelines(
   state: GuidelinesState,
-  border: "rounded" | "single" | "double",
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
 ): ReturnType<typeof Box> {
-  // Slice the markdown source by line so the reducer's scroll counter
-  // actually drives what the user sees. MarkdownRenderable doesn't expose
-  // a viewport; line-slice keeps it simple and matches the up/down=1,
-  // pgup/pgdn=10 model.
   const lines = state.content.split("\n");
   const total = lines.length;
   const start = Math.min(state.scroll, Math.max(total - 1, 0));
   const sliced = lines.slice(start).join("\n");
   const moreAbove = start > 0;
   const titleSuffix = total > 1 ? `   line ${start + 1}/${total}` : "";
-  return Box(
-    {
-      flexDirection: "column",
-      borderStyle: border,
-      padding: 1,
-      marginTop: 1,
-      flexGrow: 1,
-    },
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.7,
     Text({ content: ` ${state.title}${titleSuffix}${moreAbove ? "   ↑ above" : ""}` }),
-    Markdown({ content: sliced }),
+    Box(
+      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      Markdown({ content: sliced }),
+    ),
     Text({
       content: " ↑/↓ scroll · pgup/pgdn page · esc close",
       attributes: TextAttributes.DIM,
@@ -591,51 +634,75 @@ function renderGuidelines(
 
 function renderHelp(
   state: HelpState,
-  border: "rounded" | "single" | "double",
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
 ): ReturnType<typeof Box> {
   const visible = state.entries.slice(state.scroll, state.scroll + HELP_PAGE);
   const more = state.entries.length - state.scroll - visible.length;
-  return Box(
-    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.6,
     Text({
       content: ` help · ${state.scope} · ${state.entries.length} commands${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
     }),
-    ...visible.map((e) =>
-      Text({
-        content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
-        attributes: TextAttributes.DIM,
-      }),
+    Box(
+      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      ...visible.map((e) =>
+        Text({
+          content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
+          attributes: TextAttributes.DIM,
+        }),
+      ),
     ),
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
   );
 }
 
-function renderPalette(
-  state: PaletteState,
-  border: "rounded" | "single" | "double",
+function renderStatsOverlay(
+  state: import("../overlay/stats-overlay.ts").StatsOverlayState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
 ): ReturnType<typeof Box> {
-  return Box(
-    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
-    Text({ content: ` :${state.filter}_` }),
-    ...state.entries.slice(0, 12).map((e, i) =>
-      Text({
-        content: ` ${e.palette}${i === state.highlight ? "  <-" : ""}`,
-        attributes: i === state.highlight ? TextAttributes.BOLD : TextAttributes.DIM,
-      }),
-    ),
+  const PAGE = 20;
+  const visible = state.lines.slice(state.scroll, state.scroll + PAGE);
+  const more = state.lines.length - state.scroll - visible.length;
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.7,
     Text({
-      content: " enter run · ↑/↓ navigate · ctrl+p/n history · esc cancel",
-      attributes: TextAttributes.DIM,
+      content: ` Stats${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
+      attributes: TextAttributes.BOLD,
     }),
+    Box(
+      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      ...visible.map((line) =>
+        Text({
+          content: line.display,
+          attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
+        }),
+      ),
+    ),
+    Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
   );
 }
 
 function renderPicker(
   state: PickerState,
-  border: "rounded" | "single" | "double",
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
 ): ReturnType<typeof Box> {
-  return Box(
-    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.5,
     Text({ content: ` relabel> ${state.filter}_` }),
     ...state.candidates.slice(0, 9).map((c: PickerCandidate, i) =>
       Text({
@@ -652,10 +719,15 @@ function renderPicker(
 
 function renderNote(
   state: NoteState,
-  border: "rounded" | "single" | "double",
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
 ): ReturnType<typeof Box> {
-  return Box(
-    { flexDirection: "column", borderStyle: border, padding: 1, marginTop: 1 },
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.5,
     Text({ content: ` note> ${state.value}_` }),
     Text({
       content: " enter save · esc cancel",

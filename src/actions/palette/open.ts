@@ -1,4 +1,5 @@
-import { openPalette } from "../../overlay/palette.ts";
+import { labelName } from "../../config/config.ts";
+import { openPaletteV2 } from "../../overlay/palette.ts";
 import type { Command } from "../command.ts";
 
 export const paletteOpen: Command = {
@@ -21,7 +22,13 @@ export const paletteOpen: Command = {
     const scope = ctx.activeScope ?? "review";
     ctx.openOverlay({
       kind: "palette",
-      state: openPalette({ commands, scope, history: ctx.paletteHistory.slice() }),
+      state: openPaletteV2({
+        commands,
+        scope,
+        history: ctx.paletteHistory.slice(),
+        db: ctx.db,
+        labels: ctx.config.labels.map(labelName),
+      }),
     });
   },
 };

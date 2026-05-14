@@ -40,7 +40,7 @@ describe("palette e2e", () => {
     await renderOnce();
     expect(app.overlay?.kind).toBe("palette");
     const frame = captureCharFrame();
-    expect(frame).toContain("enter run");
+    expect(frame).toContain("[enter] run");
   });
 
   test("Esc closes the palette", async () => {
@@ -148,7 +148,7 @@ describe("palette e2e", () => {
     expect(app.queueId).toBe("by-source:llm:gpt-4");
   });
 
-  test(":help with no argument flashes the topic list", async () => {
+  test(":help with no argument opens topic picker", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey(":");
@@ -160,6 +160,9 @@ describe("palette e2e", () => {
     mockInput.pressKey("RETURN");
     await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(app.flash?.message).toContain("topics");
+    const state = app.overlay?.state as import("../../src/overlay/palette.ts").PaletteState;
+    expect(state.mode).toBe("pick");
+    expect(state.picker?.pickerKind).toBe("topic");
+    expect(state.picker?.candidates).toContain("tutorial");
   });
 });
