@@ -3,7 +3,7 @@ import { manPageTopics } from "../man/loader.ts";
 import type { Db } from "./db.ts";
 import { queueCount } from "./queues/queue-counts.ts";
 import { BUILTIN_QUEUES } from "./queues/registry.ts";
-import { recordsWithPrimary } from "./schema.ts";
+import { records, recordsWithPrimary } from "./schema.ts";
 
 export type PaletteData = {
   counts: Map<string, number>;
@@ -17,6 +17,8 @@ export type PaletteData = {
   topics: string[];
   formats: string[];
   queueNames: string[];
+  /** Total record count — denominator for queue progress bars in pickers. */
+  totalRecords: number;
 };
 
 export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
@@ -73,5 +75,6 @@ export function fetchPaletteData(db: Db, labels: string[]): PaletteData {
     topics: manPageTopics(),
     formats: ["jsonl", "csv", "review-log", "stats"],
     queueNames: Object.keys(BUILTIN_QUEUES),
+    totalRecords: db.select({ n: sql<number>`COUNT(*)` }).from(records).get()?.n ?? 0,
   };
 }

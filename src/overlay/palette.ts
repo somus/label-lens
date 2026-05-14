@@ -203,11 +203,12 @@ function tryOpenPicker(state: PaletteState): ReduceResult | null {
       return null;
   }
 
+  const totalForProgress = kind === "queue" ? data.totalRecords : undefined;
   return {
     overlay: packed({
       ...state,
       mode: "pick",
-      picker: openPicker(entry.commandName, kind, candidates, candidateCounts),
+      picker: openPicker(entry.commandName, kind, candidates, candidateCounts, totalForProgress),
     }),
     effects: [],
   };

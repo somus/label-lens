@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
-import { defaultDisplay } from "../../src/render/capability.ts";
+import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
+import { displayFor } from "../util/display.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
 function makeConfig(): LabellensConfig {
@@ -15,7 +16,7 @@ function makeConfig(): LabellensConfig {
   };
 }
 
-async function setup(store: TmpStore) {
+async function setup(store: TmpStore, display: ResolvedDisplay = defaultDisplay()) {
   const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
     width: 120,
     height: 40,
@@ -23,7 +24,7 @@ async function setup(store: TmpStore) {
   const app = createAppContext({
     db: store.db,
     config: makeConfig(),
-    display: defaultDisplay(),
+    display,
     requestRender: () => {},
     onQuit: () => {},
   });
@@ -146,6 +147,46 @@ describe("palette e2e", () => {
     await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
     expect(app.queueId).toBe("by-source:llm:gpt-4");
+  });
+
+  test(":queue picker carries totalForProgress so rows render with progress bars", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { app, mockInput, renderOnce } = await setup(store);
+    mockInput.pressKey(":");
+    await renderOnce();
+    for (const ch of "queue") {
+      mockInput.pressKey(ch);
+      await renderOnce();
+    }
+    mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
+    await renderOnce();
+    const state = app.overlay?.state as import("../../src/overlay/palette.ts").PaletteState;
+    expect(state.mode).toBe("pick");
+    expect(state.picker?.pickerKind).toBe("queue");
+    // tiny.jsonl has 10 records.
+    expect(state.picker?.totalForProgress).toBe(10);
+    expect(state.picker?.candidateCounts?.get("pending")).toBe(10);
+  });
+
+  test(":queue picker frame contains bracketed progress bar on truecolor", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { mockInput, renderOnce, captureCharFrame } = await setup(
+      store,
+      displayFor({ color: "truecolor" }),
+    );
+    mockInput.pressKey(":");
+    await renderOnce();
+    for (const ch of "queue") {
+      mockInput.pressKey(ch);
+      await renderOnce();
+    }
+    mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
+    await renderOnce();
+    const frame = captureCharFrame();
+    expect(frame).toMatch(/[█░]/);
+    expect(frame).toContain("100%");
   });
 
   test(":help with no argument opens topic picker", async () => {

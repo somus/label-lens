@@ -7,6 +7,10 @@ export type PickerField = {
   candidates: string[];
   allCandidates: string[];
   candidateCounts?: Map<string, number>;
+  /** Denominator for progress bars rendered alongside `candidateCounts`. Set
+   *  by the queue picker so each row renders a count-vs-total bar matching the
+   *  queue screen. Other picker kinds leave this undefined. */
+  totalForProgress?: number;
   filter: string;
   highlight: number;
   step?: "from" | "to";
@@ -24,6 +28,7 @@ export function openPicker(
   pickerKind: string,
   candidates: string[],
   candidateCounts?: Map<string, number>,
+  totalForProgress?: number,
 ): PickerField {
   const isCorrection = pickerKind === "correction";
   return {
@@ -33,6 +38,7 @@ export function openPicker(
     candidates: candidates.slice(),
     allCandidates: candidates.slice(),
     candidateCounts,
+    totalForProgress,
     filter: "",
     highlight: 0,
     step: isCorrection ? "from" : undefined,

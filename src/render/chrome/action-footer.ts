@@ -128,6 +128,14 @@ export type ActionFooterProps =
  * the row renders verbatim. Used by screens that mount before AppContext is
  * wired (ADR 0008).
  */
+/**
+ * Minimum overhead the footer needs beyond raw cluster text:
+ *   2 cols — Chrome outer padding (left + right)
+ *   2 cols — cluster's own leading/trailing space
+ *   1 col  — breathing room so space-between reads as separation, not overlap
+ */
+const FOOTER_OVERFLOW_OVERHEAD = 5;
+
 function segmentsLength(segs: Segment[]): number {
   let n = 0;
   for (const s of segs) n += s.text.length;
@@ -150,15 +158,12 @@ export function ActionFooter(props: ActionFooterProps): ReturnType<typeof Box> {
   const primarySegs = entriesToSegments(primary);
   const utilitySegs = entriesToSegments(utility);
   // If the combined clusters would overlap (flexbox space-between has no
-  // collision detection), fall back to a single left cluster with `┊` between
+  // collision detection), collapse into a single left cluster with `┊` between
   // groups. Otherwise route primary→left, utility→right.
-  // Chrome wraps the footer in a row with padding=1 each side, and each cluster
-  // adds its own 1-col pad. Plus we need at least 1 col of breathing room
-  // between clusters for space-between to read as separation, not overlap.
-  // Total overhead = 5 cols (2 chrome pad + 2 cluster pad + 1 gap).
   const leftWidth = segmentsLength(primarySegs);
   const rightWidth = segmentsLength(utilitySegs);
-  const overflows = width !== undefined && leftWidth + rightWidth + 5 > width;
+  const overflows =
+    width !== undefined && leftWidth + rightWidth + FOOTER_OVERFLOW_OVERHEAD > width;
   if (utility.length === 0 || overflows) {
     const middle =
       primary.length > 0 && utility.length > 0 ? [{ text: " ┊", tone: "dim" as const }] : [];
