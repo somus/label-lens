@@ -216,13 +216,15 @@ function renderCategoryHeader(
   useColor: boolean,
   t: ReturnType<typeof resolveTheme>,
 ): ReturnType<typeof Text> {
+  // Icons land in truecolor/256 only — 16/mono drop them (see ADR/issue #46).
+  const header = useColor ? ` ${cat.icon} ${cat.label}` : ` ${cat.label}`;
   if (useColor) {
     return Text({
-      content: new StyledText([dimFn(fgFn(t.fg.muted)(` ${cat.label}`))]),
+      content: new StyledText([dimFn(fgFn(t.fg.muted)(header))]),
       attributes: TextAttributes.NONE,
     });
   }
-  return Text({ content: ` ${cat.label}`, attributes: TextAttributes.DIM });
+  return Text({ content: header, attributes: TextAttributes.DIM });
 }
 
 function renderEntry(

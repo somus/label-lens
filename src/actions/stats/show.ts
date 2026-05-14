@@ -12,7 +12,7 @@ export const statsShow: Command = {
   scope: "review",
   binding: "t",
   hidden: true,
-  footer: { label: "stats", order: 120 },
+  footer: { label: "stats", order: 120, group: "utility" },
   run: openStats,
 };
 

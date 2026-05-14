@@ -4,6 +4,7 @@ import type { PaletteEntry } from "./palette.ts";
 export type CategoryGroup = {
   id: PaletteCategory;
   label: string;
+  icon: string;
   entries: PaletteEntry[];
 };
 
@@ -14,6 +15,13 @@ const CATEGORY_LABELS: Record<PaletteCategory, string> = {
   filters: "Filters",
   actions: "Actions",
   help: "Help",
+};
+
+const CATEGORY_ICONS: Record<PaletteCategory, string> = {
+  queues: "⊞",
+  filters: "◇",
+  actions: "▸",
+  help: "?",
 };
 
 export function categorize(entries: PaletteEntry[], commands: Command[]): CategoryGroup[] {
@@ -33,7 +41,12 @@ export function categorize(entries: PaletteEntry[], commands: Command[]): Catego
   for (const cat of CATEGORY_ORDER) {
     const entries = buckets.get(cat)!;
     if (entries.length > 0) {
-      groups.push({ id: cat, label: CATEGORY_LABELS[cat], entries });
+      groups.push({
+        id: cat,
+        label: CATEGORY_LABELS[cat],
+        icon: CATEGORY_ICONS[cat],
+        entries,
+      });
     }
   }
   return groups;

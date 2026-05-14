@@ -53,6 +53,11 @@ export function segmentsToStyledText(segs: Segment[], display: ResolvedDisplay):
   return new StyledText(segs.map((seg) => chunkFor(seg, display)));
 }
 
+/** `│` chip separator for status-bar segment composition. */
+export function sep(): Segment {
+  return { text: " │ ", tone: "dim" };
+}
+
 export type StatusBarProps = {
   display: ResolvedDisplay;
   left: Segment[];

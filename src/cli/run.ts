@@ -16,6 +16,7 @@ import { mountStatsScreen } from "../screens/stats.ts";
 import { runSignals } from "../signals/run.ts";
 import { type Db, openDb } from "../store/db.ts";
 import { findUnknownLabels } from "../store/labels.ts";
+import { chooseInitialScreen } from "./initial-screen.ts";
 
 export async function runReview(): Promise<void> {
   const configPath = resolve("./labellens.config.json");
@@ -181,7 +182,11 @@ export async function runReview(): Promise<void> {
     });
   };
 
-  mountReview("pending");
+  if (chooseInitialScreen(db) === "queue") {
+    app.openQueueScreen?.();
+  } else {
+    mountReview("pending");
+  }
 }
 
 function promptForChoice(

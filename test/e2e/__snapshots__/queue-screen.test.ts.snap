@@ -4,12 +4,15 @@ exports[`queue screen e2e renders all built-in queues with counts 1`] = `
 "                                                                                                    
   LabelLens  tiny.jsonl  Queues                                                           6 queues  
                                                                                                     
-  > Pending         10                                                                              
-    Skipped         0                                                                               
-    Low confidence  10                                                                              
-    Disagreements   1                                                                               
-    Flagged         1                                                                               
-    Marked          0                                                                               
+  Review Queues                                                                                     
+  > Pending           10  [########] 100%  Awaiting your label                                      
+    Skipped            0  [--------] 0%  Reviewed but punted                                        
+    Marked             0  [--------] 0%  Flagged for follow-up via [m]                              
+                                                                                                    
+  Signal Queues                                                                                     
+    Low confidence    10  [########] 100%  Predictions with the weakest scores                      
+    Disagreements      1  [#-------] 10%  Sources predict different labels                          
+    Flagged            1  [#-------] 10%  Imported or computed signals                              
                                                                                                     
                                                                                                     
                                                                                                     
@@ -26,10 +29,7 @@ exports[`queue screen e2e renders all built-in queues with counts 1`] = `
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-   [j/k] navigate  [enter] select  [esc] cancel                                                     
+   [j/k] navigate ┊ [enter] select ┊ [esc] cancel                                                   
                                                                                                     
 "
 `;
