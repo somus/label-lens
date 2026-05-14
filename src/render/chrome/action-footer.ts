@@ -69,9 +69,12 @@ export function entriesToSegments(entries: FooterEntry[]): Segment[] {
   entries.forEach((entry, i) => {
     if (i > 0) segs.push({ text: "  ", tone: "dim" });
     if (entry.disabled) {
+      // Tone-only signal so the footer stays within its single-row budget
+      // (ADR 0008). Dim renders distinctly from accent (truecolor/256) or via
+      // attribute on 16/mono (dim vs bold). disabledMessage explains *why* on
+      // attempt; the footer just signals availability.
       segs.push({ text: `[${entry.binding}] `, tone: "dim" });
       segs.push({ text: entry.label, tone: "dim" });
-      segs.push({ text: " (unavailable)", tone: "dim" });
     } else {
       segs.push({ text: `[${entry.binding}] `, tone: "accent" });
       segs.push({ text: entry.label, tone: "muted" });

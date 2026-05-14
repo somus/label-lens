@@ -22,8 +22,8 @@ exports[`review screen e2e initial render: progress strip + first record + prima
   2 travel                                                                                          
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
- palette  [t] stats  [?] help                                                                       
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t]   
+ stats  [?] help                                                                                    
                                                                                                     
 "
 `;
@@ -50,8 +50,8 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
                                                                                                     
   history:                                                                                          
   + food  Lunch at Zomato Bangalore                                                                 
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
- palette  [t] stats  [?] help                                                                       
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t]   
+ stats  [?] help                                                                                    
                                                                                                     
 "
 `;
@@ -78,8 +78,8 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
   2 travel >                                                                                        
   3 other                                                                                           
                                                                                                     
-  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc (unavailable)  [Q] queues  [:]  
- palette  [t] stats  [?] help                                                                       
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t]   
+ stats  [?] help                                                                                    
                                                                                                     
 "
 `;
@@ -99,15 +99,15 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
+                                                                                                    
   history:                                                                                          
   + ENTRY_START  Senior Engineer at Acme                                                            
   + food  Refund from Swiggy                                                                        
   + other  ATM withdrawal                                                                           
   + food  Coffee at Blue Tokai                                                                      
   + rent  Rent transfer to landlord                                                                 
-  [a] accept (unavailable)  [r] relabel (unavailable)  [x] reject (unavailable)  [s] skip (         
- unavailable)  [n] note (unavailable)  [gd] doc (unavailable)  [Q] queues  [:] palette  [t] stats   
- [?] help                                                                                           
+  [a] accept  [r] relabel  [x] reject  [s] skip  [n] note  [gd] doc  [Q] queues  [:] palette  [t]   
+ stats  [?] help                                                                                    
                                                                                                     
 "
 `;

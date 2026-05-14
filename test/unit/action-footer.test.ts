@@ -58,12 +58,11 @@ describe("entriesToSegments", () => {
     ]);
   });
 
-  test("renders disabled entries dimmed with (unavailable) marker", () => {
+  test("renders disabled entries with tone-only dim signal (no text suffix) to preserve single-row footer budget", () => {
     const segs = entriesToSegments([{ binding: "gd", label: "doc", order: 0, disabled: true }]);
     expect(segs).toEqual([
       { text: "[gd] ", tone: "dim" },
       { text: "doc", tone: "dim" },
-      { text: " (unavailable)", tone: "dim" },
     ]);
   });
 
@@ -78,7 +77,6 @@ describe("entriesToSegments", () => {
       { text: "  ", tone: "dim" },
       { text: "[gd] ", tone: "dim" },
       { text: "doc", tone: "dim" },
-      { text: " (unavailable)", tone: "dim" },
     ]);
   });
 });
