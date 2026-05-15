@@ -217,6 +217,7 @@ export function mountReviewScreen(args: {
         statusRight,
         footerHint,
         width: renderer.terminalWidth,
+        sidebar: app.getSidebarData("queue"),
         body,
       }),
     );
