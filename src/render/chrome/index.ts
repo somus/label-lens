@@ -91,7 +91,7 @@ export function Chrome(props: ChromeProps): ReturnType<typeof Box> {
         { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
         Box({ flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" }, body),
         Box({ width: 1, flexShrink: 0 }),
-        Sidebar({ display, data: sidebar, width: sbWidth }),
+        Sidebar({ display, data: sidebar, width: sbWidth, motion: props.app?.motion }),
       ),
       footer,
     );

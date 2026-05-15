@@ -60,8 +60,8 @@ describe("signalCounts", () => {
   });
 });
 
-describe("queueProgress", () => {
-  test("reviewed counts only effective reviews in the scope", async () => {
+describe("queueProgress (dataset-wide)", () => {
+  test("reviewed counts accepted + relabeled + rejected dataset-wide; total = orphan-free dataset size", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ids = recordIds(store.db);
     insertReview(store.db, {
@@ -79,10 +79,9 @@ describe("queueProgress", () => {
       source_of_truth: "human",
     });
 
-    expect(queueProgress(store.db, [ids[0]!, ids[1]!, ids[2]!], 3)).toEqual({
-      reviewed: 2,
-      total: 3,
-    });
+    const result = queueProgress(store.db);
+    expect(result.reviewed).toBe(2);
+    expect(result.total).toBe(ids.length);
   });
 
   test("undone reviews are excluded (effective_reviews per ADR 0007)", async () => {
@@ -95,7 +94,6 @@ describe("queueProgress", () => {
       prev_label: "food",
       source_of_truth: "human",
     });
-    // Compensate the prior review — undone row + original both drop from effective_reviews.
     const originalId = store.db.all<{ id: number }>(
       sql`SELECT id FROM reviews WHERE record_id = ${ids[0]!} ORDER BY id DESC LIMIT 1`,
     )[0]!.id;
@@ -104,30 +102,27 @@ describe("queueProgress", () => {
           VALUES (${ids[0]!}, 'undone', NULL, 'food', ${new Date().toISOString()}, 'human', ${originalId})`,
     );
 
-    expect(queueProgress(store.db, [ids[0]!], 1)).toEqual({ reviewed: 0, total: 1 });
+    const result = queueProgress(store.db);
+    expect(result.reviewed).toBe(0);
+    expect(result.total).toBe(ids.length);
   });
 
-  test("queueTotal=0 short-circuits to zeros", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    expect(queueProgress(store.db, null, 0)).toEqual({ reviewed: 0, total: 0 });
-  });
-
-  test("empty recordIds returns 0 reviewed against the given total", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    expect(queueProgress(store.db, [], 5)).toEqual({ reviewed: 0, total: 5 });
-  });
-
-  test("null recordIds counts all effective reviews against the given total", async () => {
+  test("skipped reviews are excluded from the reviewed count", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ids = recordIds(store.db);
     insertReview(store.db, {
       record_id: ids[0]!,
-      status: "accepted",
-      final_label: "food",
-      prev_label: "food",
+      status: "skipped",
+      final_label: null,
+      prev_label: null,
       source_of_truth: "human",
     });
-    expect(queueProgress(store.db, null, 10)).toEqual({ reviewed: 1, total: 10 });
+    expect(queueProgress(store.db).reviewed).toBe(0);
+  });
+
+  test("empty dataset returns zeros", async () => {
+    using store = await openTmpStore();
+    expect(queueProgress(store.db)).toEqual({ reviewed: 0, total: 0 });
   });
 });
 

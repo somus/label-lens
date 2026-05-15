@@ -40,9 +40,16 @@ const ISSUE_RICH: Record<string, string> = {
   exact_duplicate: "⧉",
 };
 
+const ISSUE_ASCII: Record<string, string> = {
+  low_confidence: "L",
+  source_disagreement: "?",
+  exact_duplicate: "=",
+};
+
 export function issueGlyph(issueType: string, display: ResolvedDisplay): string {
-  if (!richGlyphs(display)) return "!";
-  return ISSUE_RICH[issueType] ?? "●";
+  const rich = richGlyphs(display);
+  const map = rich ? ISSUE_RICH : ISSUE_ASCII;
+  return map[issueType] ?? (rich ? "●" : "!");
 }
 
 export type FlashKind = "success" | "info" | "warning" | "error";

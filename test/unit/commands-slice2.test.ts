@@ -80,6 +80,28 @@ describe("record.reject", () => {
       tone: "danger",
     });
   });
+
+  test("flashes the sidebar reviewed counter on a decision", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    await dispatch(defaultRegistry(), "review", app, "record.accept");
+    expect(app.motion.snapshot("sidebar.counter.reviewed")).toMatchObject({
+      active: true,
+      kind: "flash",
+      tone: "accent",
+    });
+  });
+
+  test("flashes the sidebar skipped counter on skip", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    await dispatch(defaultRegistry(), "review", app, "record.skip");
+    expect(app.motion.snapshot("sidebar.counter.skipped")).toMatchObject({
+      active: true,
+      kind: "flash",
+      tone: "accent",
+    });
+  });
 });
 
 describe("record.relabelByIndex", () => {

@@ -178,7 +178,7 @@ export function createAppContext(args: {
         queueTotal,
         datasetPath,
         counters: { ...ctx.sessionCounters },
-        queueProgress: queueProgress(args.db, ids, queueTotal),
+        queueProgress: queueProgress(args.db),
         signals: signalCounts(args.db, ids),
         smartNext: args.config.navigation?.smartNext ?? false,
       };

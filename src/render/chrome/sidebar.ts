@@ -1,4 +1,5 @@
 import type { SidebarData, SidebarSignalRow } from "../../app/sidebar-data.ts";
+import type { MotionController } from "../anim.ts";
 import { Box } from "../box.ts";
 import type { ResolvedDisplay } from "../capability.ts";
 import { issueGlyph } from "../glyph-map.ts";
@@ -77,8 +78,16 @@ export function Sidebar(props: {
   display: ResolvedDisplay;
   data: SidebarData;
   width: number;
+  /**
+   * Motion controller used to drive counter-row flashes when the reviewer
+   * commits a decision / skip / mark. Each counter row queries the snapshot
+   * for `sidebar.counter.<label>` and renders accent-toned when the
+   * snapshot is active (≈200ms after the action). Optional — tests + the
+   * registry-less re-ingest screen don't have a motion controller.
+   */
+  motion?: MotionController;
 }): ReturnType<typeof Box> {
-  const { display, data, width } = props;
+  const { display, data, width, motion } = props;
   // Floor of 22 mirrors the 24-col `sidebarWidth` contract minus left/right
   // padding. Counter rows and truncate-middle assume the inner column has
   // room for an 8-char label + count + gap.
@@ -91,7 +100,7 @@ export function Sidebar(props: {
   ];
 
   if (data.mode === "queue") {
-    children.push(...renderQueueBody(display, data, innerWidth));
+    children.push(...renderQueueBody(display, data, innerWidth, motion));
   } else {
     children.push(...renderStatsBody(display, data, innerWidth));
   }
@@ -112,6 +121,7 @@ function renderQueueBody(
   display: ResolvedDisplay,
   data: Extract<SidebarData, { mode: "queue" }>,
   innerWidth: number,
+  motion: MotionController | undefined,
 ): ReturnType<typeof Box | typeof Text>[] {
   const out: ReturnType<typeof Box | typeof Text>[] = [];
 
@@ -189,9 +199,9 @@ function renderQueueBody(
   // Counters section
   out.push(sectionHeader(display, "Counters", innerWidth));
   out.push(blankRow());
-  out.push(counterRow(display, "reviewed", data.counters.reviewed, innerWidth));
-  out.push(counterRow(display, "skipped", data.counters.skipped, innerWidth));
-  out.push(counterRow(display, "marked", data.counters.marked, innerWidth));
+  out.push(counterRow(display, "reviewed", data.counters.reviewed, innerWidth, motion));
+  out.push(counterRow(display, "skipped", data.counters.skipped, innerWidth, motion));
+  out.push(counterRow(display, "marked", data.counters.marked, innerWidth, motion));
   out.push(blankRow());
   out.push(progressRow(display, data.queueProgress.reviewed, data.queueProgress.total, innerWidth));
   out.push(blankRow());
@@ -280,24 +290,35 @@ function counterRow(
   label: string,
   count: number,
   innerWidth: number,
+  motion?: MotionController,
 ): ReturnType<typeof Box> {
   const countText = String(count);
   const gap = Math.max(2, innerWidth - visualWidth(label) - visualWidth(countText));
+  // Counter flash (plan A12): when a decision/skip/mark just landed, the
+  // matching `sidebar.counter.<label>` motion snapshot is active for the
+  // flash duration. Tone the row accent so the increment registers as a
+  // visible pulse rather than a silent number-bump.
+  const motionKey = `sidebar.counter.${label}`;
+  const active = motion?.snapshot(motionKey).active ?? false;
+  const tone: Segment["tone"] = active ? "accent" : "default";
   return fixedRow(
     innerWidth,
     Text({
       content: segmentsToStyledText(
         [
-          { text: label, tone: "default" },
+          { text: label, tone },
           { text: " ".repeat(gap), tone: "default" },
-          { text: countText, tone: "default" },
+          { text: countText, tone },
         ],
         display,
       ),
+      attributes: active ? TextAttributes.BOLD : TextAttributes.NONE,
       wrapMode: "char",
     }),
   );
 }
+
+const PROGRESS_LABEL = "progress";
 
 function progressRow(
   display: ResolvedDisplay,
@@ -305,15 +326,20 @@ function progressRow(
   total: number,
   innerWidth: number,
 ): ReturnType<typeof Box> {
-  // Shrink the bar width so `[bar] NNN%` always fits in innerWidth at narrow
-  // sidebar widths (24ch). Reserve 6 cells for ` 100%` + brackets.
+  // Label + space prefix so the bar reads as "progress" rather than a
+  // mystery `[bar]`. Shrink the bar width to fit label + `[bar] NNN%` in
+  // innerWidth.
+  const prefix = `${PROGRESS_LABEL} `;
   const reservedForPct = 6;
-  const barWidth = Math.max(4, Math.min(PROGRESS_BAR_WIDTH, innerWidth - reservedForPct));
-  const segs = progressSegments(reviewed, total, barWidth, display);
+  const barWidth = Math.max(
+    4,
+    Math.min(PROGRESS_BAR_WIDTH, innerWidth - prefix.length - reservedForPct),
+  );
+  const barSegs = progressSegments(reviewed, total, barWidth, display);
   return fixedRow(
     innerWidth,
     Text({
-      content: segmentsToStyledText(segs, display),
+      content: segmentsToStyledText([{ text: prefix, tone: "muted" }, ...barSegs], display),
       wrapMode: "char",
     }),
   );

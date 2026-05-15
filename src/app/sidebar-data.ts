@@ -73,29 +73,23 @@ export function signalCounts(db: Db, recordIds: string[] | null): SidebarSignalR
 }
 
 /**
- * Queue progress: reviewed / total. Reviewed = records in the queue scope
- * with any effective review entry. Uses the `effective_reviews` view per
- * ADR 0007.
- *
- * Precondition: `recordIds` must come from internal sources (see
- * `signalCounts`). Same trust contract.
+ * Queue progress: dataset-wide reviewed / total. Earlier this was scoped
+ * to the current queue's record IDs, but record sets like `pending`
+ * shrink as records are reviewed — the intersection of "current pending
+ * IDs" and `effective_reviews` is always empty, so the bar never moved.
+ * Dataset-wide means the bar reflects "how much of the whole job is
+ * done" regardless of the focused queue.
  */
-export function queueProgress(
-  db: Db,
-  recordIds: string[] | null,
-  queueTotal: number,
-): { reviewed: number; total: number } {
-  if (queueTotal === 0) return { reviewed: 0, total: 0 };
-  if (recordIds !== null && recordIds.length === 0) return { reviewed: 0, total: queueTotal };
-  const rows = db.all<{ n: number }>(
-    recordIds === null
-      ? sql`SELECT COUNT(*) AS n FROM effective_reviews`
-      : sql`SELECT COUNT(*) AS n FROM effective_reviews WHERE record_id IN (${sql.join(
-          recordIds.map((id) => sql`${id}`),
-          sql`, `,
-        )})`,
+export function queueProgress(db: Db): { reviewed: number; total: number } {
+  const total =
+    db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records WHERE orphan = 0`)[0]?.n ?? 0;
+  if (total === 0) return { reviewed: 0, total: 0 };
+  const byStatus = db.all<{ status: string; n: number }>(
+    sql`SELECT status, COUNT(*) AS n FROM effective_reviews WHERE status IN ('accepted','relabeled','rejected') GROUP BY status`,
   );
-  return { reviewed: rows[0]?.n ?? 0, total: queueTotal };
+  let reviewed = 0;
+  for (const row of byStatus) reviewed += row.n;
+  return { reviewed, total };
 }
 
 /**

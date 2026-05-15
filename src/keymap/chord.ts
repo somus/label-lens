@@ -29,6 +29,9 @@ export type ChordResolver = {
    *  chord is in flight. Used by the footer to show a `(g…)` chip while
    *  the reviewer is mid-chord (plan I2). */
   pendingKey(nowMs?: number): string | null;
+  /** Chord-buffer expiry window. Exposed so the status bar can drive a
+   *  fade-out motion that matches the actual timeout. */
+  readonly windowMs: number;
 };
 
 function parseBindings(bindings: Binding[]): { single: Binding[]; chords: ParsedBinding[] } {
@@ -102,5 +105,6 @@ export function createChordResolver(
       if (at - pending.at > windowMs) return null;
       return pending.firstPart;
     },
+    windowMs,
   };
 }

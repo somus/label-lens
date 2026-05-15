@@ -12,6 +12,7 @@ import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
 
 import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
+import { pulse } from "../render/anim.ts";
 import { BadgeLine, type BadgeVariant } from "../render/badge.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
@@ -78,6 +79,9 @@ export function mountReviewScreen(args: {
     dispatch(registry, app.activeScope ?? "review", app, name, argument).then(() => undefined);
   let lastDocViewActive = false;
   let lastOverlayActive = false;
+  // Track chord pending key across renders so we only start the fade-out
+  // motion on transition (calling play() per frame would reset progress).
+  let lastChordKey: string | null = null;
 
   const renderState = () => {
     if (!mounted) return;
@@ -160,17 +164,25 @@ export function mountReviewScreen(args: {
       { text: queueIndicator, tone: "default" },
     ];
     if (marked) {
-      statusLeft.push({ text: "   ● marked", tone: "warning" });
+      statusLeft.push({ text: "   ⦿ marked", tone: "warning" });
     }
     if (app.config.navigation?.smartNext && queueId === "pending") {
       statusLeft.push({ text: "   ▸ smart", tone: "accent" });
     }
     // Chord-pending chip (plan I2). When the reviewer has tapped the first
     // key of a chord (e.g. `g` waiting for `d` in `g d`), append `(g…)`
-    // so the chord state is visible until it resolves or times out.
+    // so the chord state is visible until it resolves or times out. Tone
+    // fades from accent → muted across the chord window as the timeout
+    // approaches, cueing how much time is left.
     const pendingChord = chord.pendingKey();
+    if (pendingChord !== lastChordKey) {
+      if (pendingChord) app.motion.play("chord:pending", pulse(chord.windowMs, "accent"));
+      lastChordKey = pendingChord;
+    }
     if (pendingChord) {
-      statusLeft.push({ text: `   (${pendingChord}…)`, tone: "accent" });
+      const snap = app.motion.snapshot("chord:pending");
+      const tone = snap.active && snap.progress >= 0.5 ? "muted" : "accent";
+      statusLeft.push({ text: `   (${pendingChord}…)`, tone });
     }
     const statusRight: Segment[] = [
       { text: `Reviewed: ${reviewedTotal} / ${counts.total}`, tone: "muted" },
