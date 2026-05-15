@@ -11,6 +11,10 @@ export type DisplayConfig = {
   motion?: "auto" | "on" | "off";
 };
 
+export type NavigationConfig = {
+  smartNext?: boolean;
+};
+
 export type BoundaryConfig = {
   documentField: string;
   contextLines: number;
@@ -31,6 +35,7 @@ export type LabellensConfig = {
     format: "jsonl" | "csv";
   };
   display?: DisplayConfig;
+  navigation?: NavigationConfig;
 };
 
 export function defaultConfig(args: {

@@ -147,6 +147,9 @@ export function mountReviewScreen(args: {
     if (marked) {
       statusLeft.push({ text: "   ● marked", tone: "warning" });
     }
+    if (app.config.navigation?.smartNext && queueId === "pending") {
+      statusLeft.push({ text: "   ▸ smart", tone: "accent" });
+    }
     const statusRight: Segment[] = [
       { text: `Reviewed: ${reviewedTotal} / ${counts.total}`, tone: "muted" },
       { text: "  ·  ", tone: "dim" },
@@ -394,11 +397,11 @@ function badgeCopy(issue: StoredIssue, totalRecords: number, predictionCount: nu
 function predictionLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
   if (!record?.primaryPrediction) return Box({});
   const p = record.primaryPrediction;
-  const conf = p.confidence !== null ? `  (${Math.round(p.confidence * 100)}%)` : "";
+  const conf = p.confidence !== null ? `  [${Math.round(p.confidence * 100)}%]` : "";
   return Box(
     { flexDirection: "row", marginTop: 1 },
     Text({
-      content: ` src ${p.source}   →   ${p.label}${conf}`,
+      content: ` [${p.source}]   →   ${p.label}${conf}`,
       attributes: TextAttributes.DIM,
     }),
   );

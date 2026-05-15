@@ -1,4 +1,4 @@
-import type { AppContext } from "../../app/context.ts";
+import { type AppContext, effectiveQueueId } from "../../app/context.ts";
 import { flash } from "../../render/anim.ts";
 import { type QueueId, resolveQueue } from "../../store/queues/registry.ts";
 import type { Command } from "../command.ts";
@@ -11,11 +11,12 @@ import type { Command } from "../command.ts";
  */
 export function switchQueue(ctx: AppContext, queueId: QueueId): void {
   const def = resolveQueue(queueId);
+  const effective = effectiveQueueId(ctx, queueId);
   // Cached cursors may be stale if reviews landed while focused elsewhere;
   // a freshly-constructed cursor is already current (see Cursor constructor),
   // so refreshing twice would just double the queueRecords cost.
-  const cached = ctx.hasCursor(queueId);
-  const cursor = ctx.getCursor(queueId);
+  const cached = ctx.hasCursor(effective);
+  const cursor = ctx.getCursor(effective);
   if (cached) cursor.refresh();
   ctx.cursor = cursor;
   ctx.queueId = queueId;

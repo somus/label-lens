@@ -12,6 +12,7 @@ import { marked } from "./marked.ts";
 import { orphans } from "./orphans.ts";
 import { pending } from "./pending.ts";
 import { skipped } from "./skipped.ts";
+import { smartPending } from "./smart-pending.ts";
 
 export type QueueId = string;
 
@@ -23,6 +24,7 @@ export type QueueDefinition = {
 
 export const BUILTIN_QUEUES: Record<QueueId, QueueDefinition> = {
   pending,
+  "smart-pending": smartPending,
   skipped,
   "low-confidence": lowConfidence,
   disagreements,

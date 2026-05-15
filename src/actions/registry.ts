@@ -23,6 +23,7 @@ import { openQueueScreen } from "./queue/open-screen.ts";
 import { queueSwitchCommands } from "./queue/switch.ts";
 import { accept, reject, relabelByIndexCommands, skip } from "./record/decisions.ts";
 import { next } from "./record/next.ts";
+import { nextOriginal, prevOriginal } from "./record/next-original.ts";
 import { openNoteCommand } from "./record/open-note.ts";
 import { openRelabelPicker } from "./record/open-relabel-picker.ts";
 import { prev } from "./record/prev.ts";
@@ -35,6 +36,8 @@ export const ALL_COMMANDS: Command[] = [
   accept,
   next,
   prev,
+  nextOriginal,
+  prevOriginal,
   reject,
   skip,
   toggleMark,

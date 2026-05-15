@@ -198,8 +198,20 @@ export function createAppContext(args: {
  * Bind a Cursor + queue to the AppContext for the duration of a review screen.
  * Returns the same AppContext (mutated) so callers can chain.
  */
+/**
+ * Maps a user-requested queue id to the cursor id actually opened. When
+ * smart-next is enabled and the user navigates to `pending`, we open the
+ * `smart-pending` cursor under the hood — same WHERE filter, signal-weighted
+ * ordering. The display still labels the queue "Pending" (queueId stays
+ * unchanged), with a `▸ smart` badge announcing the mode.
+ */
+export function effectiveQueueId(app: AppContext, queueId: QueueId): QueueId {
+  if (queueId === "pending" && app.config.navigation?.smartNext) return "smart-pending";
+  return queueId;
+}
+
 export function enterReview(app: AppContext, queueId: QueueId = "pending"): AppContext {
-  app.cursor = app.getCursor(queueId);
+  app.cursor = app.getCursor(effectiveQueueId(app, queueId));
   app.queueId = queueId;
   return app;
 }

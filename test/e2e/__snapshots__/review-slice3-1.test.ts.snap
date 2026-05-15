@@ -13,7 +13,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
- │ Lunch at Zomato Bangalore                                                                                                        │ src llm:gpt-4   →   food  (92%)                                   
+ │ Lunch at Zomato Bangalore                                                                                                        │ [llm:gpt-4]   →   food  [92%]                                     
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
   █ Uber ride to airport                                                                                                              1 food >                                                          
   ▆ Amazon order #12345                                                                                                               2 travel                                                          
@@ -41,7 +41,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
- │ Lunch at Zomato Bangalore                                                                                                        │ src llm:gpt-4   →   food  (92%)                                   
+ │ Lunch at Zomato Bangalore                                                                                                        │ [llm:gpt-4]   →   food  [92%]                                     
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
   █ Uber ride to airport                                                                                                              1 food >                                                          
   ▆ Amazon order #12345                                                                                                               2 travel                                                          
@@ -69,7 +69,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐                                                                   
- │ ▶ Lunch at Zomato Bangalore                                                                                                      │ src llm:gpt-4   →   food  (92%)                                   
+ │ ▶ Lunch at Zomato Bangalore                                                                                                      │ [llm:gpt-4]   →   food  [92%]                                     
  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘                                                                   
   █ Uber ride to airport                                                                                                              1 food >                                                          
   ▆ Amazon order #12345                                                                                                               2 travel                                                          
@@ -97,7 +97,7 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
- │ Lunch at Zomato Bangalore                                                                                                        │ src llm:gpt-4   →   food  (92%)                                   
+ │ Lunch at Zomato Bangalore                                                                                                        │ [llm:gpt-4]   →   food  [92%]                                     
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
   █ Uber ride to airport                                                                                                              1 food >                                                          
   ▆ Amazon order #12345                                                                                                               2 travel                                                          
