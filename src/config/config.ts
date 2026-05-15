@@ -1,6 +1,8 @@
 import type { FieldMap } from "./inference.ts";
 
-export type LabelConfigEntry = string | { name: string; key?: string; color?: string };
+export type LabelConfigEntry =
+  | string
+  | { name: string; key?: string; color?: string; glyph?: string };
 
 export type DisplayConfig = {
   color?: "truecolor" | "256" | "16" | "mono" | "auto";
@@ -9,6 +11,7 @@ export type DisplayConfig = {
   candidatePin?: number;
   layout?: "auto" | "stack" | "split";
   motion?: "auto" | "on" | "off";
+  sidebar?: "auto" | "on" | "off";
 };
 
 /**
@@ -78,6 +81,7 @@ export function defaultConfig(args: {
       candidatePin: 0.4,
       layout: "auto",
       motion: "auto",
+      sidebar: "auto",
     },
     navigation: {
       smartNext: false,

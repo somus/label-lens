@@ -18,6 +18,7 @@ export type Tone =
   | "muted"
   | "dim"
   | "accent"
+  | "accentDeep"
   | "bold"
   | "success"
   | "warning"
@@ -45,6 +46,8 @@ function chunkFor(seg: Segment, display: ResolvedDisplay): TextChunk {
       return supportsFg ? fgFn(tokens.fg.dim)(seg.text) : dimFn(seg.text);
     case "accent":
       return supportsFg ? boldFn(fgFn(tokens.fg.accent)(seg.text)) : boldFn(seg.text);
+    case "accentDeep":
+      return supportsFg ? fgFn(tokens.fg.accentDeep)(seg.text) : dimFn(seg.text);
     case "bold":
       return boldFn(seg.text);
     case "success":

@@ -21,6 +21,7 @@ export type ThemeTokens = {
     muted: string;
     dim: string;
     accent: string;
+    accentDeep: string;
     success: string;
     warning: string;
     danger: string;
@@ -38,6 +39,7 @@ export type ThemeTokens = {
       danger: string;
       info: string;
     };
+    kindTint: { heavy: string; medium: string; light: string };
   };
   border: {
     subtle: string;
@@ -56,6 +58,7 @@ function truecolorTokens(dark: boolean): ThemeTokens {
           muted: "#9aa3ad",
           dim: "#5e6772",
           accent: "#7ec8ff",
+          accentDeep: "#3a7fa8",
           success: "#7fd793",
           warning: "#e0b46a",
           danger: "#e07b7b",
@@ -73,6 +76,7 @@ function truecolorTokens(dark: boolean): ThemeTokens {
             danger: "#3a1d1d",
             info: "#1c2740",
           },
+          kindTint: { heavy: "#1f2a3a", medium: "#1a2535", light: "#161e28" },
         },
         border: { subtle: "#3a3f44", accent: "#7ec8ff", focus: "#7ec8ff" },
       }
@@ -82,6 +86,7 @@ function truecolorTokens(dark: boolean): ThemeTokens {
           muted: "#57606a",
           dim: "#8c959f",
           accent: "#0066cc",
+          accentDeep: "#003a7a",
           success: "#1a7f37",
           warning: "#9a6700",
           danger: "#a40e26",
@@ -99,6 +104,7 @@ function truecolorTokens(dark: boolean): ThemeTokens {
             danger: "#ffebe9",
             info: "#ddf4ff",
           },
+          kindTint: { heavy: "#dfe8f0", medium: "#e5ecf2", light: "#eef2f6" },
         },
         border: { subtle: "#d0d7de", accent: "#0066cc", focus: "#0066cc" },
       };
@@ -112,6 +118,7 @@ function tokens256(dark: boolean): ThemeTokens {
           muted: "#a0a0a0",
           dim: "#606060",
           accent: "#7ec8ff",
+          accentDeep: "#3a6680",
           success: "#7fd793",
           warning: "#e0b46a",
           danger: "#e07b7b",
@@ -129,6 +136,7 @@ function tokens256(dark: boolean): ThemeTokens {
             danger: "#3d2020",
             info: "#1f2a44",
           },
+          kindTint: { heavy: "#1a2535", medium: "#15202b", light: "#121a23" },
         },
         border: { subtle: "#3a3a3a", accent: "#7ec8ff", focus: "#7ec8ff" },
       }
@@ -138,6 +146,7 @@ function tokens256(dark: boolean): ThemeTokens {
           muted: "#5a5a5a",
           dim: "#909090",
           accent: "#0050a0",
+          accentDeep: "#003070",
           success: "#0a7030",
           warning: "#8a5a00",
           danger: "#a02020",
@@ -155,6 +164,7 @@ function tokens256(dark: boolean): ThemeTokens {
             danger: "#ffd8d4",
             info: "#d4ecff",
           },
+          kindTint: { heavy: "#d8e2ec", medium: "#dce4ec", light: "#e6ecf2" },
         },
         border: { subtle: "#c0c0c0", accent: "#0050a0", focus: "#0050a0" },
       };
@@ -167,6 +177,7 @@ function ansi16Tokens(dark: boolean): ThemeTokens {
       muted: dark ? "gray" : "black",
       dim: "gray",
       accent: "cyan",
+      accentDeep: "blue",
       success: "green",
       warning: "yellow",
       danger: "red",
@@ -184,6 +195,7 @@ function ansi16Tokens(dark: boolean): ThemeTokens {
         danger: TRANSPARENT,
         info: TRANSPARENT,
       },
+      kindTint: { heavy: TRANSPARENT, medium: TRANSPARENT, light: TRANSPARENT },
     },
     border: { subtle: "gray", accent: "cyan", focus: "cyan" },
   };
@@ -196,6 +208,7 @@ function monoTokens(): ThemeTokens {
       muted: "white",
       dim: "gray",
       accent: "white",
+      accentDeep: "gray",
       success: "white",
       warning: "white",
       danger: "white",
@@ -213,6 +226,7 @@ function monoTokens(): ThemeTokens {
         danger: TRANSPARENT,
         info: TRANSPARENT,
       },
+      kindTint: { heavy: TRANSPARENT, medium: TRANSPARENT, light: TRANSPARENT },
     },
     border: { subtle: "white", accent: "white", focus: "white" },
   };

@@ -14,6 +14,8 @@ export type Capability = {
 
 export type Layout = "auto" | "stack" | "split";
 
+export type SidebarMode = "auto" | "on" | "off";
+
 export type ResolvedDisplay = {
   color: CapabilityColor;
   banding: boolean;
@@ -21,14 +23,38 @@ export type ResolvedDisplay = {
   candidatePin: number;
   layout: Layout;
   motion: boolean;
+  sidebar: SidebarMode;
 };
 
 const SPLIT_MIN_WIDTH = 160;
+const SIDEBAR_MIN_WIDTH = 120;
+const SIDEBAR_WIDE_WIDTH = 160;
 
 export function pickLayout(layout: Layout, terminalWidth: number): "stack" | "split" {
   if (layout === "stack") return "stack";
   if (layout === "split") return "split";
   return terminalWidth >= SPLIT_MIN_WIDTH ? "split" : "stack";
+}
+
+/**
+ * Resolve whether sidebar is visible at the given terminal width.
+ * `auto`: visible when terminal ≥ 120 cols AND capability ≥ 256 colors.
+ *         Capability gate matches banding/motion — sidebar's quadrant bands +
+ *         gradient wordmark need color to read; at 16/mono they collapse but
+ *         the layout shift would still be jarring without it being intentional.
+ * `on`:   forced visible regardless of width / capability. Reviewer opt-in.
+ * `off`:  hidden. Top status bar takes over.
+ */
+export function pickSidebar(display: ResolvedDisplay, terminalWidth: number): boolean {
+  if (display.sidebar === "off") return false;
+  if (display.sidebar === "on") return true;
+  const supportsChrome = display.color === "truecolor" || display.color === "256";
+  return terminalWidth >= SIDEBAR_MIN_WIDTH && supportsChrome;
+}
+
+/** Sidebar width in columns when visible. Two-step: 24ch baseline, 32ch ≥160. */
+export function sidebarWidth(terminalWidth: number): number {
+  return terminalWidth >= SIDEBAR_WIDE_WIDTH ? 32 : 24;
 }
 
 export function detectCapability(env: CapabilityEnv): Capability {
@@ -75,7 +101,8 @@ export function resolveDisplay(args: {
   // to render at those capability levels. `on` cannot override capability,
   // matching the `banding` clamp above.
   const motion = motionMode === "off" ? false : supportsMotion;
-  return { color, banding, theme, candidatePin, layout, motion };
+  const sidebar: SidebarMode = args.config?.sidebar ?? "auto";
+  return { color, banding, theme, candidatePin, layout, motion, sidebar };
 }
 
 export type ThemeProbe = {
@@ -91,6 +118,7 @@ export function defaultDisplay(): ResolvedDisplay {
     candidatePin: 0.4,
     layout: "auto",
     motion: false,
+    sidebar: "auto",
   };
 }
 

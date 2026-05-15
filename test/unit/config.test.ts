@@ -29,7 +29,7 @@ describe("defaultConfig", () => {
     expect(cfg.labels).toEqual(["food", "other", "travel"]);
   });
 
-  test("populates display defaults: candidatePin=0.4, color/banding/theme/layout/motion=auto", () => {
+  test("populates display defaults: candidatePin=0.4, color/banding/theme/layout/motion/sidebar=auto", () => {
     const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS });
     expect(cfg.display).toEqual({
       color: "auto",
@@ -38,6 +38,7 @@ describe("defaultConfig", () => {
       candidatePin: 0.4,
       layout: "auto",
       motion: "auto",
+      sidebar: "auto",
     });
   });
 });

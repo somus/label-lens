@@ -21,6 +21,7 @@ function displayFor(color: ResolvedDisplay["color"]): ResolvedDisplay {
     candidatePin: 0.4,
     layout: "auto",
     motion: false,
+    sidebar: "auto",
   };
 }
 

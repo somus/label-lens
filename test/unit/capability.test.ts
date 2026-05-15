@@ -93,6 +93,7 @@ describe("resolveDisplay", () => {
       candidatePin: 0.4,
       layout: "auto",
       motion: true,
+      sidebar: "auto",
     });
   });
 
