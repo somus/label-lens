@@ -35,6 +35,8 @@ export function renderFilterBuilder(
       shouldFill: true,
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
+      borderColor:
+        display.color === "truecolor" || display.color === "256" ? t.fg.accent : undefined,
     },
     ModalHeader({ display, title: "Visual where filter", innerWidth: modalWidth - 4 }),
     Text({ content: previewLine(state), attributes: TextAttributes.DIM }),

@@ -28,7 +28,7 @@ function modalChrome(
       ? lerpHex(t.bg.chrome, t.bg.overlay, fadeProgress)
       : t.bg.overlay
     : undefined;
-  const borderColor = canLerp ? lerpHex(t.bg.chrome, t.border.subtle, fadeProgress) : undefined;
+  const borderColor = useColor ? t.fg.accent : undefined;
   return { backgroundColor, borderColor };
 }
 
@@ -157,7 +157,6 @@ function renderBrowseModal(
       content: ` :${state.filter}_`,
       attributes: fading ? TextAttributes.DIM : TextAttributes.BOLD,
     }),
-    Text({ content: "" }),
     Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
     hintLine,
   );
@@ -254,6 +253,7 @@ function renderPickerModal(
       shouldFill: true,
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
+      borderColor: useColor ? t.fg.accent : undefined,
     },
     ModalHeader({ display, title: picker.title, innerWidth: modalWidth - 4 }),
     Text({ content: titleText, attributes: TextAttributes.BOLD }),

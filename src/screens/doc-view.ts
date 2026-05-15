@@ -76,6 +76,7 @@ export function renderDocView(app: AppContext, terminalHeight: number): ReturnTy
         total: lines.rows.length,
         visible: viewport,
         scrollTop,
+        caps: true,
       }),
     ),
   );

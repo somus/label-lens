@@ -6,7 +6,7 @@ import { type AppContext, enterReview } from "../app/context.ts";
 import { labelName } from "../config/config.ts";
 import { createChordResolver } from "../keymap/chord.ts";
 import { applyEffects } from "../overlay/effects.ts";
-import type { GuidelinesState } from "../overlay/guidelines.ts";
+import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
 
@@ -28,6 +28,7 @@ import { ModalHeader } from "../render/modal-frame.ts";
 import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { progressBar } from "../render/progress-bar.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
+import { Scrollbar } from "../render/scrollbar.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole, resolveTheme } from "../render/theme.ts";
 import type { Db } from "../store/db.ts";
@@ -828,6 +829,7 @@ function modalBox(
     {
       flexDirection: "column",
       borderStyle: border,
+      borderColor: t.fg.accent,
       padding: 1,
       position: "absolute",
       top: topOffset,
@@ -896,6 +898,9 @@ function renderGuidelines(
   const sliced = lines.slice(start).join("\n");
   const moreAbove = start > 0;
   const titleSuffix = total > 1 ? `   line ${start + 1}/${total}` : "";
+  // Approximation for the scrollbar's visible window — markdown render
+  // height varies per node, so the reducer's page constant is a hint, not
+  // a pixel-perfect viewport mapping.
   return modalBox(
     display,
     termWidth,
@@ -903,8 +908,18 @@ function renderGuidelines(
     0.7,
     `${state.title}${titleSuffix}${moreAbove ? "  ↑ above" : ""}`,
     Box(
-      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-      Markdown({ content: sliced }),
+      { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
+      Box(
+        { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+        Markdown({ content: sliced }),
+      ),
+      Scrollbar({
+        display,
+        total,
+        visible: GUIDELINES_PAGE,
+        scrollTop: start,
+        caps: true,
+      }),
     ),
     Text({
       content: " ↑/↓ scroll · pgup/pgdn page · esc close",
@@ -928,13 +943,23 @@ function renderHelp(
     0.6,
     `Help · ${state.scope}${more > 0 ? `   (+${more} more)` : ""}`,
     Box(
-      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-      ...visible.map((e) =>
-        Text({
-          content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
-          attributes: TextAttributes.DIM,
-        }),
+      { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
+      Box(
+        { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+        ...visible.map((e) =>
+          Text({
+            content: ` ${e.binding.padEnd(10)} ${e.name}${e.palette ? `   ${e.palette}` : ""}`,
+            attributes: TextAttributes.DIM,
+          }),
+        ),
       ),
+      Scrollbar({
+        display,
+        total: state.entries.length,
+        visible: HELP_PAGE,
+        scrollTop: state.scroll,
+        caps: true,
+      }),
     ),
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
   );
@@ -956,13 +981,23 @@ function renderStatsOverlay(
     0.7,
     `Stats${more > 0 ? `   (+${more} more)` : ""}`,
     Box(
-      { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-      ...visible.map((line) =>
-        Text({
-          content: line.display,
-          attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
-        }),
+      { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
+      Box(
+        { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+        ...visible.map((line) =>
+          Text({
+            content: line.display,
+            attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
+          }),
+        ),
       ),
+      Scrollbar({
+        display,
+        total: state.lines.length,
+        visible: PAGE,
+        scrollTop: state.scroll,
+        caps: true,
+      }),
     ),
     Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
   );

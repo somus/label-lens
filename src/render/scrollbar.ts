@@ -5,8 +5,10 @@ import { resolveTheme } from "./theme.ts";
 
 /**
  * Right-edge mini scrollbar. 1ch wide, spans body height. Renders a column of
- * `│` chars in `fg.accentDeep` for the total track, with the visible window
- * painted as `▊` chars in `fg.accent`. Plan F3.
+ * `│` chars in `fg.accentDeep` for the total track with the visible window
+ * painted as `▊` chars in `fg.accent`. Optional `caps` adds `▲` / `▼` arrow
+ * heads at top and bottom of the track (Basalt-style) — caps absorb 2 rows
+ * from the track, so the track of thumb cells is `visible - 2`. Plan F3.
  *
  * Caller supplies viewport height in rows and the scroll position. Output is a
  * column Box ready to compose at the right edge of a content area via flex.
@@ -16,19 +18,24 @@ export function Scrollbar(props: {
   total: number;
   visible: number;
   scrollTop: number;
+  caps?: boolean;
 }): ReturnType<typeof Box> {
-  const { display, total, visible, scrollTop } = props;
+  const { display, total, visible, scrollTop, caps = false } = props;
   const rich = display.color === "truecolor" || display.color === "256";
   const t = resolveTheme(display);
-  const trackRows = visible;
+  const trackRows = caps ? Math.max(1, visible - 2) : visible;
+
+  const capArrow = (glyph: string, asciiFallback: string, dim: boolean) => {
+    if (rich) {
+      return Text({ content: glyph, fg: dim ? t.fg.disabled : t.fg.accent });
+    }
+    return Text({ content: dim ? asciiFallback : glyph });
+  };
 
   if (total <= visible) {
-    // No overflow — render an invisible spacer column so the layout doesn't
-    // collapse and reflow.
-    return Box(
-      { flexDirection: "column", width: 1, flexShrink: 0 },
-      ...Array.from({ length: trackRows }, () => Text({ content: " " })),
-    );
+    const spacer = Array.from({ length: trackRows }, () => Text({ content: " " }));
+    const children = caps ? [Text({ content: " " }), ...spacer, Text({ content: " " })] : spacer;
+    return Box({ flexDirection: "column", width: 1, flexShrink: 0 }, ...children);
   }
 
   const thumbSize = Math.max(1, Math.round((visible / total) * trackRows));
@@ -37,7 +44,7 @@ export function Scrollbar(props: {
     maxScroll > 0 ? Math.round((scrollTop / maxScroll) * (trackRows - thumbSize)) : 0;
   const thumbEnd = thumbStart + thumbSize;
 
-  const rows = Array.from({ length: trackRows }, (_, i) => {
+  const trackChildren = Array.from({ length: trackRows }, (_, i) => {
     const inThumb = i >= thumbStart && i < thumbEnd;
     if (rich) {
       return Text({
@@ -48,5 +55,13 @@ export function Scrollbar(props: {
     return Text({ content: inThumb ? "#" : "|" });
   });
 
-  return Box({ flexDirection: "column", width: 1, flexShrink: 0 }, ...rows);
+  const children = caps
+    ? [
+        capArrow("▲", "^", scrollTop === 0),
+        ...trackChildren,
+        capArrow("▼", "v", scrollTop >= maxScroll),
+      ]
+    : trackChildren;
+
+  return Box({ flexDirection: "column", width: 1, flexShrink: 0 }, ...children);
 }

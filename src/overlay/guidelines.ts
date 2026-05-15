@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import type { LabellensConfig } from "../config/config.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
+export const GUIDELINES_PAGE = 10;
+
 export type GuidelinesState = {
   source: "config" | "missing";
   content: string;
@@ -53,8 +55,8 @@ export function reduceGuidelines(state: GuidelinesState, event: OverlayEvent): R
   if (name === "escape") return { overlay: null, effects: [{ kind: "close" }] };
   if (name === "down") return scrolled(state, 1);
   if (name === "up") return scrolled(state, -1);
-  if (name === "pagedown") return scrolled(state, 10);
-  if (name === "pageup") return scrolled(state, -10);
+  if (name === "pagedown") return scrolled(state, GUIDELINES_PAGE);
+  if (name === "pageup") return scrolled(state, -GUIDELINES_PAGE);
   return { overlay: packed(state), effects: [] };
 }
 
