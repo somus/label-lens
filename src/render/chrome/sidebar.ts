@@ -8,6 +8,31 @@ import { truncateMiddle } from "../truncate.ts";
 import { type Segment, segmentsToStyledText } from "./status-bar.ts";
 import { Wordmark } from "./wordmark.ts";
 
+/**
+ * Approximate visual cell width. Many of the glyphs we use in the sidebar
+ * (`⚠`, `⚡`, `●`, `◇`) live in Unicode blocks that East-Asian-Width-Ambiguous
+ * tables call 2 cells in CJK locales and 1 elsewhere — but most terminals on
+ * macOS / Linux render them as 2 regardless. We assume 2 for symbols in the
+ * Misc-Symbols/Dingbats range so layout math reserves enough room.
+ */
+function visualWidth(s: string): number {
+  let w = 0;
+  for (const ch of s) {
+    const code = ch.codePointAt(0) ?? 0;
+    // Latin / common BMP: 1 cell.
+    if (code < 0x2000) {
+      w += 1;
+      continue;
+    }
+    // Misc Symbols (U+2600..U+26FF), Dingbats (U+2700..U+27BF), and the
+    // CJK Symbols block all default to 2 cells on the terminals we ship to.
+    if (code >= 0x2300 && code <= 0x27ff) w += 2;
+    else if (code >= 0x2e80 && code <= 0x9fff) w += 2;
+    else w += 1;
+  }
+  return w;
+}
+
 const PROGRESS_BAR_WIDTH = 10;
 
 /**
@@ -61,72 +86,90 @@ function renderQueueBody(
 
   // Queue title row
   out.push(
-    Text({
-      content: segmentsToStyledText(
-        [{ text: truncateMiddleSafe(data.queueLabel, innerWidth), tone: "default" }],
-        display,
-      ),
-      attributes: TextAttributes.BOLD,
-    }),
+    fixedRow(
+      innerWidth,
+      Text({
+        content: segmentsToStyledText(
+          [{ text: truncateEndSafe(data.queueLabel, innerWidth), tone: "default" }],
+          display,
+        ),
+        attributes: TextAttributes.BOLD,
+        wrapMode: "char",
+      }),
+    ),
   );
   out.push(
-    Text({
-      content: segmentsToStyledText(
-        [
-          {
-            text: `${data.queuePosition} / ${data.queueTotal}`,
-            tone: "muted",
-          },
-        ],
-        display,
-      ),
-    }),
+    fixedRow(
+      innerWidth,
+      Text({
+        content: segmentsToStyledText(
+          [{ text: `${data.queuePosition} / ${data.queueTotal}`, tone: "muted" }],
+          display,
+        ),
+        wrapMode: "char",
+      }),
+    ),
   );
-  out.push(Text({ content: "" }));
+  out.push(blankRow());
 
   // Dataset path
   out.push(
-    Text({
-      content: segmentsToStyledText(
-        [{ text: truncateMiddle(data.datasetPath, innerWidth), tone: "muted" }],
-        display,
-      ),
-    }),
+    fixedRow(
+      innerWidth,
+      Text({
+        content: segmentsToStyledText(
+          [{ text: truncateMiddle(data.datasetPath, innerWidth), tone: "muted" }],
+          display,
+        ),
+        wrapMode: "char",
+      }),
+    ),
   );
-  out.push(Text({ content: "" }));
+  out.push(blankRow());
 
   // Smart-next mode row (when active)
   if (data.smartNext) {
     out.push(
-      Text({
-        content: segmentsToStyledText(
-          [
-            { text: "▸ ", tone: "accent" },
-            { text: "smart", tone: "accent" },
-          ],
-          display,
-        ),
-      }),
+      fixedRow(
+        innerWidth,
+        Text({
+          content: segmentsToStyledText(
+            [
+              { text: "▸ ", tone: "accent" },
+              { text: "smart", tone: "accent" },
+            ],
+            display,
+          ),
+          wrapMode: "char",
+        }),
+      ),
     );
-    out.push(Text({ content: "" }));
+    out.push(blankRow());
   }
 
   // Counters section
   out.push(sectionHeader(display, "Counters", innerWidth));
+  out.push(blankRow());
   out.push(counterRow(display, "reviewed", data.counters.reviewed, innerWidth));
   out.push(counterRow(display, "skipped", data.counters.skipped, innerWidth));
   out.push(counterRow(display, "marked", data.counters.marked, innerWidth));
-  out.push(progressRow(display, data.queueProgress.reviewed, data.queueProgress.total));
-  out.push(Text({ content: "" }));
+  out.push(blankRow());
+  out.push(progressRow(display, data.queueProgress.reviewed, data.queueProgress.total, innerWidth));
+  out.push(blankRow());
 
   // Signals section
   out.push(sectionHeader(display, "Signals", innerWidth));
+  out.push(blankRow());
   if (data.signals.length === 0) {
     out.push(
-      Text({
-        content: segmentsToStyledText([{ text: "None", tone: "dim" }], display),
-        attributes: TextAttributes.DIM,
-      }),
+      fixedRow(
+        innerWidth,
+        Text({
+          content: segmentsToStyledText([{ text: "None", tone: "dim" }], display),
+          attributes: TextAttributes.DIM,
+          wrapMode: "char",
+        }),
+      ),
     );
   } else {
     for (const signal of data.signals) {
@@ -142,15 +185,20 @@ function renderStatsBody(
   data: Extract<SidebarData, { mode: "stats" }>,
   innerWidth: number,
 ): ReturnType<typeof Box | typeof Text>[] {
-  const out: ReturnType<typeof Box | typeof Text>[] = [
-    Text({
-      content: segmentsToStyledText(
-        [{ text: truncateMiddle(data.datasetPath, innerWidth), tone: "muted" }],
-        display,
-      ),
-    }),
-    Text({ content: "" }),
+  return [
+    fixedRow(
+      innerWidth,
+      Text({
+        content: segmentsToStyledText(
+          [{ text: truncateMiddle(data.datasetPath, innerWidth), tone: "muted" }],
+          display,
+        ),
+        wrapMode: "char",
+      }),
+    ),
+    blankRow(),
     sectionHeader(display, "Totals", innerWidth),
+    blankRow(),
     counterRow(display, "total", data.totals.total, innerWidth),
     counterRow(display, "reviewed", data.totals.reviewed, innerWidth),
     counterRow(display, "pending", data.totals.pending, innerWidth),
@@ -159,25 +207,28 @@ function renderStatsBody(
     counterRow(display, "rejected", data.totals.rejected, innerWidth),
     counterRow(display, "skipped", data.totals.skipped, innerWidth),
   ];
-  return out;
 }
 
 function sectionHeader(
   display: ResolvedDisplay,
   label: string,
   innerWidth: number,
-): ReturnType<typeof Text> {
+): ReturnType<typeof Box> {
   const labelWithSpace = `${label} `;
   const ruleLen = Math.max(1, innerWidth - labelWithSpace.length);
-  return Text({
-    content: segmentsToStyledText(
-      [
-        { text: labelWithSpace, tone: "muted" },
-        { text: "─".repeat(ruleLen), tone: "dim" },
-      ],
-      display,
-    ),
-  });
+  return fixedRow(
+    innerWidth,
+    Text({
+      content: segmentsToStyledText(
+        [
+          { text: labelWithSpace, tone: "muted" },
+          { text: "─".repeat(ruleLen), tone: "dim" },
+        ],
+        display,
+      ),
+      wrapMode: "char",
+    }),
+  );
 }
 
 function counterRow(
@@ -185,55 +236,107 @@ function counterRow(
   label: string,
   count: number,
   innerWidth: number,
-): ReturnType<typeof Text> {
+): ReturnType<typeof Box> {
   const countText = String(count);
-  const gap = Math.max(2, innerWidth - label.length - countText.length);
-  return Text({
-    content: segmentsToStyledText(
-      [
-        { text: label, tone: "default" },
-        { text: " ".repeat(gap), tone: "default" },
-        { text: countText, tone: "default" },
-      ],
-      display,
-    ),
-  });
+  const gap = Math.max(2, innerWidth - visualWidth(label) - visualWidth(countText));
+  return fixedRow(
+    innerWidth,
+    Text({
+      content: segmentsToStyledText(
+        [
+          { text: label, tone: "default" },
+          { text: " ".repeat(gap), tone: "default" },
+          { text: countText, tone: "default" },
+        ],
+        display,
+      ),
+      wrapMode: "char",
+    }),
+  );
 }
 
 function progressRow(
   display: ResolvedDisplay,
   reviewed: number,
   total: number,
-): ReturnType<typeof Text> {
-  const segs = progressSegments(reviewed, total, PROGRESS_BAR_WIDTH, display);
-  return Text({ content: segmentsToStyledText(segs, display) });
+  innerWidth: number,
+): ReturnType<typeof Box> {
+  // Shrink the bar width so `[bar] NNN%` always fits in innerWidth at narrow
+  // sidebar widths (24ch). Reserve 6 cells for ` 100%` + brackets.
+  const reservedForPct = 6;
+  const barWidth = Math.max(4, Math.min(PROGRESS_BAR_WIDTH, innerWidth - reservedForPct));
+  const segs = progressSegments(reviewed, total, barWidth, display);
+  return fixedRow(
+    innerWidth,
+    Text({
+      content: segmentsToStyledText(segs, display),
+      wrapMode: "char",
+    }),
+  );
 }
 
 function signalRow(
   display: ResolvedDisplay,
   signal: SidebarSignalRow,
   innerWidth: number,
-): ReturnType<typeof Text> {
+): ReturnType<typeof Box> {
   const glyph = issueGlyph(signal.type, display);
-  const glyphWidth = glyph.length;
+  const glyphCells = visualWidth(glyph);
   const countText = String(signal.count);
-  // Reserve glyph + space + count for the label budget. `truncateMiddleSafe`
-  // floor protects against pathological narrow widths.
-  const labelBudget = innerWidth - glyphWidth - 1 - countText.length - 1;
-  const labelText = truncateMiddleSafe(signal.type, labelBudget);
-  const gap = Math.max(1, innerWidth - glyphWidth - 1 - labelText.length - countText.length);
-  return Text({
-    content: segmentsToStyledText(
-      [
-        { text: glyph, tone: "warning" },
-        { text: " ", tone: "default" },
-        { text: labelText, tone: "default" },
-        { text: " ".repeat(gap), tone: "default" },
-        { text: countText, tone: "muted" },
-      ],
-      display,
-    ),
-  });
+  const countCells = visualWidth(countText);
+  // Reserve glyph + 1ch + label + ≥1ch gap + count.
+  const labelBudget = Math.max(4, innerWidth - glyphCells - 1 - countCells - 1);
+  const labelText = truncateEndSafe(signal.type, labelBudget);
+  const used = glyphCells + 1 + visualWidth(labelText) + countCells;
+  const gap = Math.max(1, innerWidth - used);
+  return fixedRow(
+    innerWidth,
+    Text({
+      content: segmentsToStyledText(
+        [
+          { text: glyph, tone: "warning" },
+          { text: " ", tone: "default" },
+          { text: labelText, tone: "default" },
+          { text: " ".repeat(gap), tone: "default" },
+          { text: countText, tone: "muted" },
+        ],
+        display,
+      ),
+      wrapMode: "char",
+    }),
+  );
+}
+
+/**
+ * Wrap a Text in a Box with explicit width + overflow:hidden so OpenTUI never
+ * line-wraps the row even if visual-width math is off by a cell. Sidebar
+ * column is fixed width — overflow disappears off the right edge rather than
+ * pushing onto a second visual row.
+ */
+function fixedRow(innerWidth: number, child: ReturnType<typeof Text>): ReturnType<typeof Box> {
+  return Box(
+    {
+      flexDirection: "row",
+      width: innerWidth,
+      flexShrink: 0,
+      overflow: "hidden",
+    },
+    child,
+  );
+}
+
+function blankRow(): ReturnType<typeof Text> {
+  return Text({ content: "" });
+}
+
+/**
+ * Truncate-at-end that never returns less than 4 chars. Used for sidebar
+ * values where the prefix is identity (queue id, signal type label, etc.).
+ */
+function truncateEndSafe(s: string, max: number): string {
+  const m = Math.max(4, max);
+  if (s.length <= m) return s;
+  return `${s.slice(0, m - 1)}…`;
 }
 
 /**
