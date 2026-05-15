@@ -505,7 +505,12 @@ function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): Return
         { text: truncate(h.recordText, 32), tone: "muted" },
       ];
       const row = Text({ content: segmentsToStyledText(segs, display) });
-      return i === 0 ? [row] : [Text({ content: "" }), row];
+      if (i === 0) return [row];
+      const sepText = " ·  ".repeat(10);
+      const sep = Text({
+        content: segmentsToStyledText([{ text: sepText, tone: "dim" }], display),
+      });
+      return [sep, row];
     }),
   );
 }
