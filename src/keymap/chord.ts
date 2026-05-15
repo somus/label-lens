@@ -25,6 +25,10 @@ export type ChordResolver = {
    *  opens, a queue switch fires) so a stale chord-start can't combine with
    *  a fresh second key in a different scope. */
   reset(): void;
+  /** Display label for the currently-buffered first key, or `null` when no
+   *  chord is in flight. Used by the footer to show a `(g…)` chip while
+   *  the reviewer is mid-chord (plan I2). */
+  pendingKey(nowMs?: number): string | null;
 };
 
 function parseBindings(bindings: Binding[]): { single: Binding[]; chords: ParsedBinding[] } {
@@ -89,6 +93,14 @@ export function createChordResolver(
     },
     reset() {
       pending = null;
+    },
+    pendingKey(nowMs) {
+      if (!pending) return null;
+      const at = nowMs ?? clock();
+      // Expire stale chord buffers proactively so the footer chip
+      // disappears when the window lapses without a follow-up.
+      if (at - pending.at > windowMs) return null;
+      return pending.firstPart;
     },
   };
 }

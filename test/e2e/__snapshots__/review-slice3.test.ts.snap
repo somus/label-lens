@@ -11,15 +11,15 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
-                                                                                                    
-  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1  food  ✓                                                                                        
-  2  travel                                                                                         
-  3  other                                                                                          
+  ◇ food  ████████░ 92%                                                                             
+    llm:gpt-4                                                                                       
+                                                                                                    
+                                                                                                    
+  [1]  food  ✓                                                                                      
+  [2]  travel                                                                                       
+  [3]  other                                                                                        
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -40,14 +40,14 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
   █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]  →  travel  88%                                                                       
+  ◇ travel  ████████░ 88%                                                                           
+    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  1  food                                                                                           
-  2  travel  ✓                                                                                      
-  3  other                                                                                          
+  [1]  food                                                                                         
+  [2]  travel  ✓                                                                                    
+  [3]  other                                                                                        
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -67,15 +67,15 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
-                                                                                                    
-  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1  food  ✓                                                                                        
-  2  travel                                                                                         
-  3  other                                                                                          
+  ◇ food  ########- 92%                                                                             
+    llm:gpt-4                                                                                       
+                                                                                                    
+                                                                                                    
+  [1]  food  ✓                                                                                      
+  [2]  travel                                                                                       
+  [3]  other                                                                                        
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -95,15 +95,15 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
-                                                                                                    
-  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1  food  ✓                                                                                        
-  2  travel                                                                                         
-  3  other                                                                                          
+  ◇ food  ########- 92%                                                                             
+    llm:gpt-4                                                                                       
+                                                                                                    
+                                                                                                    
+  [1]  food  ✓                                                                                      
+  [2]  travel                                                                                       
+  [3]  other                                                                                        
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -123,15 +123,15 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
-                                                                                                    
-  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1  food  ✓                                                                                        
-  2  travel                                                                                         
-  3  other                                                                                          
+  ◇ food  ████████░ 92%                                                                             
+    llm:gpt-4                                                                                       
+                                                                                                    
+                                                                                                    
+  [1]  food  ✓                                                                                      
+  [2]  travel                                                                                       
+  [3]  other                                                                                        
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -151,15 +151,15 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
-                                                                                                    
-  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1  food  ✓                                                                                        
-  2  travel                                                                                         
-  3  other                                                                                          
+  ◇ food  ████████░ 92%                                                                             
+    llm:gpt-4                                                                                       
+                                                                                                    
+                                                                                                    
+  [1]  food  ✓                                                                                      
+  [2]  travel                                                                                       
+  [3]  other                                                                                        
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -179,15 +179,15 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
-                                                                                                    
-  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1  food  ✓                                                                                        
-  2  travel                                                                                         
-  3  other                                                                                          
+  ◇ food  ████████░ 92%                                                                             
+    llm:gpt-4                                                                                       
+                                                                                                    
+                                                                                                    
+  [1]  food  ✓                                                                                      
+  [2]  travel                                                                                       
+  [3]  other                                                                                        
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   

@@ -20,8 +20,11 @@ import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { renderFilterBuilder } from "../render/filter-view.ts";
+import { issueGlyph, statusGlyph } from "../render/glyph-map.ts";
+import { foldNamespace } from "../render/label-fold.ts";
 import { Markdown } from "../render/markdown.ts";
 import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
+import { progressBar } from "../render/progress-bar.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole, resolveTheme } from "../render/theme.ts";
@@ -45,16 +48,14 @@ export type ReviewScreenHandle = {
   destroy: () => void;
 };
 
-const STATUS_SYMBOL: Record<StoredReview["status"], string> = {
-  accepted: "+",
-  relabeled: "~",
-  rejected: "-",
-  skipped: ">",
-  undone: "<",
-  pending: "?",
-};
+// Status glyphs come from `glyph-map.ts:statusGlyph` so the same set is
+// used everywhere (history strip, audit-log export hints) and the mono
+// fallback ASCII set is shared. Plan B10.
 
-const NON_BAND_ROWS = 14;
+// Rows consumed below the band region: prediction card (~3 rows), issue
+// badges (variable but commonly 0–2 here), label list (≤9 rows), note row,
+// history block. Updated when the prediction line became a 3-row card.
+const NON_BAND_ROWS = 16;
 const MIN_WINDOW = 2;
 
 export function mountReviewScreen(args: {
@@ -164,6 +165,13 @@ export function mountReviewScreen(args: {
     if (app.config.navigation?.smartNext && queueId === "pending") {
       statusLeft.push({ text: "   ▸ smart", tone: "accent" });
     }
+    // Chord-pending chip (plan I2). When the reviewer has tapped the first
+    // key of a chord (e.g. `g` waiting for `d` in `g d`), append `(g…)`
+    // so the chord state is visible until it resolves or times out.
+    const pendingChord = chord.pendingKey();
+    if (pendingChord) {
+      statusLeft.push({ text: `   (${pendingChord}…)`, tone: "accent" });
+    }
     const statusRight: Segment[] = [
       { text: `Reviewed: ${reviewedTotal} / ${counts.total}`, tone: "muted" },
       { text: "  ·  ", tone: "dim" },
@@ -186,6 +194,7 @@ export function mountReviewScreen(args: {
             totalRecords: counts.total,
             predictionCount,
             effectivePin,
+            marked,
           })
         : stackBody({
             window,
@@ -198,6 +207,7 @@ export function mountReviewScreen(args: {
             totalRecords: counts.total,
             predictionCount,
             effectivePin,
+            marked,
           }),
       app.overlay
         ? renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight)
@@ -274,6 +284,9 @@ type BodyArgs = {
   issues: StoredIssue[];
   totalRecords: number;
   predictionCount: number;
+  /** Current record's marked tag state, threaded so prediction card can
+   *  show the `⦿ marked` prefix without re-querying the store. */
+  marked: boolean;
   /**
    * Pin position to *use* for layout this render. Differs from
    * `display.candidatePin` when there are fewer preceding records than the
@@ -319,7 +332,7 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
       effectivePin,
     ),
     Box({ height: 1 }),
-    predictionLine(record, display),
+    predictionCard(record, display, args.marked),
     issueBadges(issues, totalRecords, predictionCount, display),
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null, display) : Box({}),
     noteLine(record),
@@ -377,7 +390,7 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
           flexDirection: "column",
           flexShrink: 0,
         },
-        predictionLine(record, display),
+        predictionCard(record, display, args.marked),
         issueBadges(issues, totalRecords, predictionCount, display),
         record ? labelListBox(labels, record.primaryPrediction?.label ?? null, display) : Box({}),
         noteLine(record),
@@ -403,6 +416,10 @@ function issueBadges(
       BadgeLine({
         display,
         variant: badgeVariant(issue.type),
+        // Per-type glyph (plan B11) — `⚠`, `⚡`, `⧉`, fallback `●`. Pulls
+        // from the same `glyph-map.ts` table the sidebar Signals section
+        // uses so both surfaces agree on glyphs.
+        icon: issueGlyph(issue.type, display),
         label: badgeCopy(issue, totalRecords, predictionCount),
       }),
     ),
@@ -454,26 +471,77 @@ function confidenceTone(c: number | null): Segment["tone"] {
   return "danger";
 }
 
-function predictionLine(
+const CONF_BAR_WIDTH = 9;
+
+/**
+ * Prediction card. Plan B6 + I1 + I3:
+ *
+ *   row 1 — `⦿ marked  ` (when tagged) + `◇ <label>` (ns-folded, bold) +
+ *           `<bar> 74%` confidence inline.
+ *   row 2 — source (ns-folded, dim).
+ *   row 3 — `reason: <reason>` muted, when the prediction carries one.
+ *
+ * Multi-label upstream input is flattened to a single string at ingest
+ * (`StoredPrediction.label: string`), so no array fallback needed here —
+ * defensive multi-label rendering lives in the ingest layer.
+ */
+function predictionCard(
   record: RecordWithPrimaryPrediction | null,
   display: ResolvedDisplay,
+  marked: boolean,
 ): ReturnType<typeof Box> {
   if (!record?.primaryPrediction) return Box({});
   const p = record.primaryPrediction;
-  const segs: Segment[] = [
-    { text: " [", tone: "dim" },
-    { text: p.source, tone: "muted" },
-    { text: "]", tone: "dim" },
-    { text: "  ", tone: "dim" },
-    { text: "→", tone: "accent" },
-    { text: "  ", tone: "dim" },
-    { text: p.label, tone: "default" },
-  ];
-  if (p.confidence !== null) {
-    segs.push({ text: "  ", tone: "dim" });
-    segs.push({ text: `${Math.round(p.confidence * 100)}%`, tone: confidenceTone(p.confidence) });
+  const rows: ReturnType<typeof Text>[] = [];
+
+  // Row 1: marked? + ◇ + label + conf bar + %.
+  const labelSegs = foldNamespace(p.label, "bold");
+  const row1Segs: Segment[] = [{ text: " ", tone: "default" }];
+  if (marked) {
+    row1Segs.push({ text: "⦿ marked", tone: "warning" });
+    row1Segs.push({ text: "  ", tone: "dim" });
   }
-  return Box({ flexDirection: "row" }, Text({ content: segmentsToStyledText(segs, display) }));
+  row1Segs.push({ text: "◇ ", tone: "accent" });
+  for (const seg of labelSegs) row1Segs.push(seg);
+  if (p.confidence !== null) {
+    const pct = Math.round(p.confidence * 100);
+    const tone = confidenceTone(p.confidence);
+    const bar = progressBar(pct, 100, CONF_BAR_WIDTH, display);
+    row1Segs.push({ text: "  ", tone: "dim" });
+    row1Segs.push({ text: bar, tone });
+    row1Segs.push({ text: ` ${pct}%`, tone });
+  }
+  rows.push(
+    Text({
+      content: segmentsToStyledText(row1Segs, display),
+      attributes: TextAttributes.BOLD,
+    }),
+  );
+
+  // Row 2: source folded dim.
+  const sourceSegs = foldNamespace(p.source, "muted");
+  rows.push(
+    Text({
+      content: segmentsToStyledText([{ text: "   ", tone: "default" }, ...sourceSegs], display),
+    }),
+  );
+
+  // Row 3: reason (when present).
+  if (p.reason) {
+    rows.push(
+      Text({
+        content: segmentsToStyledText(
+          [
+            { text: "   reason: ", tone: "muted" },
+            { text: p.reason, tone: "default" },
+          ],
+          display,
+        ),
+      }),
+    );
+  }
+
+  return Box({ flexDirection: "column" }, ...rows);
 }
 
 function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
@@ -516,14 +584,18 @@ function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): Return
     }),
     Text({ content: "" }),
     ...history.flatMap((h, i) => {
-      const glyph = STATUS_SYMBOL[h.status] ?? "?";
+      const glyph = statusGlyph(h.status, display);
       const label = labelOrDash(h.final_label ?? h.prev_label);
-      const paddedLabel = label.padEnd(labelWidth, " ");
+      // Namespace fold splits `policy:spam` into `policy:` dim + `spam`
+      // bold. Plain labels (no `:` / `.`) come back as a single bold
+      // segment. Pad-end happens on the value portion so columns still
+      // align across rows.
+      const foldedLabel = foldLabelForHistory(label, labelWidth);
       const segs: Segment[] = [
         { text: " ", tone: "default" },
         { text: glyph, tone: STATUS_TONE[h.status] ?? "default" },
         { text: "  ", tone: "default" },
-        { text: paddedLabel, tone: "bold" },
+        ...foldedLabel,
         { text: "  ", tone: "dim" },
         { text: truncate(h.recordText, 32), tone: "muted" },
       ];
@@ -540,6 +612,26 @@ function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): Return
       return [sep, row];
     }),
   );
+}
+
+/**
+ * Apply namespace fold to a label and pad the value portion (or the entire
+ * label when no namespace) to `width` so adjacent rows align. Dash labels
+ * (`labelOrDash` placeholder `—`) skip the fold to avoid splitting on `.`
+ * inside the dash glyph (none today, but defensive).
+ */
+function foldLabelForHistory(label: string, width: number): Segment[] {
+  if (label === "—") {
+    return [{ text: label.padEnd(width, " "), tone: "bold" }];
+  }
+  const segs = foldNamespace(label, "bold");
+  if (segs.length === 1) {
+    return [{ ...segs[0], text: segs[0]!.text.padEnd(width, " ") }];
+  }
+  // Two-segment fold: prefix (dim) + value (bold). Pad value.
+  const last = segs[segs.length - 1]!;
+  const padded = last.text.padEnd(Math.max(0, width - (label.length - last.text.length)), " ");
+  return [...segs.slice(0, -1), { ...last, text: padded }];
 }
 
 function labelOrDash(s: string | null): string {
@@ -569,15 +661,21 @@ function bandRegion(
   const focusedAbsolute = startIndex + focusedIndex;
 
   const beforeChildren = contextStrip
-    ? contextStrip.before.map((line, i) =>
-        BandedRecord({
-          text: line,
-          isFocused: false,
-          bandSlot: slotFor(i),
-          display,
-          variant: "context",
-        }),
-      )
+    ? [
+        ...contextStrip.before.map((line, i) =>
+          BandedRecord({
+            text: line,
+            isFocused: false,
+            bandSlot: slotFor(i),
+            display,
+            variant: "context",
+          }),
+        ),
+        // Plan F4 — dashed separator above focused row in boundary mode
+        // so the reviewer sees the context strip is *this record's*
+        // neighbourhood, not sibling records.
+        contextSeparator(display),
+      ]
     : records.slice(0, focusedIndex).map((r, i) =>
         BandedRecord({
           text: r.text,
@@ -589,15 +687,18 @@ function bandRegion(
       );
 
   const afterChildren = contextStrip
-    ? contextStrip.after.map((line, i) =>
-        BandedRecord({
-          text: line,
-          isFocused: false,
-          bandSlot: slotFor(i),
-          display,
-          variant: "context",
-        }),
-      )
+    ? [
+        contextSeparator(display),
+        ...contextStrip.after.map((line, i) =>
+          BandedRecord({
+            text: line,
+            isFocused: false,
+            bandSlot: slotFor(i),
+            display,
+            variant: "context",
+          }),
+        ),
+      ]
     : records.slice(focusedIndex + 1).map((r, i) =>
         BandedRecord({
           text: r.text,
@@ -644,6 +745,28 @@ function slotFor(absoluteIndex: number): "even" | "odd" {
   return absoluteIndex % 2 === 0 ? "even" : "odd";
 }
 
+/**
+ * Dashed rule that divides the boundary-task context strip from the
+ * focused row. Plan F4. The rule reads as "this is where the record's
+ * own neighbourhood ends and the focused candidate begins". Length is
+ * generous (60 chars) so it fills typical band-column widths; the
+ * containing Box clips overflow.
+ */
+function contextSeparator(display: ResolvedDisplay): ReturnType<typeof Text> {
+  return Text({
+    content: segmentsToStyledText([{ text: ` ${"─".repeat(60)}`, tone: "dim" }], display),
+    attributes: TextAttributes.DIM,
+  });
+}
+
+/**
+ * Compact alternatives list (plan B7). The predicted label is already in
+ * the prediction card above; this list is the relabel keymap surface —
+ * one row per configured label with a `[N]` accelerator chip and
+ * namespace-folded value. The predicted row keeps a subtle `✓` marker
+ * but no longer carries the accent weight (the card above is the
+ * headline emphasis).
+ */
 function labelListBox(
   labels: Parameters<typeof labelName>[0][],
   predicted: string | null,
@@ -654,11 +777,12 @@ function labelListBox(
     ...labels.slice(0, 9).map((entry, idx) => {
       const name = labelName(entry);
       const isPredicted = name === predicted;
+      const folded = foldNamespace(name, isPredicted ? "default" : "muted");
       const segs: Segment[] = [
-        { text: " ", tone: "default" },
+        { text: " [", tone: "dim" },
         { text: String(idx + 1), tone: "accent" },
-        { text: "  ", tone: "dim" },
-        { text: name, tone: isPredicted ? "accent" : "muted" },
+        { text: "]  ", tone: "dim" },
+        ...folded,
       ];
       if (isPredicted) {
         segs.push({ text: "  ", tone: "dim" });

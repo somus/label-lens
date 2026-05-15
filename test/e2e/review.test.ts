@@ -52,7 +52,11 @@ describe("review screen e2e", () => {
     expect(frame).toContain("Lunch at Zomato Bangalore");
     expect(frame).toContain("food");
     expect(frame).toContain("92%");
-    expect(frame).toContain("[llm:gpt-4]");
+    // Source row in the prediction card. Folded namespace renders the
+    // prefix `llm:` separately from `gpt-4` so the `[brackets]` style
+    // from the old predictionLine is gone.
+    expect(frame).toContain("llm:");
+    expect(frame).toContain("gpt-4");
     // gd doc hint is boundary-only; absent for classification
     expect(frame).not.toContain("gd doc");
 
