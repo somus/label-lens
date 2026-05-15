@@ -17,6 +17,7 @@ import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
+import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { renderFilterBuilder } from "../render/filter-view.ts";
 import { Markdown } from "../render/markdown.ts";
@@ -320,7 +321,7 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
     noteLine(record),
     Box({ height: 2 }),
-    historyBlock(history),
+    historyBlock(history, display),
   );
 }
 
@@ -379,7 +380,7 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
         noteLine(record),
       ),
       Box({ flexBasis: 0, flexGrow: 1, flexShrink: 1 }),
-      historyBlock(history),
+      historyBlock(history, display),
     ),
   );
 }
@@ -467,17 +468,44 @@ function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof
   );
 }
 
-function historyBlock(history: HistoryEntry[]): ReturnType<typeof Box> {
+const STATUS_TONE: Record<StoredReview["status"], Segment["tone"]> = {
+  accepted: "success",
+  relabeled: "info",
+  rejected: "danger",
+  skipped: "muted",
+  undone: "warning",
+  pending: "dim",
+};
+
+function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): ReturnType<typeof Box> {
   if (history.length === 0) return Box({});
+
+  const labelWidth = Math.min(
+    12,
+    history.reduce((m, h) => Math.max(m, labelOrDash(h.final_label ?? h.prev_label).length), 0),
+  );
+
   return Box(
-    { flexDirection: "column", flexShrink: 0 },
-    Text({ content: " history:", attributes: TextAttributes.DIM }),
-    ...history.map((h) =>
-      Text({
-        content: ` ${STATUS_SYMBOL[h.status] ?? "?"} ${labelOrDash(h.final_label ?? h.prev_label)}  ${truncate(h.recordText, 32)}`,
-        attributes: TextAttributes.DIM,
-      }),
-    ),
+    { flexDirection: "column", flexShrink: 0, paddingBottom: 1 },
+    Text({
+      content: segmentsToStyledText([{ text: " history", tone: "accent" }], display),
+      attributes: TextAttributes.BOLD,
+    }),
+    Text({ content: "" }),
+    ...history.map((h) => {
+      const glyph = STATUS_SYMBOL[h.status] ?? "?";
+      const label = labelOrDash(h.final_label ?? h.prev_label);
+      const paddedLabel = label.padEnd(labelWidth, " ");
+      const segs: Segment[] = [
+        { text: " ", tone: "default" },
+        { text: glyph, tone: STATUS_TONE[h.status] ?? "default" },
+        { text: "  ", tone: "default" },
+        { text: paddedLabel, tone: "bold" },
+        { text: "  ", tone: "dim" },
+        { text: truncate(h.recordText, 32), tone: "muted" },
+      ];
+      return Text({ content: segmentsToStyledText(segs, display) });
+    }),
   );
 }
 

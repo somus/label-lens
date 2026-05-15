@@ -37,8 +37,6 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
                                                                                                     
   [llm:gpt-4]   →   travel  [88%]                                                                   
                                                                                                     
@@ -48,8 +46,10 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
   3 other                                                                                           
                                                                                                     
                                                                                                     
-  history:                                                                                          
-  + food  Lunch at Zomato Bangalore                                                                 
+  history                                                                                           
+                                                                                                    
+  +  food  Lunch at Zomato Bangalore                                                                
+                                                                                                    
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
  stats ┊[?] help                                                                                    
                                                                                                     
@@ -98,14 +98,14 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
+  history                                                                                           
                                                                                                     
+  +  ENTRY_START  Senior Engineer at Acme                                                           
+  +  food         Refund from Swiggy                                                                
+  +  other        ATM withdrawal                                                                    
+  +  food         Coffee at Blue Tokai                                                              
+  +  rent         Rent transfer to landlord                                                         
                                                                                                     
-  history:                                                                                          
-  + ENTRY_START  Senior Engineer at Acme                                                            
-  + food  Refund from Swiggy                                                                        
-  + other  ATM withdrawal                                                                           
-  + food  Coffee at Blue Tokai                                                                      
-  + rent  Rent transfer to landlord                                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
  stats ┊[?] help                                                                                    
                                                                                                     

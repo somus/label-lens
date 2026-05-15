@@ -86,7 +86,7 @@ describe("review screen slice 2 UI", () => {
     mockInput.pressKey("x");
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain("history:");
+    expect(frame).toContain("history");
   });
 
   test("'r' opens relabel picker overlay", async () => {
