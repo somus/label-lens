@@ -1,8 +1,16 @@
-import type { CliRenderer } from "@opentui/core";
+import {
+  bg as bgFn,
+  type CliRenderer,
+  fg as fgFn,
+  StyledText,
+  type TextChunk,
+} from "@opentui/core";
 import type { AppContext } from "../app/context.ts";
 import { Box } from "../render/box.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
+import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { Text, TextAttributes } from "../render/text.ts";
+import { resolveTheme } from "../render/theme.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { allStats, drillToQueue, type Section, type StatRow } from "../store/stats.ts";
 
@@ -49,9 +57,19 @@ function formatRow(row: StatRow): string {
   }
 }
 
+/**
+ * Sections moved to the sidebar (`getSidebarData("stats")` carries the
+ * Totals block: Total / Reviewed / Pending / Accepted / Relabeled /
+ * Rejected / Skipped). Main pane only renders drillable / navigable
+ * sections so the screen reads as a dataset debugger rather than a
+ * counters dashboard. Plan E1.
+ */
+const SECTIONS_IN_SIDEBAR = new Set(["Progress", "Decisions"]);
+
 function flatten(sections: Section[]): Line[] {
   const lines: Line[] = [];
   for (const s of sections) {
+    if (SECTIONS_IN_SIDEBAR.has(s.label)) continue;
     lines.push({ kind: "section-header", label: s.label });
     for (const row of s.rows) {
       lines.push({ kind: "row", display: formatRow(row), row, drillTo: drillToQueue(row) });
@@ -95,22 +113,19 @@ export function mountStatsScreen(args: {
     // stale value behind.
     app.activeScope = "stats";
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
+    const theme = resolveTheme(app.display);
+    const innerWidth = Math.max(40, renderer.terminalWidth - 8);
     const children: ReturnType<typeof Text>[] = [];
     lines.forEach((line, i) => {
       if (line.kind === "section-header") {
         children.push(Text({ content: "" }));
-        children.push(Text({ content: ` ${line.label}`, attributes: TextAttributes.BOLD }));
+        children.push(sectionHeaderRow(app, line.label, innerWidth));
+        children.push(Text({ content: "" }));
         return;
       }
       const isHighlighted = i === highlight;
-      const marker = isHighlighted ? ">" : " ";
-      const dim = line.drillTo === null && !isHighlighted;
-      children.push(
-        Text({
-          content: ` ${marker} ${line.display}`,
-          attributes: isHighlighted ? TextAttributes.BOLD : dim ? TextAttributes.DIM : undefined,
-        }),
-      );
+      const drillable = line.drillTo !== null;
+      children.push(statRow(app, line.display, drillable, isHighlighted, innerWidth, theme));
     });
 
     const statusLeft: Segment[] = [
@@ -141,10 +156,92 @@ export function mountStatsScreen(args: {
         statusRight,
         footerHint,
         width: renderer.terminalWidth,
+        // Sidebar runs in stats-totals mode here — replaces the headline
+        // counter rows that used to live at the top of the main pane.
+        sidebar: app.getSidebarData("stats"),
         body: Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...children),
       }),
     );
   };
+
+  /**
+   * Section sub-header: muted title + dashed underline extending to the
+   * right edge of the content column. Same pattern as the sidebar's
+   * `Counters` / `Signals` heads — plan E3.
+   */
+  function sectionHeaderRow(
+    app: AppContext,
+    label: string,
+    innerWidth: number,
+  ): ReturnType<typeof Text> {
+    const labelWithSpace = ` ${label} `;
+    const ruleLen = Math.max(1, innerWidth - labelWithSpace.length);
+    return Text({
+      content: segmentsToStyledText(
+        [
+          { text: labelWithSpace, tone: "muted" },
+          { text: "─".repeat(ruleLen), tone: "dim" },
+        ],
+        app.display,
+      ),
+    });
+  }
+
+  /**
+   * Drillable row: ` <text>           →` with the chip right-anchored in
+   * `fg.accentDeep`. Highlighted row gets the same solid-cyan-bg + inverse
+   * fg treatment used for modal selections — plan E2. Non-drillable rows
+   * dim out.
+   */
+  function statRow(
+    app: AppContext,
+    text: string,
+    drillable: boolean,
+    highlighted: boolean,
+    innerWidth: number,
+    theme: ReturnType<typeof resolveTheme>,
+  ): ReturnType<typeof Text> {
+    const supportsColor = app.display.color === "truecolor" || app.display.color === "256";
+    const chip = drillable ? " →" : "  ";
+    // Leading `> ` marker on highlighted rows in addition to the bg-bar.
+    // The bg-bar carries the visual weight at truecolor, but `>` keeps the
+    // highlight legible at mono / 16-color AND makes plain-text captures
+    // (tests, copy/paste) detectable.
+    const prefix = highlighted ? "> " : "  ";
+    const visibleLen = prefix.length + text.length + chip.length;
+    const gap = Math.max(1, innerWidth - visibleLen);
+    const rowText = `${prefix}${text}${" ".repeat(gap)}${chip}`;
+
+    if (highlighted && supportsColor) {
+      const chunk: TextChunk = bgFn(theme.fg.accent)(fgFn(theme.bg.chrome)(rowText));
+      return Text({
+        content: new StyledText([chunk]),
+        attributes: TextAttributes.BOLD,
+      });
+    }
+
+    if (highlighted) {
+      return Text({
+        content: rowText,
+        attributes: TextAttributes.BOLD | TextAttributes.INVERSE,
+      });
+    }
+
+    const tone: Segment["tone"] = drillable ? "default" : "dim";
+    const chipTone: Segment["tone"] = drillable ? "accentDeep" : "dim";
+    return Text({
+      content: segmentsToStyledText(
+        [
+          { text: prefix, tone: "dim" },
+          { text, tone },
+          { text: " ".repeat(gap), tone: "default" },
+          { text: chip, tone: chipTone },
+        ],
+        app.display,
+      ),
+      attributes: drillable ? TextAttributes.NONE : TextAttributes.DIM,
+    });
+  }
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
     switch (event.name) {

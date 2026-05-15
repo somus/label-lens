@@ -5,38 +5,38 @@ exports[`stats screen e2e renders core sections + first-drillable highlight + fo
   LabelLens  tiny.jsonl  Stats                                                    7 drillable rows  
                                                                                                     
                                                                                                     
-  Progress                                                                                          
-    Total: 10                                                                                       
-    Reviewed: 1                                                                                     
-    Pending: 9                                                                                      
-    Skipped: 0                                                                                      
+  Acceptance by source ──────────────────────────────────────────────────────────────────────       
                                                                                                     
-  Decisions                                                                                         
-    Accepted: 0                                                                                     
-    Relabeled: 1                                                                                    
-    Rejected: 0                                                                                     
-    Skipped: 0                                                                                      
+ > llm:gpt-4                      0%  (1 reviewed)                                          →       
                                                                                                     
-  Acceptance by source                                                                              
-  > llm:gpt-4                      0%  (1 reviewed)                                                 
+  Relabel by source ─────────────────────────────────────────────────────────────────────────       
                                                                                                     
-  Relabel by source                                                                                 
-    llm:gpt-4                    100%  (1 reviewed)                                                 
+   llm:gpt-4                    100%  (1 reviewed)                                          →       
                                                                                                     
-  Top corrections                                                                                   
-    food → travel                           1                                                       
+  Top corrections ───────────────────────────────────────────────────────────────────────────       
                                                                                                     
-  Labels with highest correction rate                                                               
-    food                         100%  (1 reviewed)                                                 
+   food → travel                           1                                                →       
                                                                                                     
-  Weakest sources                                                                                   
-    llm:gpt-4                    100%  (1 reviewed)                                                 
+  Labels with highest correction rate ───────────────────────────────────────────────────────       
                                                                                                     
-  Imported issues                                                                                   
-    label_issue                      1 record                                                       
+   food                         100%  (1 reviewed)                                          →       
                                                                                                     
-  Suggested next queue                                                                              
-    by-source:llm:gpt-4   (score 7.00)                                                              
+  Weakest sources ───────────────────────────────────────────────────────────────────────────       
+                                                                                                    
+   llm:gpt-4                    100%  (1 reviewed)                                          →       
+                                                                                                    
+  Imported issues ───────────────────────────────────────────────────────────────────────────       
+                                                                                                    
+   label_issue                      1 record                                                →       
+                                                                                                    
+  Suggested next queue ──────────────────────────────────────────────────────────────────────       
+                                                                                                    
+   by-source:llm:gpt-4   (score 7.00)                                                       →       
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
                                                                                                     
                                                                                                     
    [j/k] navigate  [enter] drill  [esc] back                                                        
