@@ -98,6 +98,7 @@ _Avoid_: Modal, dialog, popup. "Panel" is reserved for the assistant's internal 
 
 ## Flagged ambiguities
 
+- **`labels[].glyph`** in `labellens.config.json` is parsed but not yet rendered. Reserved for the boundary-task label rendering work that overlays per-label glyphs on the kind defaults in `src/render/glyph-map.ts`. Set values are accepted but have no visual effect today.
 - "Label" is overloaded (prediction vs annotation). Use **Prediction** or **Annotation** explicitly. Reserve plain "label" for the *value* (e.g., `food`, `SECTION_HEADER`), not the relationship.
 - "Suggestion" reserved for **assistant** output. Never use for **Prediction**.
 - "Status" means **Review state**, not arbitrary state. **Tag** is separate.

@@ -37,6 +37,7 @@ Users override via `labellens.config.json` `display.*`:
 - `theme: "auto" | "light" | "dark"` — auto uses `renderer.waitForThemeMode(200)` with a `light` fallback on timeout / null / rejection.
 - `candidatePin: 0.05..0.95` — viewport pin position; default 0.4 = 40% from top of band region.
 - `motion: "auto" | "on" | "off"` — animation feedback (fades, flashes, progress tweens). Auto enables for truecolor / 256-color terminals; forced off at 16 / mono regardless of override.
+- `sidebar: "auto" | "on" | "off"` — right-column sidebar (wordmark + counters + signals or stats totals) in place of the top status bar. Auto shows at ≥120 cols with truecolor / 256-color terminals; `on` forces visible regardless of width / capability; `off` keeps the top status bar. Width is 24ch under 160 cols, 32ch above (`sidebarWidth`).
 
 Live theme switching mid-session is a V1 follow-up (PRD §14.5).
 

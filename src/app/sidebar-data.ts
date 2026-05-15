@@ -51,6 +51,13 @@ export type SidebarData = SidebarQueueData | SidebarStatsData;
  *
  * Pass `null` for `recordIds` to count signals across the full dataset
  * (used by `pending` queue + any non-scoped read).
+ *
+ * Precondition: `recordIds` must originate from internal sources (e.g.
+ * `Cursor.rowIds()` / queue resolution) — never from raw user input. Values
+ * are parameter-bound via drizzle so SQL injection is not the concern; the
+ * contract here is that callers vouch for the ID set having been produced
+ * by the store, so unbounded IN-clause sizes and arbitrary strings are not
+ * possible.
  */
 export function signalCounts(db: Db, recordIds: string[] | null): SidebarSignalRow[] {
   if (recordIds !== null && recordIds.length === 0) return [];
@@ -69,6 +76,9 @@ export function signalCounts(db: Db, recordIds: string[] | null): SidebarSignalR
  * Queue progress: reviewed / total. Reviewed = records in the queue scope
  * with any effective review entry. Uses the `effective_reviews` view per
  * ADR 0007.
+ *
+ * Precondition: `recordIds` must come from internal sources (see
+ * `signalCounts`). Same trust contract.
  */
 export function queueProgress(
   db: Db,
@@ -88,7 +98,14 @@ export function queueProgress(
   return { reviewed: rows[0]?.n ?? 0, total: queueTotal };
 }
 
-/** Dataset-wide totals for the stats sidebar. Mirrors progressCounts shape. */
+/**
+ * Dataset-wide totals for the stats sidebar. Mirrors progressCounts shape.
+ *
+ * Known review statuses: `accepted`, `relabeled`, `rejected`, `skipped` (plus
+ * `undone` / `pending` which never appear in `effective_reviews` per ADR 0007).
+ * Any unknown status returned by the GROUP BY is silently ignored — schema
+ * additions should extend the destructuring below to surface in the sidebar.
+ */
 export function statsTotals(db: Db): SidebarStatsData["totals"] {
   const total =
     db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records WHERE orphan = 0`)[0]?.n ?? 0;

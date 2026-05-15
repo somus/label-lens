@@ -29,8 +29,9 @@ const STATUS_ASCII: Record<string, string> = {
 };
 
 export function statusGlyph(status: string, display: ResolvedDisplay): string {
-  const map = richGlyphs(display) ? STATUS_RICH : STATUS_ASCII;
-  return map[status] ?? (richGlyphs(display) ? "●" : "?");
+  const rich = richGlyphs(display);
+  const map = rich ? STATUS_RICH : STATUS_ASCII;
+  return map[status] ?? (rich ? "●" : "?");
 }
 
 const ISSUE_RICH: Record<string, string> = {

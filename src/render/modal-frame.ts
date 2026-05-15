@@ -2,6 +2,7 @@ import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
 import type { Segment } from "./chrome/status-bar.ts";
 import { segmentsToStyledText } from "./chrome/status-bar.ts";
+import { quadrantTile } from "./quadrant.ts";
 import { Text, TextAttributes } from "./text.ts";
 
 /**
@@ -38,8 +39,8 @@ export function ModalHeader(props: {
   const tileLen = Math.max(0, innerWidth - titleLen);
   const leftLen = Math.floor(tileLen / 2);
   const rightLen = tileLen - leftLen;
-  const leftTile = quadrantTile(leftLen);
-  const rightTile = quadrantTile(rightLen);
+  const leftTile = quadrantTile("▞▚", leftLen);
+  const rightTile = quadrantTile("▞▚", rightLen);
 
   const segs: Segment[] = [
     { text: leftTile, tone: "accentDeep" },
@@ -48,15 +49,6 @@ export function ModalHeader(props: {
   ];
 
   return Box({ flexDirection: "row" }, Text({ content: segmentsToStyledText(segs, display) }));
-}
-
-/** Produce `n` chars of alternating `▞▚` quadrant tile. */
-export function quadrantTile(n: number): string {
-  if (n <= 0) return "";
-  const pattern = "▞▚";
-  let out = "";
-  while (out.length < n) out += pattern;
-  return out.slice(0, n);
 }
 
 /**

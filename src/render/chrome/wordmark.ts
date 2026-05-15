@@ -1,5 +1,6 @@
 import { Box } from "../box.ts";
 import type { ResolvedDisplay } from "../capability.ts";
+import { quadrantTile } from "../quadrant.ts";
 import { Text, TextAttributes } from "../text.ts";
 import type { Segment } from "./status-bar.ts";
 import { segmentsToStyledText } from "./status-bar.ts";
@@ -65,13 +66,6 @@ export function Wordmark(props: {
       content: segmentsToStyledText([{ text: botBand, tone: "accentDeep" }], display),
     }),
   );
-}
-
-function quadrantTile(pattern: string, n: number): string {
-  if (n <= 0) return "";
-  let out = "";
-  while (out.length < n) out += pattern;
-  return out.slice(0, n);
 }
 
 function centerText(s: string, width: number): string {

@@ -24,7 +24,10 @@ export function Sidebar(props: {
   width: number;
 }): ReturnType<typeof Box> {
   const { display, data, width } = props;
-  const innerWidth = Math.max(8, width - 2);
+  // Floor of 22 mirrors the 24-col `sidebarWidth` contract minus left/right
+  // padding. Counter rows and truncate-middle assume the inner column has
+  // room for an 8-char label + count + gap.
+  const innerWidth = Math.max(22, width - 2);
 
   const children: ReturnType<typeof Box | typeof Text>[] = [
     Wordmark({ display, innerWidth }),
@@ -212,9 +215,13 @@ function signalRow(
   innerWidth: number,
 ): ReturnType<typeof Text> {
   const glyph = issueGlyph(signal.type, display);
+  const glyphWidth = glyph.length;
   const countText = String(signal.count);
-  const labelText = truncateMiddleSafe(signal.type, Math.max(4, innerWidth - countText.length - 4));
-  const gap = Math.max(1, innerWidth - 2 - labelText.length - countText.length);
+  // Reserve glyph + space + count for the label budget. `truncateMiddleSafe`
+  // floor protects against pathological narrow widths.
+  const labelBudget = innerWidth - glyphWidth - 1 - countText.length - 1;
+  const labelText = truncateMiddleSafe(signal.type, labelBudget);
+  const gap = Math.max(1, innerWidth - glyphWidth - 1 - labelText.length - countText.length);
   return Text({
     content: segmentsToStyledText(
       [
@@ -229,7 +236,14 @@ function signalRow(
   });
 }
 
-/** Truncate-middle but never throw on tiny widths. */
+/**
+ * Truncate-middle that never returns less than 4 chars. The 4-char floor is
+ * the smallest output `truncateMiddle` produces meaningfully (`a…z` style:
+ * one head char + ellipsis + one tail char + room to grow). Below 4 the
+ * helper would either throw or collapse to just `…`, which reads worse than
+ * a clipped string. Callers pass narrow budgets when the parent column is
+ * tiny — preserve at least the head/tail anchor.
+ */
 function truncateMiddleSafe(s: string, max: number): string {
   return truncateMiddle(s, Math.max(4, max));
 }

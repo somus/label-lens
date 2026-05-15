@@ -52,7 +52,14 @@ export function pickSidebar(display: ResolvedDisplay, terminalWidth: number): bo
   return terminalWidth >= SIDEBAR_MIN_WIDTH && supportsChrome;
 }
 
-/** Sidebar width in columns when visible. Two-step: 24ch baseline, 32ch ≥160. */
+/**
+ * Sidebar width in columns when visible. Two-step: 24ch baseline, 32ch ≥160.
+ *
+ * Contract: never returns less than 24. Sidebar rendering (counter rows,
+ * truncate-middle, progress bar) assumes ≥22ch of inner width. Forcing
+ * `sidebar: "on"` on a terminal narrower than 24 still allocates 24 cols;
+ * the parent layout will clip. Callers must not bypass this helper.
+ */
 export function sidebarWidth(terminalWidth: number): number {
   return terminalWidth >= SIDEBAR_WIDE_WIDTH ? 32 : 24;
 }

@@ -1,5 +1,11 @@
 import type { FieldMap } from "./inference.ts";
 
+/**
+ * `glyph` is parsed but not yet consumed by a renderer. Reserved for the
+ * boundary-task label rendering work that will overlay per-label glyphs on
+ * the kind defaults from `glyph-map.ts`. Until that ships, set values
+ * survive a round-trip through config but have no visual effect.
+ */
 export type LabelConfigEntry =
   | string
   | { name: string; key?: string; color?: string; glyph?: string };

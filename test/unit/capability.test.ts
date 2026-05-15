@@ -2,10 +2,18 @@ import { describe, expect, test } from "bun:test";
 import {
   applyDisplayOverrides,
   bootstrapDisplay,
+  defaultDisplay,
   detectCapability,
   pickLayout,
+  pickSidebar,
+  type ResolvedDisplay,
   resolveDisplay,
+  sidebarWidth,
 } from "../../src/render/capability.ts";
+
+function display(overrides: Partial<ResolvedDisplay>): ResolvedDisplay {
+  return { ...defaultDisplay(), ...overrides };
+}
 
 describe("detectCapability", () => {
   test("COLORTERM=truecolor → truecolor", () => {
@@ -331,5 +339,48 @@ describe("pickLayout", () => {
 
   test("forced 'split' overrides narrow width", () => {
     expect(pickLayout("split", 80)).toBe("split");
+  });
+});
+
+describe("pickSidebar", () => {
+  test("auto + truecolor + width ≥120 → visible", () => {
+    expect(pickSidebar(display({ sidebar: "auto", color: "truecolor" }), 120)).toBe(true);
+    expect(pickSidebar(display({ sidebar: "auto", color: "256" }), 200)).toBe(true);
+  });
+
+  test("auto + width <120 → hidden", () => {
+    expect(pickSidebar(display({ sidebar: "auto", color: "truecolor" }), 119)).toBe(false);
+    expect(pickSidebar(display({ sidebar: "auto", color: "truecolor" }), 80)).toBe(false);
+  });
+
+  test("auto + 16/mono → hidden regardless of width", () => {
+    expect(pickSidebar(display({ sidebar: "auto", color: "16" }), 200)).toBe(false);
+    expect(pickSidebar(display({ sidebar: "auto", color: "mono" }), 200)).toBe(false);
+  });
+
+  test("'on' forces visible regardless of width or capability", () => {
+    expect(pickSidebar(display({ sidebar: "on", color: "mono" }), 40)).toBe(true);
+    expect(pickSidebar(display({ sidebar: "on", color: "16" }), 80)).toBe(true);
+  });
+
+  test("'off' always hidden", () => {
+    expect(pickSidebar(display({ sidebar: "off", color: "truecolor" }), 300)).toBe(false);
+  });
+});
+
+describe("sidebarWidth", () => {
+  test("baseline 24ch below 160 cols", () => {
+    expect(sidebarWidth(120)).toBe(24);
+    expect(sidebarWidth(159)).toBe(24);
+  });
+
+  test("wide 32ch at ≥160 cols", () => {
+    expect(sidebarWidth(160)).toBe(32);
+    expect(sidebarWidth(240)).toBe(32);
+  });
+
+  test("never returns less than 24, even at tiny terminal widths", () => {
+    expect(sidebarWidth(40)).toBe(24);
+    expect(sidebarWidth(0)).toBe(24);
   });
 });
