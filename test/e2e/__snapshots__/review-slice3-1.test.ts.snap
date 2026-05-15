@@ -4,14 +4,6 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
  │ Lunch at Zomato Bangalore                                                                                                        │ [llm:gpt-4]   →   food  [92%]                                     
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
@@ -21,6 +13,14 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   █ Salary credit October                                                                                                                                                                               
   █ Rent transfer to landlord                                                                                                                                                                           
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
@@ -32,14 +32,6 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
  │ Lunch at Zomato Bangalore                                                                                                        │ [llm:gpt-4]   →   food  [92%]                                     
  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                   
@@ -51,6 +43,14 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                                                         
 "
@@ -59,14 +59,6 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, 16-color light (markers) 1`] = `
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
                                                                                                                                                                                                         
  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐                                                                   
  │ ▶ Lunch at Zomato Bangalore                                                                                                      │ [llm:gpt-4]   →   food  [92%]                                     
@@ -79,6 +71,14 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
                                                                                                                                                                                                         
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                                                         
 "
@@ -87,14 +87,6 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, truecolor dark 1`] = `
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
-                                                                                                                                                                                                        
                                                                                                                                                                                                         
  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                   
  │ Lunch at Zomato Bangalore                                                                                                        │ [llm:gpt-4]   →   food  [92%]                                     
@@ -105,6 +97,14 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
   █ Salary credit October                                                                                                                                                                               
   █ Rent transfer to landlord                                                                                                                                                                           
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  

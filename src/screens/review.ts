@@ -115,13 +115,26 @@ export function mountReviewScreen(args: {
     const queueId = app.queueId ?? initialQueueId;
     const bandRows = Math.max(8, renderer.terminalHeight - NON_BAND_ROWS);
     const mode = pickLayout(app.display.layout, renderer.terminalWidth);
-    const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
-    const nextN = Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - app.display.candidatePin)));
+    const pin = app.display.candidatePin;
+    const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * pin));
+    const nextN = Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - pin)));
     const window = cursor?.window(prevN, nextN) ?? {
       records: [],
       focusedIndex: -1,
       startIndex: 0,
     };
+    // When the cursor is near the top of the queue there are fewer
+    // preceding records than the pin would reserve room for. Shrink the
+    // top region proportionally so the focused row floats up to fill the
+    // empty band rather than sitting in the middle of a tall void.
+    // Boundary mode always renders contextLines above and below the
+    // focused row, so the full pin is correct there.
+    const hasContextStrip = app.config.task === "boundary";
+    const effectivePin = hasContextStrip
+      ? pin
+      : prevN > 0
+        ? Math.min(pin, (window.focusedIndex / prevN) * pin)
+        : 0;
     const record = cursor?.current() ?? null;
     const history = recentReviewsWithText(app.db, 5);
     const marked = record ? hasTag(app.db, record.id, "marked") : false;
@@ -171,6 +184,7 @@ export function mountReviewScreen(args: {
             issues,
             totalRecords: counts.total,
             predictionCount,
+            effectivePin,
           })
         : stackBody({
             window,
@@ -182,6 +196,7 @@ export function mountReviewScreen(args: {
             issues,
             totalRecords: counts.total,
             predictionCount,
+            effectivePin,
           }),
       app.overlay
         ? renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight)
@@ -255,6 +270,13 @@ type BodyArgs = {
   issues: StoredIssue[];
   totalRecords: number;
   predictionCount: number;
+  /**
+   * Pin position to *use* for layout this render. Differs from
+   * `display.candidatePin` when there are fewer preceding records than the
+   * pin would normally reserve space for — instead of leaving a band of
+   * blank rows above the focus, we collapse the top region proportionally.
+   */
+  effectivePin: number;
 };
 
 function contextStripFor(
@@ -280,10 +302,18 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
     issues,
     totalRecords,
     predictionCount,
+    effectivePin,
   } = args;
   return Box(
     { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-    bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
+    bandRegion(
+      window.records,
+      window.focusedIndex,
+      window.startIndex,
+      display,
+      contextStrip,
+      effectivePin,
+    ),
     predictionLine(record),
     issueBadges(issues, totalRecords, predictionCount, display),
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
@@ -304,24 +334,31 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
     issues,
     totalRecords,
     predictionCount,
+    effectivePin,
   } = args;
-  const pin = display.candidatePin;
   return Box(
     { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
     // Main column: full band region (prev above, focused pinned, after below).
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 2, overflow: "hidden" },
-      bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
+      bandRegion(
+        window.records,
+        window.focusedIndex,
+        window.startIndex,
+        display,
+        contextStrip,
+        effectivePin,
+      ),
     ),
     // Right column: history + metadata + label list, top-aligned to the pin row.
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
-      Box({ flexBasis: 0, flexGrow: pin }),
+      Box({ flexBasis: 0, flexGrow: effectivePin }),
       Box(
         {
           flexDirection: "column",
           flexBasis: 0,
-          flexGrow: 1 - pin,
+          flexGrow: 1 - effectivePin,
           flexShrink: 1,
           overflow: "hidden",
         },
@@ -442,6 +479,7 @@ function bandRegion(
   startIndex: number,
   display: ResolvedDisplay,
   contextStrip: ContextStrip | null = null,
+  pinOverride?: number,
 ): ReturnType<typeof Box> {
   if (records.length === 0 || focusedIndex < 0) {
     return Box(
@@ -454,7 +492,7 @@ function bandRegion(
   }
 
   const focused = records[focusedIndex]!;
-  const pin = display.candidatePin;
+  const pin = pinOverride ?? display.candidatePin;
   const focusedAbsolute = startIndex + focusedIndex;
 
   const beforeChildren = contextStrip
