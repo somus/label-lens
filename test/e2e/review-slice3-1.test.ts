@@ -188,7 +188,7 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     mockInput.pressKey("r");
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain("relabel>");
+    expect(frame).toContain("Relabel");
   });
 
   test("snapshot: split layout at 200x24, truecolor light", async () => {

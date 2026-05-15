@@ -1,4 +1,4 @@
-import { bold as boldFn, dim as dimFn, fg as fgFn, StyledText } from "@opentui/core";
+import { bg as bgFn, bold as boldFn, dim as dimFn, fg as fgFn, StyledText } from "@opentui/core";
 import type { Command } from "../actions/command.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import type { CategoryGroup } from "../overlay/palette-categories.ts";
@@ -7,6 +7,7 @@ import { lerpHex } from "./anim.ts";
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
 import { type Segment, segmentsToStyledText } from "./chrome/status-bar.ts";
+import { ModalHeader, modalWidth } from "./modal-frame.ts";
 import { progressSegments } from "./progress-segments.ts";
 import { Text, TextAttributes } from "./text.ts";
 import { borderForRole, resolveTheme } from "./theme.ts";
@@ -40,17 +41,18 @@ export function renderPalette(
 ): ReturnType<typeof Box> {
   const border = borderForRole(display, "overlay");
   const t = resolveTheme(display);
-  const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * 0.6)));
-  const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
+  const isPicker = state.mode === "pick" && state.picker;
+  const width = modalWidth(isPicker ? "picker" : "palette", termWidth);
+  const leftOffset = Math.max(0, Math.floor((termWidth - width - 2) / 2));
   const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
   const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
 
-  if (state.mode === "pick" && state.picker) {
+  if (isPicker && state.picker) {
     return renderPickerModal(
       state.picker,
       display,
       t,
-      modalWidth,
+      width,
       modalHeight,
       leftOffset,
       topOffset,
@@ -62,7 +64,7 @@ export function renderPalette(
     state,
     display,
     t,
-    modalWidth,
+    width,
     modalHeight,
     leftOffset,
     topOffset,
@@ -150,6 +152,7 @@ function renderBrowseModal(
       overflow: "hidden",
       ...modalChrome(t, useColor, fading, fadeProgress),
     },
+    ModalHeader({ display, title: "Commands", innerWidth: modalWidth - 4 }),
     Text({
       content: ` :${state.filter}_`,
       attributes: fading ? TextAttributes.DIM : TextAttributes.BOLD,
@@ -252,6 +255,7 @@ function renderPickerModal(
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
+    ModalHeader({ display, title: picker.title, innerWidth: modalWidth - 4 }),
     Text({ content: titleText, attributes: TextAttributes.BOLD }),
     Text({ content: "" }),
     Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
@@ -301,13 +305,18 @@ function renderEntry(
   const line = `${leftText}${" ".repeat(gap)}${right}`;
 
   if (useColor && highlighted && !fading) {
+    // Solid-cyan bg + inverse fg matches the modal highlight bar locked
+    // in plan C2. Bold attribute on top so mono-fallback still reads.
     return Text({
-      content: new StyledText([boldFn(fgFn(t.fg.accent)(line))]),
+      content: new StyledText([boldFn(bgFn(t.fg.accent)(fgFn(t.bg.overlay)(line)))]),
       attributes: TextAttributes.NONE,
     });
   }
   if (highlighted && !fading) {
-    return Text({ content: line, attributes: TextAttributes.BOLD });
+    return Text({
+      content: line,
+      attributes: TextAttributes.BOLD | TextAttributes.INVERSE,
+    });
   }
   if (useColor) {
     return Text({

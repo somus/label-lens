@@ -3,6 +3,7 @@ import { type FilterBuilderState, selectedValues } from "../overlay/filter-build
 import { BUILDER_COLUMNS, operatorsForColumn } from "../store/queues/predicate.ts";
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
+import { ModalHeader } from "./modal-frame.ts";
 import { Text, TextAttributes } from "./text.ts";
 import { borderForRole, resolveTheme } from "./theme.ts";
 
@@ -35,7 +36,7 @@ export function renderFilterBuilder(
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
-    Text({ content: " visual where filter", attributes: TextAttributes.BOLD }),
+    ModalHeader({ display, title: "Visual where filter", innerWidth: modalWidth - 4 }),
     Text({ content: previewLine(state), attributes: TextAttributes.DIM }),
     Text({ content: "" }),
     Box(

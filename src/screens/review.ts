@@ -24,6 +24,7 @@ import { renderFilterBuilder } from "../render/filter-view.ts";
 import { issueGlyph, statusGlyph } from "../render/glyph-map.ts";
 import { foldNamespace } from "../render/label-fold.ts";
 import { Markdown } from "../render/markdown.ts";
+import { ModalHeader } from "../render/modal-frame.ts";
 import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { progressBar } from "../render/progress-bar.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
@@ -813,6 +814,7 @@ function modalBox(
   termWidth: number,
   termHeight: number,
   widthFraction: number,
+  title: string,
   // biome-ignore lint/suspicious/noExplicitAny: mixed VNode children (Text, Markdown, etc.)
   ...children: any[]
 ): ReturnType<typeof Box> {
@@ -837,6 +839,7 @@ function modalBox(
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
     },
+    ModalHeader({ display, title, innerWidth: modalWidth - 4 }),
     ...children,
   );
 }
@@ -859,6 +862,7 @@ function renderOverlay(
         termWidth,
         termHeight,
         0.5,
+        "Assistant",
         Text({ content: " assistant overlay (slice 11)" }),
       );
     case "palette":
@@ -897,7 +901,7 @@ function renderGuidelines(
     termWidth,
     termHeight,
     0.7,
-    Text({ content: ` ${state.title}${titleSuffix}${moreAbove ? "   ↑ above" : ""}` }),
+    `${state.title}${titleSuffix}${moreAbove ? "  ↑ above" : ""}`,
     Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
       Markdown({ content: sliced }),
@@ -922,9 +926,7 @@ function renderHelp(
     termWidth,
     termHeight,
     0.6,
-    Text({
-      content: ` help · ${state.scope} · ${state.entries.length} commands${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
-    }),
+    `Help · ${state.scope}${more > 0 ? `   (+${more} more)` : ""}`,
     Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
       ...visible.map((e) =>
@@ -952,10 +954,7 @@ function renderStatsOverlay(
     termWidth,
     termHeight,
     0.7,
-    Text({
-      content: ` Stats${more > 0 ? `   (+${more} more, ↓ to scroll)` : ""}`,
-      attributes: TextAttributes.BOLD,
-    }),
+    `Stats${more > 0 ? `   (+${more} more)` : ""}`,
     Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
       ...visible.map((line) =>
@@ -980,7 +979,8 @@ function renderPicker(
     termWidth,
     termHeight,
     0.5,
-    Text({ content: ` relabel> ${state.filter}_` }),
+    "Relabel",
+    Text({ content: ` > ${state.filter}_` }),
     ...state.candidates.slice(0, 9).map((c: PickerCandidate, i) =>
       Text({
         content: ` ${i + 1} ${c.label}${c.predicted ? " >" : ""}${i === state.highlight ? "  <-" : ""}`,
@@ -1005,7 +1005,8 @@ function renderNote(
     termWidth,
     termHeight,
     0.5,
-    Text({ content: ` note> ${state.value}_` }),
+    "Note",
+    Text({ content: ` ${state.value}_` }),
     Text({
       content: " enter save · esc cancel",
       attributes: TextAttributes.DIM,

@@ -24,11 +24,13 @@ export function ModalHeader(props: {
   const rich = display.color === "truecolor" || display.color === "256";
 
   if (!rich) {
-    // Mono / 16-color fallback: plain bold title + underline row.
+    // Mono / 16-color fallback: single bold title row. Dropped the
+    // dashed underline so the modal body keeps a row of headroom — at
+    // typical terminal heights the quadrant header eats space we can't
+    // spare without clipping the entry list.
     return Box(
       { flexDirection: "column" },
       Text({ content: ` ${title}`, attributes: TextAttributes.BOLD }),
-      Text({ content: ` ${"─".repeat(Math.max(1, innerWidth - 2))}` }),
     );
   }
 

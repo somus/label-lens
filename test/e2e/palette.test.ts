@@ -266,7 +266,7 @@ describe("palette e2e", () => {
     await new Promise((r) => setTimeout(r, 240));
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain("visual where filter");
+    expect(frame).toContain("Visual where filter");
     expect(frame).toContain("Results:");
     expect(frame).toContain("records");
     expect(frame).toContain("source");

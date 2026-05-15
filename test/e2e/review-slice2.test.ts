@@ -97,7 +97,7 @@ describe("review screen slice 2 UI", () => {
     await renderOnce();
     expect(app.overlay?.kind).toBe("picker");
     const frame = captureCharFrame();
-    expect(frame).toContain("relabel>");
+    expect(frame).toContain("Relabel");
     expect(frame).toContain("food");
     expect(frame).toContain("travel");
     expect(frame).toContain("enter commit");
@@ -121,7 +121,7 @@ describe("review screen slice 2 UI", () => {
       ]);
     }
     const frame = captureCharFrame();
-    expect(frame).toContain("relabel> t");
+    expect(frame).toContain("> t");
   });
 
   test("'n' opens note prompt overlay", async () => {
@@ -131,7 +131,7 @@ describe("review screen slice 2 UI", () => {
     await renderOnce();
     expect(app.overlay?.kind).toBe("note");
     const frame = captureCharFrame();
-    expect(frame).toContain("note>");
+    expect(frame).toContain("Note");
     expect(frame).toContain("enter save");
   });
 
