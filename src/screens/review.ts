@@ -339,7 +339,9 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
   } = args;
   return Box(
     { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
-    // Main column: full band region (prev above, focused pinned, after below).
+    // Main column: band region (prev above, focused pinned, after
+    // below). Only this column reacts to navigation; the right column
+    // stays put.
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 2, overflow: "hidden" },
       bandRegion(
@@ -351,22 +353,21 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
         effectivePin,
       ),
     ),
-    // Right column. Layout (top → bottom):
-    //   top spacer (flexGrow: effectivePin) — keeps prediction aligned
-    //     with the focused row in the band region
+    // Right column. Both metadata and history are pinned — top-anchored
+    // and bottom-anchored respectively — so they stop dancing around
+    // when the user scrolls the band:
     //   metadata block — prediction + badges + label list + note
-    //   middle spacer (flexGrow: 1 - effectivePin) — pushes history down
-    //   history block — anchored to the bottom of the column so it does
-    //     not slide around as the user navigates
+    //   spacer (flexGrow: 1) — absorbs leftover height
+    //   history block
     Box(
       {
         flexDirection: "column",
         flexBasis: 0,
         flexGrow: 1,
         paddingLeft: 1,
+        paddingTop: 1,
         overflow: "hidden",
       },
-      Box({ flexBasis: 0, flexGrow: effectivePin, flexShrink: 1 }),
       Box(
         {
           flexDirection: "column",
@@ -377,7 +378,7 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
         record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
         noteLine(record),
       ),
-      Box({ flexBasis: 0, flexGrow: Math.max(0, 1 - effectivePin), flexShrink: 1 }),
+      Box({ flexBasis: 0, flexGrow: 1, flexShrink: 1 }),
       historyBlock(history),
     ),
   );

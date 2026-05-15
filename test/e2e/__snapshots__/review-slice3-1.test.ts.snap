@@ -4,13 +4,13 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮  [llm:gpt-4]   →   food  [92%]                                     
- │ Lunch at Zomato Bangalore                                                                                                       │                                                                    
+ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                    
+ │ Lunch at Zomato Bangalore                                                                                                       │  [llm:gpt-4]   →   food  [92%]                                     
  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                    
-  █ Uber ride to airport                                                                                                              1 food >                                                          
-  ▆ Amazon order #12345                                                                                                               2 travel                                                          
-  ▄ Netflix monthly                                                                                                                   3 other                                                           
-  █ Salary credit October                                                                                                                                                                               
+  █ Uber ride to airport                                                                                                                                                                                
+  ▆ Amazon order #12345                                                                                                               1 food >                                                          
+  ▄ Netflix monthly                                                                                                                   2 travel                                                          
+  █ Salary credit October                                                                                                             3 other                                                           
   █ Rent transfer to landlord                                                                                                                                                                           
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
@@ -32,13 +32,13 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮  [llm:gpt-4]   →   food  [92%]                                     
- │ Lunch at Zomato Bangalore                                                                                                       │                                                                    
+ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                    
+ │ Lunch at Zomato Bangalore                                                                                                       │  [llm:gpt-4]   →   food  [92%]                                     
  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                    
-  █ Uber ride to airport                                                                                                              1 food >                                                          
-  ▆ Amazon order #12345                                                                                                               2 travel                                                          
-  ▄ Netflix monthly                                                                                                                   3 other                                                           
-  █ Salary credit October                                                                                                                                                                               
+  █ Uber ride to airport                                                                                                                                                                                
+  ▆ Amazon order #12345                                                                                                               1 food >                                                          
+  ▄ Netflix monthly                                                                                                                   2 travel                                                          
+  █ Salary credit October                                                                                                             3 other                                                           
   █ Rent transfer to landlord                                                                                                                                                                           
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
@@ -60,13 +60,13 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐  [llm:gpt-4]   →   food  [92%]                                     
- │ ▶ Lunch at Zomato Bangalore                                                                                                     │                                                                    
+ ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐                                                                    
+ │ ▶ Lunch at Zomato Bangalore                                                                                                     │  [llm:gpt-4]   →   food  [92%]                                     
  └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘                                                                    
-  █ Uber ride to airport                                                                                                              1 food >                                                          
-  ▆ Amazon order #12345                                                                                                               2 travel                                                          
-  ▄ Netflix monthly                                                                                                                   3 other                                                           
-  █ Salary credit October                                                                                                                                                                               
+  █ Uber ride to airport                                                                                                                                                                                
+  ▆ Amazon order #12345                                                                                                               1 food >                                                          
+  ▄ Netflix monthly                                                                                                                   2 travel                                                          
+  █ Salary credit October                                                                                                             3 other                                                           
   █ Rent transfer to landlord                                                                                                                                                                           
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
@@ -88,13 +88,13 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮  [llm:gpt-4]   →   food  [92%]                                     
- │ Lunch at Zomato Bangalore                                                                                                       │                                                                    
+ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                    
+ │ Lunch at Zomato Bangalore                                                                                                       │  [llm:gpt-4]   →   food  [92%]                                     
  ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                                    
-  █ Uber ride to airport                                                                                                              1 food >                                                          
-  ▆ Amazon order #12345                                                                                                               2 travel                                                          
-  ▄ Netflix monthly                                                                                                                   3 other                                                           
-  █ Salary credit October                                                                                                                                                                               
+  █ Uber ride to airport                                                                                                                                                                                
+  ▆ Amazon order #12345                                                                                                               1 food >                                                          
+  ▄ Netflix monthly                                                                                                                   2 travel                                                          
+  █ Salary credit October                                                                                                             3 other                                                           
   █ Rent transfer to landlord                                                                                                                                                                           
   ▇ Coffee at Blue Tokai                                                                                                                                                                                
                                                                                                                                                                                                         
