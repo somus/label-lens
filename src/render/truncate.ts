@@ -8,30 +8,37 @@
  * - **Note text**: truncate-at-end + caller appends "(press n for full)".
  */
 
-const ELLIPSIS = "…";
+// Three ASCII dots (`...`) instead of `…` (U+2026). The single-codepoint
+// ellipsis is variable-width across fonts — many monospace fonts render it
+// inside a single cell as collapsed `..`, which reads as part of the path
+// (e.g. file extensions) and overlaps visually with adjacent characters.
+// ASCII triple-dot is always 3 cells, never ambiguous.
+const ELLIPSIS = "...";
+const ELLIPSIS_WIDTH = ELLIPSIS.length;
 
 export function truncateEnd(s: string, max: number): string {
   if (max <= 0) return "";
   if (s.length <= max) return s;
-  if (max <= 1) return ELLIPSIS;
-  return s.slice(0, max - 1) + ELLIPSIS;
+  if (max <= ELLIPSIS_WIDTH) return ELLIPSIS.slice(0, max);
+  return s.slice(0, max - ELLIPSIS_WIDTH) + ELLIPSIS;
 }
 
 export function truncateMiddle(s: string, max: number): string {
   if (max <= 0) return "";
   if (s.length <= max) return s;
-  if (max <= 3) return ELLIPSIS;
+  if (max <= ELLIPSIS_WIDTH) return ELLIPSIS.slice(0, max);
   // Keep last segment intact (filename), drop interior. e.g.
   // `~/very/long/path/to/dataset.jsonl` @ 24 →
-  // `~/…/to/dataset.jsonl`  (head=`~/`, tail=`/to/dataset.jsonl`)
-  const tailHint = lastPathSegments(s, Math.max(8, max - 4));
-  if (tailHint.length + 4 <= max) {
-    const headBudget = max - tailHint.length - ELLIPSIS.length - 1; // 1 for `/`
+  // `~/.../to/dataset.jsonl`  (head=`~/`, tail=`/to/dataset.jsonl`)
+  const tailHint = lastPathSegments(s, Math.max(8, max - ELLIPSIS_WIDTH - 2));
+  if (tailHint.length + ELLIPSIS_WIDTH + 2 <= max) {
+    // Head + ELLIPSIS + `/` + tail.
+    const headBudget = max - tailHint.length - ELLIPSIS_WIDTH - 1;
     const head = s.slice(0, Math.max(1, headBudget));
     return `${head}${ELLIPSIS}/${tailHint}`;
   }
   // Tail alone bigger than budget — drop tail prefix, end-truncate.
-  return ELLIPSIS + s.slice(-(max - 1));
+  return ELLIPSIS + s.slice(-(max - ELLIPSIS_WIDTH));
 }
 
 /** Return the last N characters of `s` aligned to a `/` boundary if one exists in range. */

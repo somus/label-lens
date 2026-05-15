@@ -5,11 +5,24 @@ export type CapabilityColor = "truecolor" | "256" | "16" | "mono";
 export type CapabilityEnv = {
   COLORTERM?: string;
   TERM?: string;
+  TERM_PROGRAM?: string;
   NO_COLOR?: string;
 };
 
 export type Capability = {
   color: CapabilityColor;
+  /**
+   * Whether the terminal renders smooth per-cell colour gradients
+   * faithfully. Truecolor reporting alone isn't enough — some terminals
+   * (Apple Terminal, VS Code on older builds, Hyper) advertise truecolor
+   * but palette-quantise neighbouring cells into a blocky pattern that
+   * makes a wordmark gradient look pixelated.
+   *
+   * We allowlist known-good terminals (iTerm2, WezTerm, Ghostty, Kitty,
+   * Alacritty) rather than blocklist; unknown terminals fall back to a
+   * single solid colour for the wordmark.
+   */
+  richGradient: boolean;
 };
 
 export type Layout = "auto" | "stack" | "split";
@@ -24,11 +37,17 @@ export type ResolvedDisplay = {
   layout: Layout;
   motion: boolean;
   sidebar: SidebarMode;
+  /**
+   * Smooth gradient rendering is OK on this terminal. Wordmark renders
+   * with the cyan colour ramp when true, single accent colour when false.
+   * Always false at 16 / mono regardless of detection.
+   */
+  richGradient: boolean;
 };
 
 const SPLIT_MIN_WIDTH = 160;
 const SIDEBAR_MIN_WIDTH = 120;
-const SIDEBAR_WIDE_WIDTH = 160;
+const SIDEBAR_FIXED_WIDTH = 32;
 
 export function pickLayout(layout: Layout, terminalWidth: number): "stack" | "split" {
   if (layout === "stack") return "stack";
@@ -53,26 +72,72 @@ export function pickSidebar(display: ResolvedDisplay, terminalWidth: number): bo
 }
 
 /**
- * Sidebar width in columns when visible. Two-step: 24ch baseline, 32ch ≥160.
+ * Sidebar width in columns when visible. Fixed at 32ch regardless of
+ * terminal size — the 24/32 two-step earlier in the slice produced
+ * cramped half-scale logo + tight counter rows at narrow terminals
+ * without a real payoff at wide terminals. One width keeps the visual
+ * rhythm stable across resizes.
  *
- * Contract: never returns less than 24. Sidebar rendering (counter rows,
- * truncate-middle, progress bar) assumes ≥22ch of inner width. Forcing
- * `sidebar: "on"` on a terminal narrower than 24 still allocates 24 cols;
- * the parent layout will clip. Callers must not bypass this helper.
+ * Contract: always returns 32. Sidebar rendering (counter rows,
+ * truncate-middle, progress bar, half-scale logo) assumes ≥22ch of
+ * inner width. Forcing `sidebar: "on"` on a terminal narrower than 32
+ * still allocates 32 cols; the parent layout will clip. Callers must
+ * not bypass this helper.
  */
-export function sidebarWidth(terminalWidth: number): number {
-  return terminalWidth >= SIDEBAR_WIDE_WIDTH ? 32 : 24;
+export function sidebarWidth(_terminalWidth: number): number {
+  return SIDEBAR_FIXED_WIDTH;
+}
+
+/**
+ * Allowlist of terminals known to render per-cell color gradients without
+ * blocky palette quantisation. Identified by `TERM_PROGRAM` (set by the
+ * terminal at startup) and `TERM` (a couple of terminals set only this).
+ *
+ * Add a terminal here only after manual testing — the cost of a false
+ * positive is a gradient that looks pixelated, which is exactly what this
+ * detection is meant to avoid.
+ */
+const GRADIENT_OK_TERM_PROGRAMS = new Set([
+  "iTerm.app",
+  "WezTerm",
+  "ghostty",
+  "kitty",
+  "tabby",
+  // macOS Terminal.app advertises only 256 by default but a recent
+  // build supports truecolor when COLORTERM is set. The visual issue we
+  // saw with `█` cells (inter-cell grid lines) is fixed by switching to
+  // background-colour rendering — see `wordmark.ts`. With that fix the
+  // gradient renders cleanly on Apple_Terminal too.
+  "Apple_Terminal",
+]);
+
+const GRADIENT_OK_TERMS = new Set(["alacritty", "xterm-ghostty", "xterm-kitty"]);
+
+function detectRichGradient(env: CapabilityEnv, color: CapabilityColor): boolean {
+  if (color !== "truecolor") return false;
+  const prog = env.TERM_PROGRAM;
+  if (prog && GRADIENT_OK_TERM_PROGRAMS.has(prog)) return true;
+  const term = env.TERM;
+  if (term && GRADIENT_OK_TERMS.has(term)) return true;
+  return false;
 }
 
 export function detectCapability(env: CapabilityEnv): Capability {
-  if (env.NO_COLOR !== undefined && env.NO_COLOR !== "") return { color: "mono" };
-  if (env.TERM === "dumb") return { color: "mono" };
-  if (env.COLORTERM === "truecolor" || env.COLORTERM === "24bit") {
-    return { color: "truecolor" };
+  if (env.NO_COLOR !== undefined && env.NO_COLOR !== "") {
+    return { color: "mono", richGradient: false };
   }
-  if (env.TERM?.endsWith("-256color")) return { color: "256" };
-  if (env.TERM) return { color: "16" };
-  return { color: "mono" };
+  if (env.TERM === "dumb") return { color: "mono", richGradient: false };
+  let color: CapabilityColor;
+  if (env.COLORTERM === "truecolor" || env.COLORTERM === "24bit") {
+    color = "truecolor";
+  } else if (env.TERM?.endsWith("-256color")) {
+    color = "256";
+  } else if (env.TERM) {
+    color = "16";
+  } else {
+    color = "mono";
+  }
+  return { color, richGradient: detectRichGradient(env, color) };
 }
 
 export type ColorAndBanding = Pick<ResolvedDisplay, "color" | "banding">;
@@ -109,7 +174,10 @@ export function resolveDisplay(args: {
   // matching the `banding` clamp above.
   const motion = motionMode === "off" ? false : supportsMotion;
   const sidebar: SidebarMode = args.config?.sidebar ?? "auto";
-  return { color, banding, theme, candidatePin, layout, motion, sidebar };
+  // Gradient detection only meaningful at truecolor. If the user forces
+  // a lower color level via config, gradient is off regardless.
+  const richGradient = color === "truecolor" && args.detectedColor.richGradient;
+  return { color, banding, theme, candidatePin, layout, motion, sidebar, richGradient };
 }
 
 export type ThemeProbe = {
@@ -126,6 +194,7 @@ export function defaultDisplay(): ResolvedDisplay {
     layout: "auto",
     motion: false,
     sidebar: "auto",
+    richGradient: false,
   };
 }
 

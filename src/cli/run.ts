@@ -58,6 +58,9 @@ export async function runReview(): Promise<void> {
       env: {
         COLORTERM: process.env.COLORTERM,
         TERM: process.env.TERM,
+        // Used by `detectRichGradient` to allowlist terminals with clean
+        // per-cell gradient rendering (iTerm2, WezTerm, Ghostty, …).
+        TERM_PROGRAM: process.env.TERM_PROGRAM,
         NO_COLOR: process.env.NO_COLOR,
       },
       themeProbe: { waitForThemeMode: (ms) => r.waitForThemeMode(ms) },

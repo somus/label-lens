@@ -9,23 +9,46 @@ import { type Segment, segmentsToStyledText } from "./status-bar.ts";
 import { Wordmark } from "./wordmark.ts";
 
 /**
- * Approximate visual cell width. Many of the glyphs we use in the sidebar
- * (`⚠`, `⚡`, `●`, `◇`) live in Unicode blocks that East-Asian-Width-Ambiguous
- * tables call 2 cells in CJK locales and 1 elsewhere — but most terminals on
- * macOS / Linux render them as 2 regardless. We assume 2 for symbols in the
- * Misc-Symbols/Dingbats range so layout math reserves enough room.
+ * Per-glyph visual width override. Symbols in U+2300..U+27FF are
+ * East-Asian-Width Ambiguous — fonts disagree on whether they render as
+ * 1 cell or 2. Empirical testing (iTerm2, macOS Terminal, Ghostty,
+ * WezTerm) shows the glyphs split as below: warning/zap render 2 cells,
+ * filled circles / diamonds / checks render 1. Range-based guessing
+ * misaligns columns in the bad case.
+ *
+ * Source-of-truth for the glyphs that flow through here is
+ * `src/render/glyph-map.ts` — `issueGlyph`, `statusGlyph`, `flashGlyph`,
+ * `kindGlyph`. When adding a new glyph there, add it here too. Unmapped
+ * symbol codepoints fall back to the range heuristic (2 cells,
+ * conservative) and `signalRow` asserts loudly if it sees one.
  */
+const GLYPH_WIDTH_OVERRIDES: Record<string, number> = {
+  "⚠": 2,
+  "⚡": 2,
+  "●": 1,
+  "◇": 1,
+  "◆": 1,
+  "✓": 1,
+  "✗": 1,
+  "↻": 1,
+  "ⓘ": 1,
+  "⧉": 1,
+  "○": 1,
+};
+
 function visualWidth(s: string): number {
   let w = 0;
   for (const ch of s) {
+    const override = GLYPH_WIDTH_OVERRIDES[ch];
+    if (override !== undefined) {
+      w += override;
+      continue;
+    }
     const code = ch.codePointAt(0) ?? 0;
-    // Latin / common BMP: 1 cell.
     if (code < 0x2000) {
       w += 1;
       continue;
     }
-    // Misc Symbols (U+2600..U+26FF), Dingbats (U+2700..U+27BF), and the
-    // CJK Symbols block all default to 2 cells on the terminals we ship to.
     if (code >= 0x2300 && code <= 0x27ff) w += 2;
     else if (code >= 0x2e80 && code <= 0x9fff) w += 2;
     else w += 1;
@@ -34,6 +57,13 @@ function visualWidth(s: string): number {
 }
 
 const PROGRESS_BAR_WIDTH = 10;
+
+/**
+ * Right-side breathing room for dataset-path rows. A full-innerWidth path
+ * butts up against the sidebar edge and reads as "overflow" even when it
+ * fits — 2 cells of trailing space restores the visual margin.
+ */
+const SIDEBAR_EDGE_BREATHING_ROOM = 2;
 
 /**
  * Sidebar — the right column shown at ≥120 cols when `display.sidebar` resolves
@@ -56,6 +86,7 @@ export function Sidebar(props: {
 
   const children: ReturnType<typeof Box | typeof Text>[] = [
     Wordmark({ display, innerWidth }),
+    Text({ content: "" }),
     Text({ content: "" }),
   ];
 
@@ -112,13 +143,21 @@ function renderQueueBody(
   );
   out.push(blankRow());
 
-  // Dataset path
+  // Dataset path. Reserve `SIDEBAR_EDGE_BREATHING_ROOM` cells of right-side
+  // breathing room so the path never butts up against the sidebar's right
+  // edge — visual review showed a full-width path read as "overflow" even
+  // when it fit.
   out.push(
     fixedRow(
       innerWidth,
       Text({
         content: segmentsToStyledText(
-          [{ text: truncateMiddle(data.datasetPath, innerWidth), tone: "muted" }],
+          [
+            {
+              text: truncateMiddle(data.datasetPath, innerWidth - SIDEBAR_EDGE_BREATHING_ROOM),
+              tone: "muted",
+            },
+          ],
           display,
         ),
         wrapMode: "char",
@@ -190,7 +229,12 @@ function renderStatsBody(
       innerWidth,
       Text({
         content: segmentsToStyledText(
-          [{ text: truncateMiddle(data.datasetPath, innerWidth), tone: "muted" }],
+          [
+            {
+              text: truncateMiddle(data.datasetPath, innerWidth - SIDEBAR_EDGE_BREATHING_ROOM),
+              tone: "muted",
+            },
+          ],
           display,
         ),
         wrapMode: "char",
@@ -275,6 +319,16 @@ function progressRow(
   );
 }
 
+/**
+ * Minimum width of the leading-glyph column in signal rows. Wide glyphs
+ * (`⚠`, `⚡`) render 2 cells; narrow glyphs (`●`) render 1 cell. We pad
+ * with spaces after the glyph so the label column always starts at the
+ * same x. Per-row column expands if a glyph wider than the minimum slips
+ * in (e.g. someone adds a 3-cell symbol to `issueGlyph`), so alignment
+ * survives but the rows widen — better than silent overlap.
+ */
+const SIGNAL_GLYPH_MIN_COLUMN = 3;
+
 function signalRow(
   display: ResolvedDisplay,
   signal: SidebarSignalRow,
@@ -282,12 +336,26 @@ function signalRow(
 ): ReturnType<typeof Box> {
   const glyph = issueGlyph(signal.type, display);
   const glyphCells = visualWidth(glyph);
+  // If `visualWidth` fell back to the U+2300..U+27FF heuristic (2 cells) for
+  // a glyph not in the override map, alignment is a guess — fail loudly so
+  // the override map gets updated rather than shipping silent misalignment.
+  if (
+    GLYPH_WIDTH_OVERRIDES[glyph] === undefined &&
+    glyph.codePointAt(0) !== undefined &&
+    (glyph.codePointAt(0) ?? 0) >= 0x2000
+  ) {
+    throw new Error(
+      `signalRow: glyph ${JSON.stringify(glyph)} not in GLYPH_WIDTH_OVERRIDES — add it to keep sidebar columns aligned`,
+    );
+  }
+  const glyphColumn = Math.max(SIGNAL_GLYPH_MIN_COLUMN, glyphCells + 1);
+  const glyphPad = glyphColumn - glyphCells;
   const countText = String(signal.count);
   const countCells = visualWidth(countText);
-  // Reserve glyph + 1ch + label + ≥1ch gap + count.
-  const labelBudget = Math.max(4, innerWidth - glyphCells - 1 - countCells - 1);
+  // Reserve `glyphColumn + label + ≥1ch gap + count`.
+  const labelBudget = Math.max(4, innerWidth - glyphColumn - countCells - 1);
   const labelText = truncateEndSafe(signal.type, labelBudget);
-  const used = glyphCells + 1 + visualWidth(labelText) + countCells;
+  const used = glyphColumn + visualWidth(labelText) + countCells;
   const gap = Math.max(1, innerWidth - used);
   return fixedRow(
     innerWidth,
@@ -295,7 +363,7 @@ function signalRow(
       content: segmentsToStyledText(
         [
           { text: glyph, tone: "warning" },
-          { text: " ", tone: "default" },
+          { text: " ".repeat(glyphPad), tone: "default" },
           { text: labelText, tone: "default" },
           { text: " ".repeat(gap), tone: "default" },
           { text: countText, tone: "muted" },
@@ -337,18 +405,6 @@ function truncateEndSafe(s: string, max: number): string {
   const m = Math.max(4, max);
   if (s.length <= m) return s;
   return `${s.slice(0, m - 1)}…`;
-}
-
-/**
- * Truncate-middle that never returns less than 4 chars. The 4-char floor is
- * the smallest output `truncateMiddle` produces meaningfully (`a…z` style:
- * one head char + ellipsis + one tail char + room to grow). Below 4 the
- * helper would either throw or collapse to just `…`, which reads worse than
- * a clipped string. Callers pass narrow budgets when the parent column is
- * tiny — preserve at least the head/tail anchor.
- */
-function truncateMiddleSafe(s: string, max: number): string {
-  return truncateMiddle(s, Math.max(4, max));
 }
 
 /** Re-export for callers — provides one Segment per fold result. */

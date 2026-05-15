@@ -63,6 +63,7 @@ function display(color: ResolvedDisplay["color"]): ResolvedDisplay {
     layout: "auto",
     motion: false,
     sidebar: "auto",
+    richGradient: false,
   };
 }
 

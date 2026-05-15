@@ -51,7 +51,7 @@ describe("detectCapability", () => {
 
 describe("applyDisplayOverrides", () => {
   test("undefined override returns detected", () => {
-    const detected = { color: "truecolor" as const };
+    const detected = { color: "truecolor" as const, richGradient: false };
     expect(applyDisplayOverrides(detected, undefined)).toEqual({
       color: "truecolor",
       banding: true,
@@ -59,30 +59,30 @@ describe("applyDisplayOverrides", () => {
   });
 
   test("display.color forces a different level", () => {
-    const detected = { color: "truecolor" as const };
+    const detected = { color: "truecolor" as const, richGradient: false };
     expect(applyDisplayOverrides(detected, { color: "mono" }).color).toBe("mono");
   });
 
   test("display.color = 'auto' keeps detected", () => {
-    const detected = { color: "256" as const };
+    const detected = { color: "256" as const, richGradient: false };
     expect(applyDisplayOverrides(detected, { color: "auto" }).color).toBe("256");
   });
 
   test("display.banding = 'off' disables banding", () => {
-    const detected = { color: "truecolor" as const };
+    const detected = { color: "truecolor" as const, richGradient: false };
     expect(applyDisplayOverrides(detected, { banding: "off" }).banding).toBe(false);
   });
 
   test("display.banding = 'on' or 'auto' keeps banding on for color terminals", () => {
-    const detected = { color: "truecolor" as const };
+    const detected = { color: "truecolor" as const, richGradient: false };
     expect(applyDisplayOverrides(detected, { banding: "auto" }).banding).toBe(true);
     expect(applyDisplayOverrides(detected, { banding: "on" }).banding).toBe(true);
   });
 
   test("16/mono never have banding even when 'on'", () => {
-    const detected = { color: "16" as const };
+    const detected = { color: "16" as const, richGradient: false };
     expect(applyDisplayOverrides(detected, { banding: "on" }).banding).toBe(false);
-    const mono = { color: "mono" as const };
+    const mono = { color: "mono" as const, richGradient: false };
     expect(applyDisplayOverrides(mono, { banding: "on" }).banding).toBe(false);
   });
 });
@@ -90,7 +90,7 @@ describe("applyDisplayOverrides", () => {
 describe("resolveDisplay", () => {
   test("uses detected values + config defaults when no overrides", () => {
     const r = resolveDisplay({
-      detectedColor: { color: "truecolor" },
+      detectedColor: { color: "truecolor", richGradient: false },
       detectedTheme: "dark",
       config: undefined,
     });
@@ -102,12 +102,13 @@ describe("resolveDisplay", () => {
       layout: "auto",
       motion: true,
       sidebar: "auto",
+      richGradient: false,
     });
   });
 
   test("falls back to light when detectedTheme is null", () => {
     const r = resolveDisplay({
-      detectedColor: { color: "truecolor" },
+      detectedColor: { color: "truecolor", richGradient: false },
       detectedTheme: null,
       config: undefined,
     });
@@ -116,7 +117,7 @@ describe("resolveDisplay", () => {
 
   test("display.theme override wins over detection", () => {
     const r = resolveDisplay({
-      detectedColor: { color: "truecolor" },
+      detectedColor: { color: "truecolor", richGradient: false },
       detectedTheme: "dark",
       config: { theme: "light" },
     });
@@ -125,7 +126,7 @@ describe("resolveDisplay", () => {
 
   test("display.theme = 'auto' keeps detected", () => {
     const r = resolveDisplay({
-      detectedColor: { color: "truecolor" },
+      detectedColor: { color: "truecolor", richGradient: false },
       detectedTheme: "dark",
       config: { theme: "auto" },
     });
@@ -135,21 +136,21 @@ describe("resolveDisplay", () => {
   test("display.candidatePin override applied; clamped to (0, 1)", () => {
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { candidatePin: 0.25 },
       }).candidatePin,
     ).toBe(0.25);
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { candidatePin: 1.5 },
       }).candidatePin,
     ).toBe(0.95);
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { candidatePin: -0.5 },
       }).candidatePin,
@@ -159,7 +160,7 @@ describe("resolveDisplay", () => {
   test("default layout is 'auto' when no config", () => {
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: undefined,
       }).layout,
@@ -169,14 +170,14 @@ describe("resolveDisplay", () => {
   test("display.layout override survives resolution", () => {
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { layout: "split" },
       }).layout,
     ).toBe("split");
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { layout: "stack" },
       }).layout,
@@ -186,28 +187,28 @@ describe("resolveDisplay", () => {
   test("display.motion auto follows color capability", () => {
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { motion: "auto" },
       }).motion,
     ).toBe(true);
     expect(
       resolveDisplay({
-        detectedColor: { color: "256" },
+        detectedColor: { color: "256", richGradient: false },
         detectedTheme: "light",
         config: { motion: "auto" },
       }).motion,
     ).toBe(true);
     expect(
       resolveDisplay({
-        detectedColor: { color: "16" },
+        detectedColor: { color: "16", richGradient: false },
         detectedTheme: "light",
         config: { motion: "auto" },
       }).motion,
     ).toBe(false);
     expect(
       resolveDisplay({
-        detectedColor: { color: "mono" },
+        detectedColor: { color: "mono", richGradient: false },
         detectedTheme: "light",
         config: { motion: "auto" },
       }).motion,
@@ -217,7 +218,7 @@ describe("resolveDisplay", () => {
   test("display.motion 'off' wins over capability; 'on' cannot re-enable 16 / mono", () => {
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { motion: "off" },
       }).motion,
@@ -226,21 +227,21 @@ describe("resolveDisplay", () => {
     // 16 / mono, so 'on' is clamped to the capability ceiling.
     expect(
       resolveDisplay({
-        detectedColor: { color: "mono" },
+        detectedColor: { color: "mono", richGradient: false },
         detectedTheme: "light",
         config: { motion: "on" },
       }).motion,
     ).toBe(false);
     expect(
       resolveDisplay({
-        detectedColor: { color: "16" },
+        detectedColor: { color: "16", richGradient: false },
         detectedTheme: "light",
         config: { motion: "on" },
       }).motion,
     ).toBe(false);
     expect(
       resolveDisplay({
-        detectedColor: { color: "truecolor" },
+        detectedColor: { color: "truecolor", richGradient: false },
         detectedTheme: "light",
         config: { motion: "on" },
       }).motion,
@@ -369,18 +370,15 @@ describe("pickSidebar", () => {
 });
 
 describe("sidebarWidth", () => {
-  test("baseline 24ch below 160 cols", () => {
-    expect(sidebarWidth(120)).toBe(24);
-    expect(sidebarWidth(159)).toBe(24);
-  });
-
-  test("wide 32ch at ≥160 cols", () => {
+  test("fixed 32ch across all terminal widths", () => {
+    expect(sidebarWidth(120)).toBe(32);
+    expect(sidebarWidth(159)).toBe(32);
     expect(sidebarWidth(160)).toBe(32);
     expect(sidebarWidth(240)).toBe(32);
   });
 
-  test("never returns less than 24, even at tiny terminal widths", () => {
-    expect(sidebarWidth(40)).toBe(24);
-    expect(sidebarWidth(0)).toBe(24);
+  test("returns 32 even at tiny terminal widths — parent layout clips", () => {
+    expect(sidebarWidth(40)).toBe(32);
+    expect(sidebarWidth(0)).toBe(32);
   });
 });
