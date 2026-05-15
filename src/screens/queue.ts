@@ -6,9 +6,11 @@ import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { progressSegments } from "../render/progress-segments.ts";
 import { Text, TextAttributes } from "../render/text.ts";
+import { queueRecords } from "../store/queries.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import { QUEUE_CYCLE, type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import { records } from "../store/schema.ts";
+import type { RecordWithPrimaryPrediction } from "../types.ts";
 
 export type QueueScreenHandle = { destroy: () => void };
 
@@ -34,6 +36,79 @@ const QUEUE_SECTIONS: Array<{ title: string; icon: string; ids: QueueId[] }> = [
 
 function basename(p: string): string {
   return p.split("/").pop() ?? p;
+}
+
+const PREVIEW_TEXT_MAX = 80;
+
+function truncate(s: string, n: number): string {
+  if (s.length <= n) return s;
+  return `${s.slice(0, n - 1)}…`;
+}
+
+function renderPreview(args: {
+  row: Row | undefined;
+  width: number;
+  useColor: boolean;
+  app: AppContext;
+  previewFor: (id: QueueId) => RecordWithPrimaryPrediction | null;
+}): ReturnType<typeof Box> | null {
+  if (args.width < NARROW_WIDTH) return null;
+  if (!args.useColor) return null;
+  if (!args.row) return null;
+
+  const heading: Segment[] = [
+    { text: " Preview: ", tone: "dim" },
+    { text: args.row.label, tone: "accent" },
+  ];
+
+  const record = args.previewFor(args.row.id);
+  const lines: ReturnType<typeof Text>[] = [
+    Text({
+      content: segmentsToStyledText(heading, args.app.display),
+      attributes: TextAttributes.BOLD,
+      wrapMode: "char",
+    }),
+  ];
+
+  if (!record) {
+    lines.push(
+      Text({
+        content: "   (no records)",
+        attributes: TextAttributes.DIM,
+      }),
+    );
+  } else {
+    const textSeg: Segment[] = [
+      { text: "   ", tone: "default" },
+      { text: truncate(record.text, PREVIEW_TEXT_MAX), tone: "default" },
+    ];
+    lines.push(
+      Text({
+        content: segmentsToStyledText(textSeg, args.app.display),
+        wrapMode: "char",
+      }),
+    );
+    const p = record.primaryPrediction;
+    if (p) {
+      const conf = p.confidence !== null ? `${Math.round(p.confidence * 100)}%` : "—";
+      const meta: Segment[] = [
+        { text: "   ", tone: "default" },
+        { text: `src ${p.source}`, tone: "muted" },
+        { text: "   ", tone: "dim" },
+        { text: p.label, tone: "accent" },
+        { text: "   ", tone: "dim" },
+        { text: conf, tone: "muted" },
+      ];
+      lines.push(
+        Text({
+          content: segmentsToStyledText(meta, args.app.display),
+          wrapMode: "char",
+        }),
+      );
+    }
+  }
+
+  return Box({ flexDirection: "column" }, ...lines);
 }
 
 function totalRecordCount(app: AppContext): number {
@@ -74,6 +149,17 @@ export function mountQueueScreen(args: {
     flatRows.findIndex((r) => r.id === app.queueId),
   );
   const longestLabel = flatRows.reduce((m, r) => Math.max(m, r.label.length), 0);
+
+  // First record per queue, memoized for the lifetime of this screen mount.
+  // Drops to one query per queue the user actually highlights.
+  const previewCache = new Map<QueueId, RecordWithPrimaryPrediction | null>();
+  const previewFor = (id: QueueId): RecordWithPrimaryPrediction | null => {
+    if (previewCache.has(id)) return previewCache.get(id) ?? null;
+    const def = resolveQueue(id);
+    const row = queueRecords(app.db, { ...def.query, limit: 1 })[0] ?? null;
+    previewCache.set(id, row);
+    return row;
+  };
 
   const renderState = () => {
     // Scope is set on every render so a thrown error mid-mount can't leave a
@@ -140,6 +226,15 @@ export function mountQueueScreen(args: {
         sectionBlocks.push(Box({ height: 1 }));
       }
     }
+
+    const previewBlock = renderPreview({
+      row: flatRows[highlight],
+      width: innerWidth,
+      useColor,
+      app,
+      previewFor,
+    });
+    if (previewBlock) sectionBlocks.push(Box({ height: 1 }), previewBlock);
 
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },

@@ -1,10 +1,28 @@
-import type { AppContext } from "../app/context.ts";
+import { type AppContext, effectiveQueueId } from "../app/context.ts";
 import { flash } from "../render/anim.ts";
 import { predicateQueue } from "../store/queues/predicate.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { insertReview, updateRecordNote } from "../store/records.ts";
 import type { Effect } from "./types.ts";
+
+/**
+ * Refresh whichever cursor is actually backing the active screen. Smart-next
+ * (PRD §14.7) opens a `smart-pending` cursor under the user-facing
+ * `pending` queueId; refreshing by `queueId` alone would update the wrong
+ * cursor and let just-reviewed records linger in the on-screen list. Also
+ * refresh the user-facing cursor when it differs so the shift+J/K escape
+ * hatch (which seeks through the plain `pending` cursor) sees fresh data.
+ */
+function refreshQueue(app: AppContext, queueId: QueueId): { total: number } {
+  const effective = effectiveQueueId(app, queueId);
+  const cursor = app.getCursor(effective);
+  cursor.refresh();
+  if (effective !== queueId && app.hasCursor(queueId)) {
+    app.getCursor(queueId).refresh();
+  }
+  return cursor;
+}
 
 export type DispatchCommandFn = (name: string, argument?: string) => void | Promise<void>;
 
@@ -36,8 +54,7 @@ export function applyEffects(
           prev_label: effect.prevLabel,
           source_of_truth: effect.sourceOfTruth,
         });
-        const cursor = app.getCursor(queueId);
-        cursor.refresh();
+        const cursor = refreshQueue(app, queueId);
         if (effect.status === "accepted") app.motion.play("footer.accept", flash(80, "success"));
         else if (effect.status === "relabeled") {
           app.motion.play("footer.relabel", flash(80, "accent"));
@@ -51,7 +68,7 @@ export function applyEffects(
       }
       case "updateNote":
         updateRecordNote(app.db, effect.recordId, effect.value);
-        app.getCursor(queueId).refresh();
+        refreshQueue(app, queueId);
         break;
       case "markAssistantViewed":
         // Slice 11 plumbing — flag the record's source-of-truth as 'human+assistant'

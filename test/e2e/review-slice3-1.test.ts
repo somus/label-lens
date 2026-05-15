@@ -103,17 +103,17 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
       await renderOnce();
     }
     const frame = captureCharFrame();
-    expect(frame).toContain("history:");
-    expect(frame).toContain("1 food");
-    expect(frame).toContain("2 travel");
-    expect(frame).toContain("3 other");
+    expect(frame).toContain("history");
+    expect(frame).toContain("1  food");
+    expect(frame).toContain("2  travel");
+    expect(frame).toContain("3  other");
     // Right column metadata sits in the right ~third of the frame.
     const lines = frameLines(frame);
-    const histLine = lines.find((l) => l.includes("history:"))!;
-    const labelLine = lines.find((l) => l.includes("1 food"))!;
+    const histLine = lines.find((l) => l.includes("history"))!;
+    const labelLine = lines.find((l) => l.includes("1  food"))!;
     // Split right column starts roughly 2/3 of width. At 200 cols, expect col >= 100.
-    expect(histLine.indexOf("history:")).toBeGreaterThan(100);
-    expect(labelLine.indexOf("1 food")).toBeGreaterThan(100);
+    expect(histLine.indexOf("history")).toBeGreaterThan(100);
+    expect(labelLine.indexOf("1  food")).toBeGreaterThan(100);
   });
 
   test("auto + width 200: focused record's top corner sits near pin row", async () => {
@@ -145,9 +145,9 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     const frame = captureCharFrame();
     const lines = frameLines(frame);
     // Stack: label list sits at far left of frame, not in a right column.
-    const labelLine = lines.find((l) => l.includes("1 food"))!;
+    const labelLine = lines.find((l) => l.includes("1  food"))!;
     expect(labelLine).toBeDefined();
-    expect(labelLine.indexOf("1 food")).toBeLessThan(20);
+    expect(labelLine.indexOf("1  food")).toBeLessThan(20);
   });
 
   test("display.layout = 'split' at width 100: label list at RIGHT third", async () => {
@@ -159,9 +159,9 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     const frame = captureCharFrame();
     const lines = frameLines(frame);
     // Split: label list sits in the right ~third of frame; at 100 cols, expect col >= 50.
-    const labelLine = lines.find((l) => l.includes("1 food"))!;
+    const labelLine = lines.find((l) => l.includes("1  food"))!;
     expect(labelLine).toBeDefined();
-    expect(labelLine.indexOf("1 food")).toBeGreaterThan(50);
+    expect(labelLine.indexOf("1  food")).toBeGreaterThan(50);
   });
 
   test("split: empty queue renders 'All records reviewed' with no focus box", async () => {

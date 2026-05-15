@@ -66,6 +66,18 @@ describe("openHelp", () => {
     expect(paletteOnly?.binding).toBe("—");
     expect(paletteOnly?.palette).toBe(":queue");
   });
+
+  test("doc-view scope shows only doc-view + global commands; hidden stays out", () => {
+    const s = openHelp({ commands: cmds, scope: "doc-view" });
+    const names = s.entries.map((e) => e.name);
+    expect(names).toContain("doc.top");
+    expect(names).toContain("palette.queue");
+    expect(names).not.toContain("record.accept");
+    expect(names).not.toContain("record.next");
+    expect(names).not.toContain("queue.next");
+    expect(names).not.toContain("palette.open");
+    expect(names).not.toContain("secret.thing");
+  });
 });
 
 function key(name: string) {

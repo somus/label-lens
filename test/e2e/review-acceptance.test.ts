@@ -72,6 +72,6 @@ describe("slice 2 acceptance — accept → relabel → skip → undo", () => {
     expect(frame).toContain("Reviewed: 2 / 10");
     expect(frame).toContain("Skipped: 0");
     expect(frame).toContain("Pending: 8");
-    expect(frame).toContain("history:");
+    expect(frame).toContain("history");
   });
 });

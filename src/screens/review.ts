@@ -17,6 +17,7 @@ import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
 import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
+import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { renderFilterBuilder } from "../render/filter-view.ts";
 import { Markdown } from "../render/markdown.ts";
@@ -115,13 +116,26 @@ export function mountReviewScreen(args: {
     const queueId = app.queueId ?? initialQueueId;
     const bandRows = Math.max(8, renderer.terminalHeight - NON_BAND_ROWS);
     const mode = pickLayout(app.display.layout, renderer.terminalWidth);
-    const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * app.display.candidatePin));
-    const nextN = Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - app.display.candidatePin)));
+    const pin = app.display.candidatePin;
+    const prevN = Math.max(MIN_WINDOW, Math.floor(bandRows * pin));
+    const nextN = Math.max(MIN_WINDOW, Math.floor(bandRows * (1 - pin)));
     const window = cursor?.window(prevN, nextN) ?? {
       records: [],
       focusedIndex: -1,
       startIndex: 0,
     };
+    // When the cursor is near the top of the queue there are fewer
+    // preceding records than the pin would reserve room for. Shrink the
+    // top region proportionally so the focused row floats up to fill the
+    // empty band rather than sitting in the middle of a tall void.
+    // Boundary mode always renders contextLines above and below the
+    // focused row, so the full pin is correct there.
+    const hasContextStrip = app.config.task === "boundary";
+    const effectivePin = hasContextStrip
+      ? pin
+      : prevN > 0
+        ? Math.min(pin, (window.focusedIndex / prevN) * pin)
+        : 0;
     const record = cursor?.current() ?? null;
     const history = recentReviewsWithText(app.db, 5);
     const marked = record ? hasTag(app.db, record.id, "marked") : false;
@@ -147,6 +161,9 @@ export function mountReviewScreen(args: {
     if (marked) {
       statusLeft.push({ text: "   ● marked", tone: "warning" });
     }
+    if (app.config.navigation?.smartNext && queueId === "pending") {
+      statusLeft.push({ text: "   ▸ smart", tone: "accent" });
+    }
     const statusRight: Segment[] = [
       { text: `Reviewed: ${reviewedTotal} / ${counts.total}`, tone: "muted" },
       { text: "  ·  ", tone: "dim" },
@@ -168,6 +185,7 @@ export function mountReviewScreen(args: {
             issues,
             totalRecords: counts.total,
             predictionCount,
+            effectivePin,
           })
         : stackBody({
             window,
@@ -179,6 +197,7 @@ export function mountReviewScreen(args: {
             issues,
             totalRecords: counts.total,
             predictionCount,
+            effectivePin,
           }),
       app.overlay
         ? renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight)
@@ -252,6 +271,13 @@ type BodyArgs = {
   issues: StoredIssue[];
   totalRecords: number;
   predictionCount: number;
+  /**
+   * Pin position to *use* for layout this render. Differs from
+   * `display.candidatePin` when there are fewer preceding records than the
+   * pin would normally reserve space for — instead of leaving a band of
+   * blank rows above the focus, we collapse the top region proportionally.
+   */
+  effectivePin: number;
 };
 
 function contextStripFor(
@@ -277,16 +303,25 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
     issues,
     totalRecords,
     predictionCount,
+    effectivePin,
   } = args;
   return Box(
     { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-    bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
-    predictionLine(record),
-    issueBadges(issues, totalRecords, predictionCount, display),
-    record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
-    noteLine(record),
+    bandRegion(
+      window.records,
+      window.focusedIndex,
+      window.startIndex,
+      display,
+      contextStrip,
+      effectivePin,
+    ),
     Box({ height: 1 }),
-    historyBlock(history),
+    predictionLine(record, display),
+    issueBadges(issues, totalRecords, predictionCount, display),
+    record ? labelListBox(labels, record.primaryPrediction?.label ?? null, display) : Box({}),
+    noteLine(record),
+    Box({ height: 2 }),
+    historyBlock(history, display),
   );
 }
 
@@ -301,33 +336,51 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
     issues,
     totalRecords,
     predictionCount,
+    effectivePin,
   } = args;
-  const pin = display.candidatePin;
   return Box(
     { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
-    // Main column: full band region (prev above, focused pinned, after below).
+    // Main column: band region (prev above, focused pinned, after
+    // below). Only this column reacts to navigation; the right column
+    // stays put.
     Box(
       { flexDirection: "column", flexBasis: 0, flexGrow: 2, overflow: "hidden" },
-      bandRegion(window.records, window.focusedIndex, window.startIndex, display, contextStrip),
+      bandRegion(
+        window.records,
+        window.focusedIndex,
+        window.startIndex,
+        display,
+        contextStrip,
+        effectivePin,
+      ),
     ),
-    // Right column: history + metadata + label list, top-aligned to the pin row.
+    // Right column. Both metadata and history are pinned — top-anchored
+    // and bottom-anchored respectively — so they stop dancing around
+    // when the user scrolls the band:
+    //   metadata block — prediction + badges + label list + note
+    //   spacer (flexGrow: 1) — absorbs leftover height
+    //   history block
     Box(
-      { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
-      Box({ flexBasis: 0, flexGrow: pin }),
+      {
+        flexDirection: "column",
+        flexBasis: 0,
+        flexGrow: 1,
+        paddingLeft: 1,
+        paddingTop: 1,
+        overflow: "hidden",
+      },
       Box(
         {
           flexDirection: "column",
-          flexBasis: 0,
-          flexGrow: 1 - pin,
-          flexShrink: 1,
-          overflow: "hidden",
+          flexShrink: 0,
         },
-        historyBlock(history),
-        predictionLine(record),
+        predictionLine(record, display),
         issueBadges(issues, totalRecords, predictionCount, display),
-        record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
+        record ? labelListBox(labels, record.primaryPrediction?.label ?? null, display) : Box({}),
         noteLine(record),
       ),
+      Box({ flexBasis: 0, flexGrow: 1, flexShrink: 1 }),
+      historyBlock(history, display),
     ),
   );
 }
@@ -342,7 +395,7 @@ function issueBadges(
   // Stable order so snapshots are deterministic regardless of insert order.
   const sorted = [...issues].sort((a, b) => a.type.localeCompare(b.type));
   return Box(
-    { flexDirection: "column", marginTop: 1 },
+    { flexDirection: "column", marginTop: 2 },
     ...sorted.map((issue) =>
       BadgeLine({
         display,
@@ -391,23 +444,39 @@ function badgeCopy(issue: StoredIssue, totalRecords: number, predictionCount: nu
   }
 }
 
-function predictionLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
+function confidenceTone(c: number | null): Segment["tone"] {
+  if (c === null) return "muted";
+  if (c >= 0.8) return "success";
+  if (c >= 0.5) return "warning";
+  return "danger";
+}
+
+function predictionLine(
+  record: RecordWithPrimaryPrediction | null,
+  display: ResolvedDisplay,
+): ReturnType<typeof Box> {
   if (!record?.primaryPrediction) return Box({});
   const p = record.primaryPrediction;
-  const conf = p.confidence !== null ? `  (${Math.round(p.confidence * 100)}%)` : "";
-  return Box(
-    { flexDirection: "row", marginTop: 1 },
-    Text({
-      content: ` src ${p.source}   →   ${p.label}${conf}`,
-      attributes: TextAttributes.DIM,
-    }),
-  );
+  const segs: Segment[] = [
+    { text: " [", tone: "dim" },
+    { text: p.source, tone: "muted" },
+    { text: "]", tone: "dim" },
+    { text: "  ", tone: "dim" },
+    { text: "→", tone: "accent" },
+    { text: "  ", tone: "dim" },
+    { text: p.label, tone: "default" },
+  ];
+  if (p.confidence !== null) {
+    segs.push({ text: "  ", tone: "dim" });
+    segs.push({ text: `${Math.round(p.confidence * 100)}%`, tone: confidenceTone(p.confidence) });
+  }
+  return Box({ flexDirection: "row" }, Text({ content: segmentsToStyledText(segs, display) }));
 }
 
 function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
   if (!record?.note) return Box({});
   return Box(
-    { flexDirection: "row", marginTop: 1 },
+    { flexDirection: "row", marginTop: 2 },
     Text({
       content: ` note: ${truncate(record.note, 200)}${record.note.length > 200 ? " (press n for full)" : ""}`,
       attributes: TextAttributes.DIM,
@@ -415,17 +484,58 @@ function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof
   );
 }
 
-function historyBlock(history: HistoryEntry[]): ReturnType<typeof Box> {
+const STATUS_TONE: Record<StoredReview["status"], Segment["tone"]> = {
+  accepted: "success",
+  relabeled: "info",
+  rejected: "danger",
+  skipped: "muted",
+  undone: "warning",
+  pending: "dim",
+};
+
+function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): ReturnType<typeof Box> {
   if (history.length === 0) return Box({});
+
+  // Cap label column at 12 cells so a long label (e.g. `policy:spam`) does
+  // not stretch the right column past its share of the split. Labels longer
+  // than the cap render unpadded and push the record text rightward — they
+  // stay readable, the column just stops contributing to alignment.
+  const labelWidth = Math.min(
+    12,
+    history.reduce((m, h) => Math.max(m, labelOrDash(h.final_label ?? h.prev_label).length), 0),
+  );
+
   return Box(
-    { flexDirection: "column" },
-    Text({ content: " history:", attributes: TextAttributes.DIM }),
-    ...history.map((h) =>
-      Text({
-        content: ` ${STATUS_SYMBOL[h.status] ?? "?"} ${labelOrDash(h.final_label ?? h.prev_label)}  ${truncate(h.recordText, 32)}`,
-        attributes: TextAttributes.DIM,
-      }),
-    ),
+    { flexDirection: "column", flexShrink: 0, paddingBottom: 1 },
+    Text({
+      content: segmentsToStyledText([{ text: " history", tone: "accent" }], display),
+      attributes: TextAttributes.BOLD,
+    }),
+    Text({ content: "" }),
+    ...history.flatMap((h, i) => {
+      const glyph = STATUS_SYMBOL[h.status] ?? "?";
+      const label = labelOrDash(h.final_label ?? h.prev_label);
+      const paddedLabel = label.padEnd(labelWidth, " ");
+      const segs: Segment[] = [
+        { text: " ", tone: "default" },
+        { text: glyph, tone: STATUS_TONE[h.status] ?? "default" },
+        { text: "  ", tone: "default" },
+        { text: paddedLabel, tone: "bold" },
+        { text: "  ", tone: "dim" },
+        { text: truncate(h.recordText, 32), tone: "muted" },
+      ];
+      const row = Text({ content: segmentsToStyledText(segs, display) });
+      if (i === 0) return [row];
+      // Sparse ⋅ rule between entries — 4 repeats × 14-cell stride covers
+      // the typical history-row width (~56 cells). Width is fixed rather
+      // than computed because the right column itself caps near 60 cols
+      // in split mode and we want consistent spacing across capabilities.
+      const sepText = " ⋅            ".repeat(4);
+      const sep = Text({
+        content: segmentsToStyledText([{ text: sepText, tone: "dim" }], display),
+      });
+      return [sep, row];
+    }),
   );
 }
 
@@ -439,6 +549,7 @@ function bandRegion(
   startIndex: number,
   display: ResolvedDisplay,
   contextStrip: ContextStrip | null = null,
+  pinOverride?: number,
 ): ReturnType<typeof Box> {
   if (records.length === 0 || focusedIndex < 0) {
     return Box(
@@ -451,7 +562,7 @@ function bandRegion(
   }
 
   const focused = records[focusedIndex]!;
-  const pin = display.candidatePin;
+  const pin = pinOverride ?? display.candidatePin;
   const focusedAbsolute = startIndex + focusedIndex;
 
   const beforeChildren = contextStrip
@@ -533,16 +644,26 @@ function slotFor(absoluteIndex: number): "even" | "odd" {
 function labelListBox(
   labels: Parameters<typeof labelName>[0][],
   predicted: string | null,
+  display: ResolvedDisplay,
 ): ReturnType<typeof Box> {
   return Box(
-    { flexDirection: "column", marginTop: 1 },
+    { flexDirection: "column", marginTop: 2 },
     ...labels.slice(0, 9).map((entry, idx) => {
       const name = labelName(entry);
       const isPredicted = name === predicted;
-      const marker = isPredicted ? " >" : "  ";
+      const segs: Segment[] = [
+        { text: " ", tone: "default" },
+        { text: String(idx + 1), tone: "accent" },
+        { text: "  ", tone: "dim" },
+        { text: name, tone: isPredicted ? "accent" : "muted" },
+      ];
+      if (isPredicted) {
+        segs.push({ text: "  ", tone: "dim" });
+        segs.push({ text: "✓", tone: "success" });
+      }
       return Text({
-        content: ` ${idx + 1} ${name}${marker}`,
-        attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.DIM,
+        content: segmentsToStyledText(segs, display),
+        attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.NONE,
       });
     }),
   );
