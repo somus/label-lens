@@ -318,7 +318,7 @@ function counterRow(
   );
 }
 
-const PROGRESS_LABEL = "progress";
+const PROGRESS_LABEL = "overall";
 
 function progressRow(
   display: ResolvedDisplay,
@@ -326,20 +326,28 @@ function progressRow(
   total: number,
   innerWidth: number,
 ): ReturnType<typeof Box> {
-  // Label + space prefix so the bar reads as "progress" rather than a
-  // mystery `[bar]`. Shrink the bar width to fit label + `[bar] NNN%` in
-  // innerWidth.
+  // Label + `reviewed/total` + bar + percent. The label is `overall`
+  // (not `progress`) so it's explicit that this counts dataset-wide
+  // reviews including prior sessions — the session counters above are
+  // session-scoped. Showing `8/43` next to `19%` makes the source of
+  // the percentage legible: without it a non-zero bar after a fresh
+  // launch reads as a bug rather than "you reviewed 8 records earlier".
+  const countText = total > 0 ? `${reviewed}/${total}` : "0/0";
   const prefix = `${PROGRESS_LABEL} `;
   const reservedForPct = 6;
+  const reservedForCount = countText.length + 1;
   const barWidth = Math.max(
     4,
-    Math.min(PROGRESS_BAR_WIDTH, innerWidth - prefix.length - reservedForPct),
+    Math.min(PROGRESS_BAR_WIDTH, innerWidth - prefix.length - reservedForCount - reservedForPct),
   );
   const barSegs = progressSegments(reviewed, total, barWidth, display);
   return fixedRow(
     innerWidth,
     Text({
-      content: segmentsToStyledText([{ text: prefix, tone: "muted" }, ...barSegs], display),
+      content: segmentsToStyledText(
+        [{ text: prefix, tone: "muted" }, { text: `${countText} `, tone: "dim" }, ...barSegs],
+        display,
+      ),
       wrapMode: "char",
     }),
   );
