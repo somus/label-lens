@@ -492,7 +492,7 @@ function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): Return
       attributes: TextAttributes.BOLD,
     }),
     Text({ content: "" }),
-    ...history.map((h) => {
+    ...history.flatMap((h, i) => {
       const glyph = STATUS_SYMBOL[h.status] ?? "?";
       const label = labelOrDash(h.final_label ?? h.prev_label);
       const paddedLabel = label.padEnd(labelWidth, " ");
@@ -504,7 +504,8 @@ function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): Return
         { text: "  ", tone: "dim" },
         { text: truncate(h.recordText, 32), tone: "muted" },
       ];
-      return Text({ content: segmentsToStyledText(segs, display) });
+      const row = Text({ content: segmentsToStyledText(segs, display) });
+      return i === 0 ? [row] : [Text({ content: "" }), row];
     }),
   );
 }
