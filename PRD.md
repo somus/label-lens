@@ -827,6 +827,31 @@ The palette is a thin layer over commands that also have direct keys; nothing is
 
 **Long-form help via man pages (aerc pattern).** LabelLens ships its tutorial and how-tos as installable man pages (`man labellens-tutorial`, `man labellens-config`, `man labellens-keymap`, `man labellens-assistant`). From inside the TUI, `:help topics` opens the topic picker and `:help <topic>` runs `less` on the same content. This means the help system is also useful outside the TUI and integrates cleanly with the man infrastructure on Unix-like systems.
 
+### 14.7 Navigation modes
+
+By default `j` / `k` walk the focused queue in document (row-index) order. The reviewer can opt into a signal-weighted ordering for the `pending` queue via:
+
+```jsonc
+{
+  "navigation": {
+    "smartNext": true     // default: false
+  }
+}
+```
+
+When `navigation.smartNext` is true and the focused queue is `pending`, `j` / `k` walk a sibling `smart-pending` cursor whose `WHERE` filter matches `pending` exactly but whose `ORDER BY` is a composite signal score:
+
+```
+score = (primary_confidence < 0.4)
+      + (record has ≥2 distinct prediction labels)         -- disagreement
+      + (record has ≥1 row in the issues table)            -- flagged
+ORDER BY score DESC, primary_confidence ASC NULLS LAST, row_index ASC
+```
+
+Unsignaled records (score = 0) sort to the tail. The status bar surfaces `▸ smart` next to the queue label whenever the mode is active so the reviewer can tell at a glance that ordering differs from document order. `shift+j` / `shift+k` are escape hatches: they always advance through the underlying `pending` cursor (document order) regardless of mode, so the reviewer can fall back to chronological scanning without toggling the config.
+
+The mode is opt-in because it changes the *meaning* of "next" — reviewers used to walking records in source order would otherwise be surprised by the reordering. Boundary tasks ignore the flag (they need document-order context strips on every record).
+
 ## 15. Keyboard model
 
 The keyboard model is structured around **named actions** with default bindings, not hardcoded key handlers. Each action has a stable name (`record.accept`, `queue.next`, `palette.open`); each key binding maps a key sequence to an action within a scope (`review`, `queue`, `stats`, `palette`, `assistant`, `global`). The two layers — actions and bindings — are decoupled so users can override bindings via config without touching code, and so UI hint strings (the action bar at the bottom of every screen) stay accurate when bindings change. This is the pattern Codex shipped (PR 18593) and OpenCode also uses; both arrived at the same shape independently.

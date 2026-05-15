@@ -496,6 +496,10 @@ const STATUS_TONE: Record<StoredReview["status"], Segment["tone"]> = {
 function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): ReturnType<typeof Box> {
   if (history.length === 0) return Box({});
 
+  // Cap label column at 12 cells so a long label (e.g. `policy:spam`) does
+  // not stretch the right column past its share of the split. Labels longer
+  // than the cap render unpadded and push the record text rightward — they
+  // stay readable, the column just stops contributing to alignment.
   const labelWidth = Math.min(
     12,
     history.reduce((m, h) => Math.max(m, labelOrDash(h.final_label ?? h.prev_label).length), 0),
@@ -522,6 +526,10 @@ function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): Return
       ];
       const row = Text({ content: segmentsToStyledText(segs, display) });
       if (i === 0) return [row];
+      // Sparse ⋅ rule between entries — 4 repeats × 14-cell stride covers
+      // the typical history-row width (~56 cells). Width is fixed rather
+      // than computed because the right column itself caps near 60 cols
+      // in split mode and we want consistent spacing across capabilities.
       const sepText = " ⋅            ".repeat(4);
       const sep = Text({
         content: segmentsToStyledText([{ text: sepText, tone: "dim" }], display),

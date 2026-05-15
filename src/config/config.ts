@@ -11,6 +11,17 @@ export type DisplayConfig = {
   motion?: "auto" | "on" | "off";
 };
 
+/**
+ * Navigation-mode toggles. Defaults are conservative — every flag is off
+ * unless the reviewer opts in via `labellens.config.json`.
+ *
+ * - `smartNext`: when true and the focused queue is `pending`, `j` / `k`
+ *   advance through a sibling `smart-pending` cursor whose ordering is
+ *   weighted by signal strength (low confidence + disagreement + flagged)
+ *   instead of document order. The status bar surfaces `▸ smart` while the
+ *   mode is active. `shift+j` / `shift+k` always navigate document order
+ *   regardless of mode (PRD §14.7).
+ */
 export type NavigationConfig = {
   smartNext?: boolean;
 };
@@ -67,6 +78,9 @@ export function defaultConfig(args: {
       candidatePin: 0.4,
       layout: "auto",
       motion: "auto",
+    },
+    navigation: {
+      smartNext: false,
     },
   };
 }
