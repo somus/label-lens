@@ -10,7 +10,7 @@ export const undo: Command = {
   run: (ctx) => {
     const target = latestReview(ctx.db);
     if (!target) {
-      ctx.setFlash("Nothing to undo", "error");
+      ctx.setFlash("Nothing to undo", "warning");
       return;
     }
     insertUndoEntry(ctx.db, target.record_id);

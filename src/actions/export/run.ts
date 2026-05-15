@@ -144,7 +144,7 @@ export const exportCommand: Command = {
     try {
       const result = runExport(ctx, { format });
       ctx.motion.play("export.complete", flash(2000, "info"));
-      ctx.setFlash(`Exported to ${result.path}`, "info", 4000);
+      ctx.setFlash(`Exported to ${result.path}`, "success");
     } catch (err) {
       ctx.setFlash(`Export failed: ${err instanceof Error ? err.message : String(err)}`, "error");
     }
@@ -177,7 +177,7 @@ export const paletteExportCommand: Command = {
         outputPath: parsed.outputPath,
       });
       ctx.motion.play("export.complete", flash(2000, "info"));
-      ctx.setFlash(`Exported to ${result.path}`, "info", 4000);
+      ctx.setFlash(`Exported to ${result.path}`, "success");
     } catch (err) {
       ctx.setFlash(`Export failed: ${err instanceof Error ? err.message : String(err)}`, "error");
     }

@@ -1,6 +1,7 @@
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
 import { confidenceGlyph } from "./confidence-bar.ts";
+import type { KindTintLevel } from "./glyph-map.ts";
 import { Text, TextAttributes } from "./text.ts";
 import { borderForRole, resolveTheme } from "./theme.ts";
 
@@ -18,6 +19,17 @@ export type BandedRecordProps = {
    *  glyph so the user sees signal strength at a glance. Optional — null
    *  falls back to a plain `│`. */
   confidence?: number | null;
+  /** Boundary-task: glyph for the row's predicted structural label kind.
+   *  Rendered between the confidence bar and the text. Use `kindGlyph()`
+   *  from `glyph-map.ts` (per-label config overrides built-in defaults).
+   *  Classification tasks omit this — left edge stays 1ch (confidence only). */
+  kindGlyph?: string;
+  /** Boundary-task: tint level overriding the even/odd band bg. `heavy` for
+   *  SECTION_HEADER, `medium` for ENTRY_START, `light` for CONTINUATION
+   *  (and so on per `kindTintLevel`). Plan B4 — kind-tint replaces banding
+   *  when present rather than layering, to keep the visual signal clear at
+   *  256-color where blending isn't precise. */
+  kindTintLevel?: KindTintLevel | null;
 };
 
 export function focusBoxStyle(display: ResolvedDisplay): "rounded" | "single" {
@@ -58,9 +70,30 @@ export function accentColor(display: ResolvedDisplay): string {
 }
 
 export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
-  const { text, isFocused, bandSlot, display, variant = "queue", confidence = null } = props;
+  const {
+    text,
+    isFocused,
+    bandSlot,
+    display,
+    variant = "queue",
+    confidence = null,
+    kindGlyph,
+    kindTintLevel = null,
+  } = props;
   const marker = leftEdgeMarker(display, isFocused, confidence);
-  const prefix = marker === null ? "" : `${marker} `;
+  // Boundary mode: confidence marker + kind glyph + space (2ch left edge).
+  // Classification: confidence marker + space (1ch). Context strip rows
+  // (context_before / context_after) suppress the kind glyph too — they're
+  // raw lines without their own prediction.
+  const includeKindGlyph = kindGlyph !== undefined && kindGlyph.length > 0 && variant !== "context";
+  const prefix =
+    marker === null
+      ? includeKindGlyph
+        ? `${kindGlyph} `
+        : ""
+      : includeKindGlyph
+        ? `${marker} ${kindGlyph} `
+        : `${marker} `;
   const isContext = variant === "context";
 
   const opts: Parameters<typeof Box>[0] = {
@@ -70,7 +103,11 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
     paddingRight: 1,
   };
   if (display.banding && !isContext) {
-    opts.backgroundColor = bandColor(display, bandSlot);
+    if (kindTintLevel !== null) {
+      opts.backgroundColor = kindTintColor(display, kindTintLevel);
+    } else {
+      opts.backgroundColor = bandColor(display, bandSlot);
+    }
   }
   if (isFocused) {
     opts.borderStyle = focusBoxStyle(display);
@@ -91,4 +128,9 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
       attributes: attrs,
     }),
   );
+}
+
+function kindTintColor(display: ResolvedDisplay, level: KindTintLevel): string {
+  const t = resolveTheme(display);
+  return t.bg.kindTint[level];
 }

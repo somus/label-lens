@@ -172,7 +172,7 @@ describe("queue screen e2e", () => {
     await renderOnce();
     expect(selected()).toBeNull();
     expect(app.flash?.message).toContain("empty");
-    expect(app.flash?.kind).toBe("info");
+    expect(app.flash?.kind).toBe("warning");
   });
 
   test("drops progress bars on narrow terminal (<60 cols)", async () => {

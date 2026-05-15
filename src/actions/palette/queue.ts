@@ -45,7 +45,7 @@ export const paletteQueue: Command = {
     const arg = argument?.trim() ?? "";
     if (arg.length === 0) {
       if (!ctx.openQueueScreen) {
-        ctx.setFlash("Queue screen unavailable", "info", 1200);
+        ctx.setFlash("Queue screen unavailable", "warning");
         return;
       }
       ctx.openQueueScreen();

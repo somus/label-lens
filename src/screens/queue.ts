@@ -270,7 +270,10 @@ export function mountQueueScreen(args: {
     const row = flatRows[highlight];
     if (!row) return;
     if (row.count === 0) {
-      app.setFlash(`${row.label} is empty (0 records). Press [j/k] to pick another queue.`, "info");
+      app.setFlash(
+        `${row.label} is empty (0 records). Press [j/k] to pick another queue.`,
+        "warning",
+      );
       renderState();
       return;
     }

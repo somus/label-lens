@@ -9,7 +9,7 @@ export const openQueueScreen: Command = {
   enabled: () => true,
   run: (ctx) => {
     if (!ctx.openQueueScreen) {
-      ctx.setFlash("Queue screen unavailable", "info", 1200);
+      ctx.setFlash("Queue screen unavailable", "warning");
       return;
     }
     ctx.openQueueScreen();

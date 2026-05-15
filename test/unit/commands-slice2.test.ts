@@ -291,7 +291,7 @@ describe("record.undo", () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
     await dispatch(defaultRegistry(), "review", app, "record.undo");
-    expect(app.flash?.kind).toBe("error");
+    expect(app.flash?.kind).toBe("warning");
     expect(app.flash?.message).toContain("Nothing to undo");
   });
 
@@ -304,7 +304,7 @@ describe("record.undo", () => {
     await dispatch(registry, "review", app, "record.undo");
     expect(currentReview(store.db, id)).toBeNull();
     await dispatch(registry, "review", app, "record.undo");
-    expect(app.flash?.kind).toBe("error");
+    expect(app.flash?.kind).toBe("warning");
     expect(app.flash?.message).toContain("Nothing to undo");
     const undoneRows = store.db.all<{ n: number }>(
       sql`SELECT COUNT(*) AS n FROM reviews WHERE record_id = ${id} AND status = 'undone'`,

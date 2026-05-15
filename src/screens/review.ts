@@ -96,7 +96,7 @@ export function mountReviewScreen(args: {
       const docViewStatus = docViewStatusSegments(app);
       const docViewFooterHint = app.overlay
         ? overlayFooterHint(app.overlay)
-        : flashFooterHint(flash);
+        : flashFooterHint(flash, app.display);
       renderer.root.add(
         Chrome({
           display: app.display,
@@ -204,7 +204,9 @@ export function mountReviewScreen(args: {
         : Box({}),
     );
 
-    const footerHint = app.overlay ? overlayFooterHint(app.overlay) : flashFooterHint(flash);
+    const footerHint = app.overlay
+      ? overlayFooterHint(app.overlay)
+      : flashFooterHint(flash, app.display);
 
     renderer.root.add(
       Chrome({

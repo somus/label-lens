@@ -10,8 +10,31 @@ import {
 import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Db } from "../store/db.ts";
 import type { QueueId } from "../store/queues/registry.ts";
+import { queueProgress, type SidebarData, signalCounts, statsTotals } from "./sidebar-data.ts";
 
-export type FlashKind = "info" | "error";
+/**
+ * Flash message kinds. Each maps to a glyph (`✓ ⓘ ⚠ ✗`) and a default
+ * duration via `DEFAULT_FLASH_TTL`. Per plan D3, classify callsites:
+ *   success — completed mutation reviewer can confirm worked (`Accepted X`,
+ *             `Exported to Y`).
+ *   info    — neutral state change with no error (`Queue: pending`,
+ *             `Mode: smart`).
+ *   warning — non-blocking refusal or no-op (`Nothing to undo`, `Already at end`).
+ *   error   — blocking failure (`Cannot accept: no prediction`,
+ *             `command registry unavailable`).
+ */
+export type FlashKind = "success" | "info" | "warning" | "error";
+
+/**
+ * Default flash duration per kind. `setFlash(msg, kind)` reads from this when
+ * ttlMs is omitted. Callers can still override per-call. Plan D4.
+ */
+export const DEFAULT_FLASH_TTL: Record<FlashKind, number> = {
+  success: 1500,
+  info: 2000,
+  warning: 3000,
+  error: 5000,
+};
 
 export type FlashMessage = {
   kind: FlashKind;
@@ -47,6 +70,22 @@ export type AppContext = {
   flash: FlashMessage | null;
   setFlash(message: string, kind: FlashKind, ttlMs?: number): void;
   clearFlash(): void;
+  /**
+   * Session counters reset on AppContext creation. Incremented by action
+   * dispatchers when the reviewer commits a decision / skip / mark toggle.
+   * Sidebar reads these as `Counters` rows; sidebar flashes the affected row
+   * on increment via the `sidebar.counter.<kind>` motion key.
+   */
+  sessionCounters: { reviewed: number; skipped: number; marked: number };
+  /**
+   * Compute a fresh SidebarData snapshot from the current cursor, queue, and
+   * session counters. Called lazily by the chrome renderer — the three
+   * underlying queries (queueProgress, signalCounts, statsTotals) are small
+   * and indexed, so per-render is acceptable at MVP scale. Mode is `queue`
+   * when a cursor is bound (review screen) and `stats` otherwise (stats
+   * screen mounts call it after switching scope).
+   */
+  getSidebarData(mode?: "queue" | "stats"): SidebarData;
   motion: MotionController;
   noteInput(): void;
   requestRender(): void;
@@ -115,6 +154,35 @@ export function createAppContext(args: {
     queueId: null,
     display: args.display,
     docView: null,
+    sessionCounters: { reviewed: 0, skipped: 0, marked: 0 },
+    getSidebarData(mode = "queue") {
+      const datasetPath = args.config.input.path;
+      if (mode === "stats") {
+        return {
+          mode: "stats",
+          datasetPath,
+          totals: statsTotals(args.db),
+        };
+      }
+      const cursor = ctx.cursor;
+      const queueId = ctx.queueId;
+      // Queue mode without a cursor (pre-mount) collapses to a 0/0 view.
+      const queueLabel = queueId ?? "—";
+      const queueTotal = cursor?.total ?? 0;
+      const queuePosition = cursor && cursor.total > 0 ? cursor.position + 1 : 0;
+      const ids = cursor ? cursor.recordIds() : null;
+      return {
+        mode: "queue",
+        queueLabel,
+        queuePosition,
+        queueTotal,
+        datasetPath,
+        counters: { ...ctx.sessionCounters },
+        queueProgress: queueProgress(args.db, ids, queueTotal),
+        signals: signalCounts(args.db, ids),
+        smartNext: args.config.navigation?.smartNext ?? false,
+      };
+    },
     requestRender: args.requestRender,
     onQuit: args.onQuit,
     openDocView(state) {
@@ -140,8 +208,9 @@ export function createAppContext(args: {
     refreshAllCursors() {
       for (const cursor of cursors.values()) cursor.refresh();
     },
-    setFlash(message, kind, ttlMs = 3000) {
-      ctx.flash = { kind, message, expiresAt: Date.now() + ttlMs };
+    setFlash(message, kind, ttlMs) {
+      const duration = ttlMs ?? DEFAULT_FLASH_TTL[kind];
+      ctx.flash = { kind, message, expiresAt: Date.now() + duration };
       if (flashTimer) clearTimeout(flashTimer);
       flashTimer = setTimeout(() => {
         flashTimer = null;
@@ -156,7 +225,7 @@ export function createAppContext(args: {
             // swallow — re-render is best-effort here
           }
         }
-      }, ttlMs + 10);
+      }, duration + 10);
       ctx.requestRender();
     },
     clearFlash() {

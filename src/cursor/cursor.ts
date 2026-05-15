@@ -37,6 +37,15 @@ export class Cursor extends EventEmitter<CursorEvents> {
     return this.records[this.index] ?? null;
   }
 
+  /**
+   * Record IDs in this queue, in cursor order. Used by sidebar-data to scope
+   * signal counts + queue progress to the currently-visible queue. Trusted
+   * source — IDs come from the store, never user input.
+   */
+  recordIds(): string[] {
+    return this.records.map((r) => r.id);
+  }
+
   next(): void {
     if (this.records.length === 0) return;
     this.index = Math.min(this.index + 1, this.records.length - 1);

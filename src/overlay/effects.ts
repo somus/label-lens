@@ -55,14 +55,26 @@ export function applyEffects(
           source_of_truth: effect.sourceOfTruth,
         });
         const cursor = refreshQueue(app, queueId);
-        if (effect.status === "accepted") app.motion.play("footer.accept", flash(80, "success"));
-        else if (effect.status === "relabeled") {
+        if (effect.status === "accepted") {
+          app.motion.play("footer.accept", flash(80, "success"));
+          app.sessionCounters.reviewed += 1;
+        } else if (effect.status === "relabeled") {
           app.motion.play("footer.relabel", flash(80, "accent"));
+          app.sessionCounters.reviewed += 1;
         } else if (effect.status === "rejected") {
           app.motion.play("footer.reject", flash(80, "danger"));
+          app.sessionCounters.reviewed += 1;
+        } else if (effect.status === "skipped") {
+          app.sessionCounters.skipped += 1;
         }
+        // Flash sidebar Counters row on the affected key so the reviewer
+        // sees confirmation even when the main pane stays focused on the
+        // band region. Motion gate makes this a no-op at 16 / mono.
+        const key =
+          effect.status === "skipped" ? "sidebar.counter.skipped" : "sidebar.counter.reviewed";
+        app.motion.play(key, flash(200, "accent"));
         if (cursor.total === 0 && app.display.motion) {
-          app.setFlash("queue complete", "info", 1200);
+          app.setFlash("queue complete", "success");
         }
         break;
       }
