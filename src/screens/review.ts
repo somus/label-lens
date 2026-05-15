@@ -314,11 +314,12 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
       contextStrip,
       effectivePin,
     ),
+    Box({ height: 1 }),
     predictionLine(record),
     issueBadges(issues, totalRecords, predictionCount, display),
     record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
     noteLine(record),
-    Box({ height: 1 }),
+    Box({ height: 2 }),
     historyBlock(history),
   );
 }
@@ -350,24 +351,34 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
         effectivePin,
       ),
     ),
-    // Right column: history + metadata + label list, top-aligned to the pin row.
+    // Right column. Layout (top → bottom):
+    //   top spacer (flexGrow: effectivePin) — keeps prediction aligned
+    //     with the focused row in the band region
+    //   metadata block — prediction + badges + label list + note
+    //   middle spacer (flexGrow: 1 - effectivePin) — pushes history down
+    //   history block — anchored to the bottom of the column so it does
+    //     not slide around as the user navigates
     Box(
-      { flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" },
-      Box({ flexBasis: 0, flexGrow: effectivePin }),
+      {
+        flexDirection: "column",
+        flexBasis: 0,
+        flexGrow: 1,
+        paddingLeft: 1,
+        overflow: "hidden",
+      },
+      Box({ flexBasis: 0, flexGrow: effectivePin, flexShrink: 1 }),
       Box(
         {
           flexDirection: "column",
-          flexBasis: 0,
-          flexGrow: 1 - effectivePin,
-          flexShrink: 1,
-          overflow: "hidden",
+          flexShrink: 0,
         },
-        historyBlock(history),
         predictionLine(record),
         issueBadges(issues, totalRecords, predictionCount, display),
         record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
         noteLine(record),
       ),
+      Box({ flexBasis: 0, flexGrow: Math.max(0, 1 - effectivePin), flexShrink: 1 }),
+      historyBlock(history),
     ),
   );
 }
@@ -382,7 +393,7 @@ function issueBadges(
   // Stable order so snapshots are deterministic regardless of insert order.
   const sorted = [...issues].sort((a, b) => a.type.localeCompare(b.type));
   return Box(
-    { flexDirection: "column", marginTop: 1 },
+    { flexDirection: "column", marginTop: 2 },
     ...sorted.map((issue) =>
       BadgeLine({
         display,
@@ -436,7 +447,7 @@ function predictionLine(record: RecordWithPrimaryPrediction | null): ReturnType<
   const p = record.primaryPrediction;
   const conf = p.confidence !== null ? `  [${Math.round(p.confidence * 100)}%]` : "";
   return Box(
-    { flexDirection: "row", marginTop: 1 },
+    { flexDirection: "row" },
     Text({
       content: ` [${p.source}]   →   ${p.label}${conf}`,
       attributes: TextAttributes.DIM,
@@ -447,7 +458,7 @@ function predictionLine(record: RecordWithPrimaryPrediction | null): ReturnType<
 function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
   if (!record?.note) return Box({});
   return Box(
-    { flexDirection: "row", marginTop: 1 },
+    { flexDirection: "row", marginTop: 2 },
     Text({
       content: ` note: ${truncate(record.note, 200)}${record.note.length > 200 ? " (press n for full)" : ""}`,
       attributes: TextAttributes.DIM,
@@ -458,7 +469,7 @@ function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof
 function historyBlock(history: HistoryEntry[]): ReturnType<typeof Box> {
   if (history.length === 0) return Box({});
   return Box(
-    { flexDirection: "column" },
+    { flexDirection: "column", flexShrink: 0 },
     Text({ content: " history:", attributes: TextAttributes.DIM }),
     ...history.map((h) =>
       Text({
@@ -576,7 +587,7 @@ function labelListBox(
   predicted: string | null,
 ): ReturnType<typeof Box> {
   return Box(
-    { flexDirection: "column", marginTop: 1 },
+    { flexDirection: "column", marginTop: 2 },
     ...labels.slice(0, 9).map((entry, idx) => {
       const name = labelName(entry);
       const isPredicted = name === predicted;

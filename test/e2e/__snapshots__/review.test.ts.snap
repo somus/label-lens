@@ -14,13 +14,13 @@ exports[`review screen e2e initial render: progress strip + first record + prima
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-                                                                                                    
-                                                                                                    
   [llm:gpt-4]   →   food  [92%]                                                                     
+                                                                                                    
                                                                                                     
   1 food >                                                                                          
   2 travel                                                                                          
   3 other                                                                                           
+                                                                                                    
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
  stats ┊[?] help                                                                                    
@@ -39,14 +39,14 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
   ▄ Netflix monthly                                                                                 
   █ Salary credit October                                                                           
   █ Rent transfer to landlord                                                                       
-  ▇ Coffee at Blue Tokai                                                                            
-  ▂ ATM withdrawal                                                                                  
                                                                                                     
   [llm:gpt-4]   →   travel  [88%]                                                                   
+                                                                                                    
                                                                                                     
   1 food                                                                                            
   2 travel >                                                                                        
   3 other                                                                                           
+                                                                                                    
                                                                                                     
   history:                                                                                          
   + food  Lunch at Zomato Bangalore                                                                 
@@ -69,14 +69,14 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
   █ Salary credit October                                                                           
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
-  ▂ ATM withdrawal                                                                                  
-                                                                                                    
                                                                                                     
   [llm:gpt-4]   →   travel  [88%]                                                                   
+                                                                                                    
                                                                                                     
   1 food                                                                                            
   2 travel >                                                                                        
   3 other                                                                                           
+                                                                                                    
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
  stats ┊[?] help                                                                                    
