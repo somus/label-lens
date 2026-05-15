@@ -5,33 +5,33 @@ exports[`stats screen e2e renders core sections + first-drillable highlight + fo
   LabelLens  tiny.jsonl  Stats                                                    7 drillable rows  
                                                                                                     
                                                                                                     
-  Acceptance by source ──────────────────────────────────────────────────────────────────────       
+  Acceptance by source ──────────────────────────────────────────────────────────────────────────   
                                                                                                     
- > llm:gpt-4                      0%  (1 reviewed)                                          →       
+ > llm:gpt-4                      0%  (1 reviewed)                                             →    
                                                                                                     
-  Relabel by source ─────────────────────────────────────────────────────────────────────────       
+  Relabel by source ─────────────────────────────────────────────────────────────────────────────   
                                                                                                     
-   llm:gpt-4                    100%  (1 reviewed)                                          →       
+   llm:gpt-4                    100%  (1 reviewed)                                             →    
                                                                                                     
-  Top corrections ───────────────────────────────────────────────────────────────────────────       
+  Top corrections ───────────────────────────────────────────────────────────────────────────────   
                                                                                                     
-   food → travel                           1                                                →       
+   food → travel                           1                                                   →    
                                                                                                     
-  Labels with highest correction rate ───────────────────────────────────────────────────────       
+  Labels with highest correction rate ───────────────────────────────────────────────────────────   
                                                                                                     
-   food                         100%  (1 reviewed)                                          →       
+   food                         100%  (1 reviewed)                                             →    
                                                                                                     
-  Weakest sources ───────────────────────────────────────────────────────────────────────────       
+  Weakest sources ───────────────────────────────────────────────────────────────────────────────   
                                                                                                     
-   llm:gpt-4                    100%  (1 reviewed)                                          →       
+   llm:gpt-4                    100%  (1 reviewed)                                             →    
                                                                                                     
-  Imported issues ───────────────────────────────────────────────────────────────────────────       
+  Imported issues ───────────────────────────────────────────────────────────────────────────────   
                                                                                                     
-   label_issue                      1 record                                                →       
+   label_issue                      1 record                                                   →    
                                                                                                     
-  Suggested next queue ──────────────────────────────────────────────────────────────────────       
+  Suggested next queue ──────────────────────────────────────────────────────────────────────────   
                                                                                                     
-   by-source:llm:gpt-4   (score 7.00)                                                       →       
+   by-source:llm:gpt-4   (score 7.00)                                                          →    
                                                                                                     
                                                                                                     
                                                                                                     

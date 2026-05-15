@@ -7,12 +7,33 @@ import {
 } from "@opentui/core";
 import type { AppContext } from "../app/context.ts";
 import { Box } from "../render/box.ts";
+import { pickSidebar, type ResolvedDisplay, sidebarWidth } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { resolveTheme } from "../render/theme.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { allStats, drillToQueue, type Section, type StatRow } from "../store/stats.ts";
+
+const STATS_PANE_MIN_WIDTH = 40;
+
+/**
+ * Inner width of the stats main pane. Subtract chrome / sidebar overhead
+ * from the terminal width plus a small safety buffer so the dashed
+ * underline and `→` chip stay inside the parent `overflow: hidden` even
+ * when OpenTUI miscounts a wide glyph's cell width.
+ */
+export function computeStatsPaneWidth(display: ResolvedDisplay, terminalWidth: number): number {
+  const sidebarOn = pickSidebar(display, terminalWidth);
+  // sidebar(32) + gap(1) + chrome pad(2) + 1 safety = 36
+  const sidebarOverhead = sidebarWidth(terminalWidth) + 1 + 2 + 1;
+  // chrome pad(2) + 2 safety = 4
+  const baseOverhead = 2 + 2;
+  return Math.max(
+    STATS_PANE_MIN_WIDTH,
+    terminalWidth - (sidebarOn ? sidebarOverhead : baseOverhead),
+  );
+}
 
 function basename(p: string): string {
   return p.split("/").pop() ?? p;
@@ -114,8 +135,8 @@ export function mountStatsScreen(args: {
     app.activeScope = "stats";
     for (const child of renderer.root.getChildren()) child.destroyRecursively();
     const theme = resolveTheme(app.display);
-    const innerWidth = Math.max(40, renderer.terminalWidth - 8);
-    const children: ReturnType<typeof Text>[] = [];
+    const innerWidth = computeStatsPaneWidth(app.display, renderer.terminalWidth);
+    const children: ReturnType<typeof Box | typeof Text>[] = [];
     lines.forEach((line, i) => {
       if (line.kind === "section-header") {
         children.push(Text({ content: "" }));
@@ -173,18 +194,25 @@ export function mountStatsScreen(args: {
     app: AppContext,
     label: string,
     innerWidth: number,
-  ): ReturnType<typeof Text> {
+  ): ReturnType<typeof Box> {
     const labelWithSpace = ` ${label} `;
     const ruleLen = Math.max(1, innerWidth - labelWithSpace.length);
-    return Text({
-      content: segmentsToStyledText(
-        [
-          { text: labelWithSpace, tone: "muted" },
-          { text: "─".repeat(ruleLen), tone: "dim" },
-        ],
-        app.display,
-      ),
-    });
+    // Wrap in a fixed-width row so OpenTUI doesn't wrap the dashed
+    // underline at glyph boundaries when the dashes happen to land past
+    // the pane's content width. overflow:hidden clips silently instead.
+    return Box(
+      { flexDirection: "row", width: innerWidth, flexShrink: 0, overflow: "hidden" },
+      Text({
+        content: segmentsToStyledText(
+          [
+            { text: labelWithSpace, tone: "muted" },
+            { text: "─".repeat(ruleLen), tone: "dim" },
+          ],
+          app.display,
+        ),
+        wrapMode: "char",
+      }),
+    );
   }
 
   /**
@@ -200,7 +228,7 @@ export function mountStatsScreen(args: {
     highlighted: boolean,
     innerWidth: number,
     theme: ReturnType<typeof resolveTheme>,
-  ): ReturnType<typeof Text> {
+  ): ReturnType<typeof Box> {
     const supportsColor = app.display.color === "truecolor" || app.display.color === "256";
     const chip = drillable ? " →" : "  ";
     // Leading `> ` marker on highlighted rows in addition to the bg-bar.
@@ -208,39 +236,55 @@ export function mountStatsScreen(args: {
     // highlight legible at mono / 16-color AND makes plain-text captures
     // (tests, copy/paste) detectable.
     const prefix = highlighted ? "> " : "  ";
-    const visibleLen = prefix.length + text.length + chip.length;
+    // OpenTUI measures `→` as 2 visual cells in several fonts even though
+    // codepoint count is 1, so the bg-bar would stop one cell short of
+    // the chip. Reserve a 1-cell buffer in the gap so the chip sits
+    // safely inside the row's painted area.
+    const chipExtraCells = drillable ? 1 : 0;
+    const visibleLen = prefix.length + text.length + chip.length + chipExtraCells;
     const gap = Math.max(1, innerWidth - visibleLen);
     const rowText = `${prefix}${text}${" ".repeat(gap)}${chip}`;
 
+    let inner: ReturnType<typeof Text>;
+
     if (highlighted && supportsColor) {
       const chunk: TextChunk = bgFn(theme.fg.accent)(fgFn(theme.bg.chrome)(rowText));
-      return Text({
+      inner = Text({
         content: new StyledText([chunk]),
         attributes: TextAttributes.BOLD,
+        wrapMode: "char",
       });
-    }
-
-    if (highlighted) {
-      return Text({
+    } else if (highlighted) {
+      inner = Text({
         content: rowText,
         attributes: TextAttributes.BOLD | TextAttributes.INVERSE,
+        wrapMode: "char",
+      });
+    } else {
+      const tone: Segment["tone"] = drillable ? "default" : "dim";
+      const chipTone: Segment["tone"] = drillable ? "accentDeep" : "dim";
+      inner = Text({
+        content: segmentsToStyledText(
+          [
+            { text: prefix, tone: "dim" },
+            { text, tone },
+            { text: " ".repeat(gap), tone: "default" },
+            { text: chip, tone: chipTone },
+          ],
+          app.display,
+        ),
+        attributes: drillable ? TextAttributes.NONE : TextAttributes.DIM,
+        wrapMode: "char",
       });
     }
 
-    const tone: Segment["tone"] = drillable ? "default" : "dim";
-    const chipTone: Segment["tone"] = drillable ? "accentDeep" : "dim";
-    return Text({
-      content: segmentsToStyledText(
-        [
-          { text: prefix, tone: "dim" },
-          { text, tone },
-          { text: " ".repeat(gap), tone: "default" },
-          { text: chip, tone: chipTone },
-        ],
-        app.display,
-      ),
-      attributes: drillable ? TextAttributes.NONE : TextAttributes.DIM,
-    });
+    // Fixed-width row + overflow:hidden so the `→` chip never wraps to a
+    // second visual line. Earlier visual review showed the chip dropping
+    // below its row whenever `text + chip` exceeded available width.
+    return Box(
+      { flexDirection: "row", width: innerWidth, flexShrink: 0, overflow: "hidden" },
+      inner,
+    );
   }
 
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
