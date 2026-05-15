@@ -98,13 +98,13 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
   history                                                                                           
                                                                                                     
   +  ENTRY_START  Senior Engineer at Acme                                                           
-  ·   ·   ·   ·   ·   ·   ·   ·   ·   ·                                                             
+  ⋅             ⋅             ⋅             ⋅                                                       
   +  food         Refund from Swiggy                                                                
-  ·   ·   ·   ·   ·   ·   ·   ·   ·   ·                                                             
+  ⋅             ⋅             ⋅             ⋅                                                       
   +  other        ATM withdrawal                                                                    
-  ·   ·   ·   ·   ·   ·   ·   ·   ·   ·                                                             
+  ⋅             ⋅             ⋅             ⋅                                                       
   +  food         Coffee at Blue Tokai                                                              
-  ·   ·   ·   ·   ·   ·   ·   ·   ·   ·                                                             
+  ⋅             ⋅             ⋅             ⋅                                                       
   +  rent         Rent transfer to landlord                                                         
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
  stats ┊[?] help                                                                                    

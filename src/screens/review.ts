@@ -506,7 +506,10 @@ function historyBlock(history: HistoryEntry[], display: ResolvedDisplay): Return
       ];
       const row = Text({ content: segmentsToStyledText(segs, display) });
       if (i === 0) return [row];
-      const sepText = " ·  ".repeat(10);
+      // Sparser ⋅ pattern: Unicode dot operator (U+22C5) reads lighter than
+      // U+00B7 and is widely spaced so the row is barely a divider, not a
+      // line of marks.
+      const sepText = " ⋅            ".repeat(4);
       const sep = Text({
         content: segmentsToStyledText([{ text: sepText, tone: "dim" }], display),
       });
