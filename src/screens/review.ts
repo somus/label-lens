@@ -316,9 +316,9 @@ function stackBody(args: BodyArgs): ReturnType<typeof Box> {
       effectivePin,
     ),
     Box({ height: 1 }),
-    predictionLine(record),
+    predictionLine(record, display),
     issueBadges(issues, totalRecords, predictionCount, display),
-    record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
+    record ? labelListBox(labels, record.primaryPrediction?.label ?? null, display) : Box({}),
     noteLine(record),
     Box({ height: 2 }),
     historyBlock(history, display),
@@ -374,9 +374,9 @@ function splitBody(args: BodyArgs): ReturnType<typeof Box> {
           flexDirection: "column",
           flexShrink: 0,
         },
-        predictionLine(record),
+        predictionLine(record, display),
         issueBadges(issues, totalRecords, predictionCount, display),
-        record ? labelListBox(labels, record.primaryPrediction?.label ?? null) : Box({}),
+        record ? labelListBox(labels, record.primaryPrediction?.label ?? null, display) : Box({}),
         noteLine(record),
       ),
       Box({ flexBasis: 0, flexGrow: 1, flexShrink: 1 }),
@@ -444,17 +444,33 @@ function badgeCopy(issue: StoredIssue, totalRecords: number, predictionCount: nu
   }
 }
 
-function predictionLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
+function confidenceTone(c: number | null): Segment["tone"] {
+  if (c === null) return "muted";
+  if (c >= 0.8) return "success";
+  if (c >= 0.5) return "warning";
+  return "danger";
+}
+
+function predictionLine(
+  record: RecordWithPrimaryPrediction | null,
+  display: ResolvedDisplay,
+): ReturnType<typeof Box> {
   if (!record?.primaryPrediction) return Box({});
   const p = record.primaryPrediction;
-  const conf = p.confidence !== null ? `  [${Math.round(p.confidence * 100)}%]` : "";
-  return Box(
-    { flexDirection: "row" },
-    Text({
-      content: ` [${p.source}]   →   ${p.label}${conf}`,
-      attributes: TextAttributes.DIM,
-    }),
-  );
+  const segs: Segment[] = [
+    { text: " [", tone: "dim" },
+    { text: p.source, tone: "muted" },
+    { text: "]", tone: "dim" },
+    { text: "  ", tone: "dim" },
+    { text: "→", tone: "accent" },
+    { text: "  ", tone: "dim" },
+    { text: p.label, tone: "default" },
+  ];
+  if (p.confidence !== null) {
+    segs.push({ text: "  ", tone: "dim" });
+    segs.push({ text: `${Math.round(p.confidence * 100)}%`, tone: confidenceTone(p.confidence) });
+  }
+  return Box({ flexDirection: "row" }, Text({ content: segmentsToStyledText(segs, display) }));
 }
 
 function noteLine(record: RecordWithPrimaryPrediction | null): ReturnType<typeof Box> {
@@ -620,16 +636,26 @@ function slotFor(absoluteIndex: number): "even" | "odd" {
 function labelListBox(
   labels: Parameters<typeof labelName>[0][],
   predicted: string | null,
+  display: ResolvedDisplay,
 ): ReturnType<typeof Box> {
   return Box(
     { flexDirection: "column", marginTop: 2 },
     ...labels.slice(0, 9).map((entry, idx) => {
       const name = labelName(entry);
       const isPredicted = name === predicted;
-      const marker = isPredicted ? " >" : "  ";
+      const segs: Segment[] = [
+        { text: " ", tone: "default" },
+        { text: String(idx + 1), tone: "accent" },
+        { text: "  ", tone: "dim" },
+        { text: name, tone: isPredicted ? "accent" : "muted" },
+      ];
+      if (isPredicted) {
+        segs.push({ text: "  ", tone: "dim" });
+        segs.push({ text: "✓", tone: "success" });
+      }
       return Text({
-        content: ` ${idx + 1} ${name}${marker}`,
-        attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.DIM,
+        content: segmentsToStyledText(segs, display),
+        attributes: isPredicted ? TextAttributes.BOLD : TextAttributes.NONE,
       });
     }),
   );

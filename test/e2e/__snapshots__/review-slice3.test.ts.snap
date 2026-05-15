@@ -14,12 +14,12 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]   →   food  [92%]                                                                     
+  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1 food >                                                                                          
-  2 travel                                                                                          
-  3 other                                                                                           
+  1  food  ✓                                                                                        
+  2  travel                                                                                         
+  3  other                                                                                          
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -42,12 +42,12 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]   →   travel  [88%]                                                                   
+  [llm:gpt-4]  →  travel  88%                                                                       
                                                                                                     
                                                                                                     
-  1 food                                                                                            
-  2 travel >                                                                                        
-  3 other                                                                                           
+  1  food                                                                                           
+  2  travel  ✓                                                                                      
+  3  other                                                                                          
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -70,12 +70,12 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]   →   food  [92%]                                                                     
+  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1 food >                                                                                          
-  2 travel                                                                                          
-  3 other                                                                                           
+  1  food  ✓                                                                                        
+  2  travel                                                                                         
+  3  other                                                                                          
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -98,12 +98,12 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]   →   food  [92%]                                                                     
+  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1 food >                                                                                          
-  2 travel                                                                                          
-  3 other                                                                                           
+  1  food  ✓                                                                                        
+  2  travel                                                                                         
+  3  other                                                                                          
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -126,12 +126,12 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]   →   food  [92%]                                                                     
+  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1 food >                                                                                          
-  2 travel                                                                                          
-  3 other                                                                                           
+  1  food  ✓                                                                                        
+  2  travel                                                                                         
+  3  other                                                                                          
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -154,12 +154,12 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]   →   food  [92%]                                                                     
+  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1 food >                                                                                          
-  2 travel                                                                                          
-  3 other                                                                                           
+  1  food  ✓                                                                                        
+  2  travel                                                                                         
+  3  other                                                                                          
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
@@ -182,12 +182,12 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   █ Rent transfer to landlord                                                                       
   ▇ Coffee at Blue Tokai                                                                            
                                                                                                     
-  [llm:gpt-4]   →   food  [92%]                                                                     
+  [llm:gpt-4]  →  food  92%                                                                         
                                                                                                     
                                                                                                     
-  1 food >                                                                                          
-  2 travel                                                                                          
-  3 other                                                                                           
+  1  food  ✓                                                                                        
+  2  travel                                                                                         
+  3  other                                                                                          
                                                                                                     
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   

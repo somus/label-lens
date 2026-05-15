@@ -15,12 +15,12 @@ exports[`chrome — status bar + action footer review chrome renders on truecolo
   ▇ Coffee at Blue Tokai                                                                                                
                                                                                                                         
                                                                                                                         
-  [llm:gpt-4]   →   food  [92%]                                                                                         
+  [llm:gpt-4]  →  food  92%                                                                                             
                                                                                                                         
                                                                                                                         
-  1 food >                                                                                                              
-  2 travel                                                                                                              
-  3 other                                                                                                               
+  1  food  ✓                                                                                                            
+  2  travel                                                                                                             
+  3  other                                                                                                              
                                                                                                                         
                                                                                                                         
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
@@ -43,12 +43,12 @@ exports[`chrome — status bar + action footer review chrome renders on 256-colo
   ▇ Coffee at Blue Tokai                                                                                                
                                                                                                                         
                                                                                                                         
-  [llm:gpt-4]   →   food  [92%]                                                                                         
+  [llm:gpt-4]  →  food  92%                                                                                             
                                                                                                                         
                                                                                                                         
-  1 food >                                                                                                              
-  2 travel                                                                                                              
-  3 other                                                                                                               
+  1  food  ✓                                                                                                            
+  2  travel                                                                                                             
+  3  other                                                                                                              
                                                                                                                         
                                                                                                                         
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
@@ -71,12 +71,12 @@ exports[`chrome — status bar + action footer review chrome renders on 16-color
   ▇ Coffee at Blue Tokai                                                                                                
                                                                                                                         
                                                                                                                         
-  [llm:gpt-4]   →   food  [92%]                                                                                         
+  [llm:gpt-4]  →  food  92%                                                                                             
                                                                                                                         
                                                                                                                         
-  1 food >                                                                                                              
-  2 travel                                                                                                              
-  3 other                                                                                                               
+  1  food  ✓                                                                                                            
+  2  travel                                                                                                             
+  3  other                                                                                                              
                                                                                                                         
                                                                                                                         
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
@@ -99,12 +99,12 @@ exports[`chrome — status bar + action footer review chrome renders on mono 1`]
   ▇ Coffee at Blue Tokai                                                                                                
                                                                                                                         
                                                                                                                         
-  [llm:gpt-4]   →   food  [92%]                                                                                         
+  [llm:gpt-4]  →  food  92%                                                                                             
                                                                                                                         
                                                                                                                         
-  1 food >                                                                                                              
-  2 travel                                                                                                              
-  3 other                                                                                                               
+  1  food  ✓                                                                                                            
+  2  travel                                                                                                             
+  3  other                                                                                                              
                                                                                                                         
                                                                                                                         
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  

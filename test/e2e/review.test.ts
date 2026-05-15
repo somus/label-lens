@@ -51,7 +51,7 @@ describe("review screen e2e", () => {
     expect(frame).toContain("Pending: 10");
     expect(frame).toContain("Lunch at Zomato Bangalore");
     expect(frame).toContain("food");
-    expect(frame).toContain("[92%]");
+    expect(frame).toContain("92%");
     expect(frame).toContain("[llm:gpt-4]");
     // gd doc hint is boundary-only; absent for classification
     expect(frame).not.toContain("gd doc");
