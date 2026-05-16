@@ -74,8 +74,8 @@ describe("stats screen e2e", () => {
     const { captureCharFrame } = await setup(store);
     const frame = captureCharFrame();
     expect(frame).toContain("Stats");
-    expect(frame).toContain("Progress");
-    expect(frame).toContain("Reviewed");
+    // Progress + Decisions sections moved to the sidebar's Totals block.
+    // Main pane keeps only navigable / drillable sections.
     expect(frame).toContain("Top corrections");
     expect(frame).toContain("food → travel");
     expect(frame).toContain("Suggested next queue");

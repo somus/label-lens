@@ -46,6 +46,16 @@ describe("queue.switch commands", () => {
     expect(app.queueId).toBe("low-confidence");
   });
 
+  test("queue.switch.marked stays dispatchable without adding a duplicate palette row", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const registry = defaultRegistry();
+    const result = await dispatch(registry, "review", app, "queue.switch.marked");
+    expect(result.kind).toBe("ok");
+    expect(app.queueId).toBe("marked");
+    expect(registry.get("queue.switch.marked")?.palette).toBeUndefined();
+  });
+
   test("switchQueue() reuses cached cursors", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
@@ -64,18 +74,16 @@ describe("queue.switch commands", () => {
     expect(app.cursor!.queueId).toBe("by-source:llm:gpt-4");
   });
 
-  test("queue.openScreen and bare palette.queue use the same Queue screen callback", async () => {
+  test("queue.openScreen and bare palette.queue both open the queue overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
-    let opened = 0;
-    app.openQueueScreen = () => {
-      opened += 1;
-    };
 
     await dispatch(defaultRegistry(), "review", app, "queue.openScreen");
-    await dispatch(defaultRegistry(), "review", app, "palette.queue");
+    expect(app.overlay?.kind).toBe("queue");
+    app.closeOverlay();
 
-    expect(opened).toBe(2);
+    await dispatch(defaultRegistry(), "review", app, "palette.queue");
+    expect(app.overlay?.kind).toBe("queue");
   });
 
   test("palette.queue with an argument still switches directly", async () => {

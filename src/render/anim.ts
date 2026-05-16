@@ -92,9 +92,14 @@ export function createMotionController(options: MotionSchedulerOptions): MotionC
 
   const tick = () => {
     if (destroyed) return;
+    const wasRunning = running.size > 0;
     sweepExpired();
-    if (running.size === 0) return;
-    if (options.isInputPending?.()) return;
+    const stillRunning = running.size > 0;
+    if (!wasRunning && !stillRunning) return;
+    // Render once more after the last motion expires so the final active
+    // frame (e.g. highlighted counter row) doesn't stick on screen until
+    // an unrelated event triggers a render.
+    if (stillRunning && options.isInputPending?.()) return;
     try {
       options.requestRender();
     } catch {

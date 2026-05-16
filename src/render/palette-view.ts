@@ -1,4 +1,4 @@
-import { bold as boldFn, dim as dimFn, fg as fgFn, StyledText } from "@opentui/core";
+import { bg as bgFn, bold as boldFn, dim as dimFn, fg as fgFn, StyledText } from "@opentui/core";
 import type { Command } from "../actions/command.ts";
 import type { PaletteState } from "../overlay/palette.ts";
 import type { CategoryGroup } from "../overlay/palette-categories.ts";
@@ -7,6 +7,7 @@ import { lerpHex } from "./anim.ts";
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
 import { type Segment, segmentsToStyledText } from "./chrome/status-bar.ts";
+import { ModalHeader, modalWidth } from "./modal-frame.ts";
 import { progressSegments } from "./progress-segments.ts";
 import { Text, TextAttributes } from "./text.ts";
 import { borderForRole, resolveTheme } from "./theme.ts";
@@ -27,7 +28,7 @@ function modalChrome(
       ? lerpHex(t.bg.chrome, t.bg.overlay, fadeProgress)
       : t.bg.overlay
     : undefined;
-  const borderColor = canLerp ? lerpHex(t.bg.chrome, t.border.subtle, fadeProgress) : undefined;
+  const borderColor = useColor ? t.fg.accent : undefined;
   return { backgroundColor, borderColor };
 }
 
@@ -40,17 +41,18 @@ export function renderPalette(
 ): ReturnType<typeof Box> {
   const border = borderForRole(display, "overlay");
   const t = resolveTheme(display);
-  const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * 0.6)));
-  const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
+  const isPicker = state.mode === "pick" && state.picker;
+  const width = modalWidth(isPicker ? "picker" : "palette", termWidth);
+  const leftOffset = Math.max(0, Math.floor((termWidth - width - 2) / 2));
   const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
   const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
 
-  if (state.mode === "pick" && state.picker) {
+  if (isPicker && state.picker) {
     return renderPickerModal(
       state.picker,
       display,
       t,
-      modalWidth,
+      width,
       modalHeight,
       leftOffset,
       topOffset,
@@ -62,7 +64,7 @@ export function renderPalette(
     state,
     display,
     t,
-    modalWidth,
+    width,
     modalHeight,
     leftOffset,
     topOffset,
@@ -88,12 +90,18 @@ function renderBrowseModal(
   const useColor = display.color === "truecolor" || display.color === "256";
   const fading = display.motion && fadeProgress < 0.99;
   let flatIdx = 0;
+  // Track the entryChildren-index of the highlighted row so we can scroll
+  // the entries box to keep it visible when the total content exceeds the
+  // modal height.
+  let highlightChildIdx = -1;
 
   if (state.categories.length > 0) {
-    for (const cat of state.categories) {
+    for (let ci = 0; ci < state.categories.length; ci++) {
+      const cat = state.categories[ci]!;
       entryChildren.push(renderCategoryHeader(cat, useColor, t, fading));
       for (const entry of cat.entries) {
         const isHighlighted = flatIdx === state.highlight;
+        if (isHighlighted) highlightChildIdx = entryChildren.length;
         entryChildren.push(
           renderEntry(
             entry.palette,
@@ -108,7 +116,11 @@ function renderBrowseModal(
         );
         flatIdx++;
       }
-      entryChildren.push(Text({ content: "" }));
+      // Spacer between categories; skip after the last so the entries Box
+      // doesn't burn a row on a trailing blank the user never sees.
+      if (ci < state.categories.length - 1) {
+        entryChildren.push(Text({ content: "" }));
+      }
     }
   } else {
     for (let i = 0; i < state.entries.length && i < 16; i++) {
@@ -135,6 +147,17 @@ function renderBrowseModal(
     attributes: TextAttributes.DIM,
   });
 
+  // Scroll the entries box so the highlighted row stays in view. Without
+  // this the modal silently clips entries top-down when the total content
+  // exceeds the viewport (e.g. after adding per-queue palette shortcuts).
+  // Entries box height = modal interior height minus the column's fixed
+  // children: top/bottom padding (2) + ModalHeader (2 rows) + filter (1)
+  // + hint (1) = 6. Plus the border edges that the inner Box itself
+  // doesn't see. Empirically `modalHeight - 8` matches what the entries
+  // column actually has to draw into.
+  const viewportRows = Math.max(4, modalHeight - 8);
+  const visibleEntries = scrollWindow(entryChildren, highlightChildIdx, viewportRows);
+
   return Box(
     {
       flexDirection: "column",
@@ -150,14 +173,47 @@ function renderBrowseModal(
       overflow: "hidden",
       ...modalChrome(t, useColor, fading, fadeProgress),
     },
+    ModalHeader({ display, title: "Commands", innerWidth: modalWidth - 4 }),
     Text({
       content: ` :${state.filter}_`,
       attributes: fading ? TextAttributes.DIM : TextAttributes.BOLD,
     }),
-    Text({ content: "" }),
-    Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
+    Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...visibleEntries),
     hintLine,
   );
+}
+
+/**
+ * Slice the entries column so the highlighted row stays in view. Adds
+ * `…` markers on the trimmed end(s) so the user knows there's more.
+ * Returns the full list unchanged when content already fits.
+ */
+function scrollWindow(
+  rows: ReturnType<typeof Text>[],
+  highlightIdx: number,
+  viewport: number,
+): ReturnType<typeof Text>[] {
+  if (rows.length <= viewport) return rows;
+  // Center highlight in viewport when possible; clamp at start/end.
+  const halfWindow = Math.floor(viewport / 2);
+  let start = Math.max(0, (highlightIdx >= 0 ? highlightIdx : 0) - halfWindow);
+  const maxStart = rows.length - viewport;
+  if (start > maxStart) start = maxStart;
+  const end = start + viewport;
+  const slice = rows.slice(start, end);
+  if (start > 0) {
+    slice[0] = Text({
+      content: `   … ${start} more above`,
+      attributes: TextAttributes.DIM,
+    });
+  }
+  if (end < rows.length) {
+    slice[slice.length - 1] = Text({
+      content: `   … ${rows.length - end} more below`,
+      attributes: TextAttributes.DIM,
+    });
+  }
+  return slice;
 }
 
 function renderPickerModal(
@@ -251,7 +307,9 @@ function renderPickerModal(
       shouldFill: true,
       overflow: "hidden",
       backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
+      borderColor: useColor ? t.fg.accent : undefined,
     },
+    ModalHeader({ display, title: picker.title, innerWidth: modalWidth - 4 }),
     Text({ content: titleText, attributes: TextAttributes.BOLD }),
     Text({ content: "" }),
     Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
@@ -301,13 +359,18 @@ function renderEntry(
   const line = `${leftText}${" ".repeat(gap)}${right}`;
 
   if (useColor && highlighted && !fading) {
+    // Solid-cyan bg + inverse fg matches the modal highlight bar locked
+    // in plan C2. Bold attribute on top so mono-fallback still reads.
     return Text({
-      content: new StyledText([boldFn(fgFn(t.fg.accent)(line))]),
+      content: new StyledText([boldFn(bgFn(t.fg.accent)(fgFn(t.bg.overlay)(line)))]),
       attributes: TextAttributes.NONE,
     });
   }
   if (highlighted && !fading) {
-    return Text({ content: line, attributes: TextAttributes.BOLD });
+    return Text({
+      content: line,
+      attributes: TextAttributes.BOLD | TextAttributes.INVERSE,
+    });
   }
   if (useColor) {
     return Text({

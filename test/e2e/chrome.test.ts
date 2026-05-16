@@ -6,7 +6,6 @@ import { Box } from "../../src/render/box.ts";
 import type { ResolvedDisplay } from "../../src/render/capability.ts";
 import { Chrome, type Segment } from "../../src/render/chrome/index.ts";
 import { Text } from "../../src/render/text.ts";
-import { mountQueueScreen } from "../../src/screens/queue.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
 import { mountStatsScreen } from "../../src/screens/stats.ts";
 import { displayFor } from "../util/display.ts";
@@ -48,7 +47,7 @@ async function setupReview(store: TmpStore, display: ResolvedDisplay) {
 }
 
 async function setupQueue(store: TmpStore, display: ResolvedDisplay) {
-  const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
+  const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
     width: 120,
     height: 24,
   });
@@ -60,12 +59,9 @@ async function setupQueue(store: TmpStore, display: ResolvedDisplay) {
     onQuit: () => {},
   });
   app.queueId = "pending";
-  mountQueueScreen({
-    renderer,
-    app,
-    onSelect: () => {},
-    onCancel: () => {},
-  });
+  mountReviewScreen({ renderer, app });
+  await renderOnce();
+  mockInput.pressKey("Q", { shift: true });
   await renderOnce();
   return { captureCharFrame };
 }
@@ -150,7 +146,7 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toMatchSnapshot();
   });
 
-  test("queue screen renders chrome with Queues title and queue picker hint", async () => {
+  test("queue overlay renders Queues title and queue picker hint", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setupQueue(store, TRUECOLOR_LIGHT);
     const frame = captureCharFrame();
@@ -159,8 +155,6 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toContain("[j/k] navigate");
     expect(frame).toContain("[enter] select");
     expect(frame).toContain("[esc] cancel");
-    // The status row also reflects total queue count.
-    expect(frame).toMatch(/\d+ queues/);
   });
 
   test("stats screen renders chrome with Stats title and drill hint", async () => {

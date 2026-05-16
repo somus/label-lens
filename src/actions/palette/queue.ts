@@ -1,3 +1,4 @@
+import { openQueue as openQueueOverlay } from "../../overlay/queue.ts";
 import type { QueueId } from "../../store/queues/registry.ts";
 import { resolveQueue } from "../../store/queues/registry.ts";
 import { WhereParseError } from "../../store/where-parser.ts";
@@ -44,11 +45,10 @@ export const paletteQueue: Command = {
   run: (ctx, argument) => {
     const arg = argument?.trim() ?? "";
     if (arg.length === 0) {
-      if (!ctx.openQueueScreen) {
-        ctx.setFlash("Queue screen unavailable", "info", 1200);
-        return;
-      }
-      ctx.openQueueScreen();
+      ctx.openOverlay({
+        kind: "queue",
+        state: openQueueOverlay(ctx),
+      });
       return;
     }
     trySwitch(ctx, arg);

@@ -37,13 +37,18 @@ async function setup(store: TmpStore, display = defaultDisplay()) {
 describe("palette centered modal", () => {
   test("renders category headers (Queues, Filters, Help)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
+    const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
     mockInput.pressKey(":");
     await renderOnce();
     const frame = captureCharFrame();
+    // Top of the scroll window — Queues + Filters are guaranteed visible.
     expect(frame).toContain("Queues");
     expect(frame).toContain("Filters");
-    expect(frame).toContain("Help");
+    // Help may be below the scroll window when palette content overflows
+    // the modal (per-queue shortcuts + filters + actions add up). Verify
+    // it exists in state regardless.
+    const state = app.overlay?.state as import("../../src/overlay/palette.ts").PaletteState;
+    expect(state.categories.some((c) => c.id === "help")).toBe(true);
   });
 
   test("shows inline counts for queue entries", async () => {
@@ -77,6 +82,9 @@ describe("palette centered modal", () => {
     await renderOnce();
     const state = app.overlay?.state as import("../../src/overlay/palette.ts").PaletteState;
     expect(state.highlight).toBe(0);
+    // First queue-category entry — `:queue` (parametric, opens the queue
+    // overlay), registered ahead of the per-queue shortcuts so it leads
+    // the Queues category.
     expect(state.entries[0]!.palette).toBe(":queue");
   });
 

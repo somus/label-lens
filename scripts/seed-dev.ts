@@ -23,6 +23,7 @@ import { openDb } from "../src/store/db.ts";
 import { insertReview } from "../src/store/records.ts";
 import { toggleTag } from "../src/store/tags.ts";
 import {
+  BOUNDARY_LABELS,
   type GeneratedRecord,
   generateBoundary,
   generateClassification,
@@ -124,7 +125,12 @@ function prefillStateOpen(db: ReturnType<typeof openDb>, opts: GenOptions): void
       marks++;
     }
 
-    const otherLabels = LABELS.filter((l) => l !== "other");
+    // Task-appropriate label pool so the relabel prefill doesn't write
+    // labels that don't exist in the generated config (e.g. classification
+    // labels into a boundary dataset).
+    const taskLabels: readonly string[] =
+      opts.task === "boundary" ? BOUNDARY_LABELS : LABELS.filter((l) => l !== "other");
+    const otherLabels = taskLabels;
     let reviews = 0;
     for (let i = 0; i < opts.withReviews && candidates.length > 0; i++) {
       const idx = Math.floor(rand() * candidates.length);
@@ -141,16 +147,17 @@ function prefillStateOpen(db: ReturnType<typeof openDb>, opts: GenOptions): void
           source_of_truth: "human",
         });
       } else {
+        const fallback = otherLabels[0]!;
         const flip =
-          predicted && otherLabels.includes(predicted as (typeof LABELS)[number])
+          predicted && otherLabels.includes(predicted)
             ? (otherLabels.filter((l) => l !== predicted)[
                 Math.floor(rand() * (otherLabels.length - 1))
-              ] ?? otherLabels[0])
-            : otherLabels[0];
+              ] ?? fallback)
+            : fallback;
         insertReview(db, {
           record_id: row.id,
           status: "relabeled",
-          final_label: flip ?? "food",
+          final_label: flip,
           prev_label: predicted,
           source_of_truth: "human",
         });

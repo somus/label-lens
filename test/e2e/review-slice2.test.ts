@@ -56,10 +56,11 @@ describe("review screen slice 2 UI", () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store);
     const frame = captureCharFrame();
-    expect(frame).toContain("1  food");
-    expect(frame).toContain("2  travel");
-    expect(frame).toContain("3  utility");
-    expect(frame).toContain("4  other");
+    // Label list now uses `[N]` accelerator chips per plan B7.
+    expect(frame).toContain("[1]  food");
+    expect(frame).toContain("[2]  travel");
+    expect(frame).toContain("[3]  utility");
+    expect(frame).toContain("[4]  other");
   });
 
   test("action bar advertises slice 2 shortcuts", async () => {
@@ -96,11 +97,11 @@ describe("review screen slice 2 UI", () => {
     await renderOnce();
     expect(app.overlay?.kind).toBe("picker");
     const frame = captureCharFrame();
-    expect(frame).toContain("relabel>");
+    expect(frame).toContain("Relabel");
     expect(frame).toContain("food");
     expect(frame).toContain("travel");
-    expect(frame).toContain("enter commit");
-    expect(frame).toContain("esc cancel");
+    expect(frame).toContain("[enter] commit");
+    expect(frame).toContain("[esc] cancel");
   });
 
   test("picker filter narrows candidates", async () => {
@@ -120,7 +121,7 @@ describe("review screen slice 2 UI", () => {
       ]);
     }
     const frame = captureCharFrame();
-    expect(frame).toContain("relabel> t");
+    expect(frame).toContain("> t");
   });
 
   test("'n' opens note prompt overlay", async () => {
@@ -130,32 +131,44 @@ describe("review screen slice 2 UI", () => {
     await renderOnce();
     expect(app.overlay?.kind).toBe("note");
     const frame = captureCharFrame();
-    expect(frame).toContain("note>");
-    expect(frame).toContain("enter save");
+    expect(frame).toContain("Note");
+    expect(frame).toContain("[enter] save");
   });
 
   test("'m' shows persistent marked badge in header strip", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store);
-    expect(captureCharFrame()).not.toContain("● marked");
+    expect(captureCharFrame()).not.toContain("⦿ marked");
     mockInput.pressKey("m");
     await renderOnce();
-    expect(captureCharFrame()).toContain("● marked");
+    expect(captureCharFrame()).toContain("⦿ marked");
     mockInput.pressKey("m");
     await renderOnce();
-    expect(captureCharFrame()).not.toContain("● marked");
+    expect(captureCharFrame()).not.toContain("⦿ marked");
+  });
+
+  test("prediction card prefixes label with ⦿ when current record is marked", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
+    mockInput.pressKey("m");
+    await renderOnce();
+    const frame = captureCharFrame();
+    // Both status bar chip and prediction card row1 carry the glyph, so a
+    // marked record renders ⦿ marked at least twice.
+    const occurrences = (frame.match(/⦿ marked/g) ?? []).length;
+    expect(occurrences).toBeGreaterThanOrEqual(2);
   });
 
   test("status bar surfaces the marked indicator when current record is marked", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store);
-    // `m` lives under `?` help — the visual signal is the ● indicator in the
+    // `m` lives under `?` help — the visual signal is the ⦿ indicator in the
     // status bar, not a footer relabel.
-    expect(captureCharFrame()).not.toContain("● marked");
+    expect(captureCharFrame()).not.toContain("⦿ marked");
     mockInput.pressKey("m");
     await renderOnce();
     const frame = captureCharFrame();
-    expect(frame).toContain("● marked");
+    expect(frame).toContain("⦿ marked");
   });
 
   test("picker filter accepts space character", async () => {

@@ -1,6 +1,14 @@
 import type { FieldMap } from "./inference.ts";
 
-export type LabelConfigEntry = string | { name: string; key?: string; color?: string };
+/**
+ * `glyph` is parsed but not yet consumed by a renderer. Reserved for the
+ * boundary-task label rendering work that will overlay per-label glyphs on
+ * the kind defaults from `glyph-map.ts`. Until that ships, set values
+ * survive a round-trip through config but have no visual effect.
+ */
+export type LabelConfigEntry =
+  | string
+  | { name: string; key?: string; color?: string; glyph?: string };
 
 export type DisplayConfig = {
   color?: "truecolor" | "256" | "16" | "mono" | "auto";
@@ -9,6 +17,7 @@ export type DisplayConfig = {
   candidatePin?: number;
   layout?: "auto" | "stack" | "split";
   motion?: "auto" | "on" | "off";
+  sidebar?: "auto" | "on" | "off";
 };
 
 /**
@@ -78,6 +87,7 @@ export function defaultConfig(args: {
       candidatePin: 0.4,
       layout: "auto",
       motion: "auto",
+      sidebar: "auto",
     },
     navigation: {
       smartNext: false,

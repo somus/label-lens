@@ -1,0 +1,307 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
+"                                                                                
+  LabelLens  tiny.jsonl  Pending  1 / 10                                        
+                                                                                
+ ╭────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                  │ 
+ ╰────────────────────────────────────────────────────────────────────────────╯ 
+  █ Uber ride to airport                                                        
+  ▆ Amazon order #12345                                                         
+  ▄ Netflix monthly                                                             
+  █ Salary credit October                                                       
+  █ Rent transfer to landlord                                                   
+  ▇ Coffee at Blue Tokai                                                        
+  ▂ ATM withdrawal                                                              
+  Refund from Swiggy                                                            
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+  ◇ food  ████████░ 92%                                                         
+    llm:gpt-4                                                                   
+                                                                                
+                                                                                
+  [1]  food  ✓                                                                  
+  [2]  travel                                                                   
+  [3]  other                                                                    
+                                                                                
+                                                                                
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues 
+                                                                                
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) stats screen @ 80x30 1`] = `
+"                                                                                
+  LabelLens  tiny.jsonl  Stats                                2 drillable rows  
+                                                                                
+                                                                                
+  Imported issues ───────────────────────────────────────────────────────────   
+                                                                                
+ > label_issue                      1 record                               →    
+                                                                                
+  Suggested next queue ──────────────────────────────────────────────────────   
+                                                                                
+   low-confidence   (score 5.00)                                           →    
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+   [j/k] navigate  [enter] drill  [esc] back                                    
+                                                                                
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) splash screen @ 80x30 1`] = `
+"                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+               terminal-first review for noisy text training data               
+                                                                                
+               No labellens.config.json found in this directory.                
+                                                                                
+  Usage                                                                         
+                                                                                
+  labellens init <file.jsonl>       initialize a config and database in the     
+                                    current directory                           
+  labellens                         launch review from a configured labellens   
+                                    directory                                   
+  labellens export [format]         export reviewed records to jsonl, stats, or 
+                                    labelstudio                                 
+  labellens migrate --rename ...    rename labels across config and stored data 
+  labellens --version               print the installed version                 
+  press any key to exit                                                         
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
+"                                                                                                                        
+ ╭───────────────────────────────────────────────────────────────────────────────────╮                                  
+ │ Lunch at Zomato Bangalore                                                         │                                  
+ ╰───────────────────────────────────────────────────────────────────────────────────╯                                  
+  █ Uber ride to airport                                                                                                
+  ▆ Amazon order #12345                                                                                                 
+  ▄ Netflix monthly                                                                                                     
+  █ Salary credit October                                                                                               
+  █ Rent transfer to landlord                                                                                           
+  ▇ Coffee at Blue Tokai                                                                                                
+  ▂ ATM withdrawal                                                                                                      
+  Refund from Swiggy                                                                                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                        pending                         
+                                                                                        1 / 10                          
+                                                                                        test/fixtures/tiny.jsonl        
+                                                                                                                        
+                                                                                        Counters ─────────────────────  
+  ◇ food  ████████░ 92%                                                                                                 
+    llm:gpt-4                                                                           reviewed                     0  
+                                                                                        skipped                      0  
+                                                                                        marked                       0  
+  [1]  food  ✓                                                                                                          
+  [2]  travel                                                                           overall 0/10 [░░░░░░░░░░]   0%  
+  [3]  other                                                                            Signals ──────────────────────  
+                                                                                                                        
+                                                                                        ●  label_issue               1  
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
+                                                                                                                        
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) stats screen @ 120x30 1`] = `
+"                                                                                                                        
+                                                                                                                        
+  Imported issues ───────────────────────────────────────────────────────────────────                                   
+                                                                                                                        
+ > label_issue                      1 record                                       →                                    
+                                                                                                                        
+  Suggested next queue ──────────────────────────────────────────────────────────────                                   
+                                                                                                                        
+   low-confidence   (score 5.00)                                                   →                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                        test/fixtures/tiny.jsonl        
+                                                                                                                        
+                                                                                        Totals ───────────────────────  
+                                                                                                                        
+                                                                                        total                       10  
+                                                                                        reviewed                     0  
+                                                                                        pending                     10  
+                                                                                        accepted                     0  
+                                                                                        relabeled                    0  
+                                                                                        rejected                     0  
+                                                                                        skipped                      0  
+   [j/k] navigate  [enter] drill  [esc] back                                                                            
+                                                                                                                        
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) splash screen @ 120x30 1`] = `
+"                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                   terminal-first review for noisy text training data                                   
+                                                                                                                        
+                                   No labellens.config.json found in this directory.                                    
+                                                                                                                        
+  Usage                                                                                                                 
+                                                                                                                        
+  labellens init <file.jsonl>       initialize a config and database in the current directory                           
+  labellens                         launch review from a configured labellens directory                                 
+  labellens export [format]         export reviewed records to jsonl, stats, or labelstudio                             
+  labellens migrate --rename ...    rename labels across config and stored data                                         
+  labellens --version               print the installed version                                                         
+                                                                                                                        
+  press any key to exit                                                                                                 
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
+"                                                                                                                                                                
+ ╭─────────────────────────────────────────────────────────────────────────────────╮                                                                            
+ │ Lunch at Zomato Bangalore                                                       │  ◇ food  ████████░ 92%                                                     
+ ╰─────────────────────────────────────────────────────────────────────────────────╯    llm:gpt-4                                                               
+  █ Uber ride to airport                                                                                                                                        
+  ▆ Amazon order #12345                                                                                                                                         
+  ▄ Netflix monthly                                                                   [1]  food  ✓                                                              
+  █ Salary credit October                                                             [2]  travel                                                               
+  █ Rent transfer to landlord                                                         [3]  other                                                                
+  ▇ Coffee at Blue Tokai                                                                                                                                        
+  ▂ ATM withdrawal                                                                                                                                              
+  Refund from Swiggy                                                                                                                                            
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                pending                         
+                                                                                                                                1 / 10                          
+                                                                                                                                test/fixtures/tiny.jsonl        
+                                                                                                                                                                
+                                                                                                                                Counters ─────────────────────  
+                                                                                                                                                                
+                                                                                                                                reviewed                     0  
+                                                                                                                                skipped                      0  
+                                                                                                                                marked                       0  
+                                                                                                                                                                
+                                                                                                                                overall 0/10 [░░░░░░░░░░]   0%  
+                                                                                                                                Signals ──────────────────────  
+                                                                                                                                                                
+                                                                                                                                ●  label_issue               1  
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                               [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
+                                                                                                                                                                
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) stats screen @ 160x30 1`] = `
+"                                                                                                                                                                
+                                                                                                                                                                
+  Imported issues ───────────────────────────────────────────────────────────────────────────────────────────────────────────                                   
+                                                                                                                                                                
+ > label_issue                      1 record                                                                               →                                    
+                                                                                                                                                                
+  Suggested next queue ──────────────────────────────────────────────────────────────────────────────────────────────────────                                   
+                                                                                                                                                                
+   low-confidence   (score 5.00)                                                                                           →                                    
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                test/fixtures/tiny.jsonl        
+                                                                                                                                                                
+                                                                                                                                Totals ───────────────────────  
+                                                                                                                                                                
+                                                                                                                                total                       10  
+                                                                                                                                reviewed                     0  
+                                                                                                                                pending                     10  
+                                                                                                                                accepted                     0  
+                                                                                                                                relabeled                    0  
+                                                                                                                                rejected                     0  
+                                                                                                                                skipped                      0  
+   [j/k] navigate  [enter] drill  [esc] back                                                                                                                    
+                                                                                                                                                                
+"
+`;
+
+exports[`multi-width snapshot sweep (plan A16) splash screen @ 160x30 1`] = `
+"                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                       terminal-first review for noisy text training data                                                       
+                                                                                                                                                                
+                                                       No labellens.config.json found in this directory.                                                        
+                                                                                                                                                                
+  Usage                                                                                                                                                         
+                                                                                                                                                                
+  labellens init <file.jsonl>       initialize a config and database in the current directory                                                                   
+  labellens                         launch review from a configured labellens directory                                                                         
+  labellens export [format]         export reviewed records to jsonl, stats, or labelstudio                                                                     
+  labellens migrate --rename ...    rename labels across config and stored data                                                                                 
+  labellens --version               print the installed version                                                                                                 
+                                                                                                                                                                
+  press any key to exit                                                                                                                                         
+"
+`;

@@ -1,35 +1,35 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`queue screen e2e renders all built-in queues with counts 1`] = `
+exports[`queue overlay e2e renders all built-in queues with counts 1`] = `
 "                                                                                                    
-  LabelLens  tiny.jsonl  Queues                                                           6 queues  
+  LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
-  Review Queues                                                                                     
-  > Pending           10  [########] 100%  Awaiting your label                                      
-    Skipped            0  [--------]   0%  Reviewed but punted                                      
-    Marked             0  [--------]   0%  Flagged for follow-up via [m]                            
-                                                                                                    
-  Signal Queues                                                                                     
-    Low confidence    10  [########] 100%  Predictions with the weakest scores                      
-    Disagreements      1  [#-------]  10%  Sources predict different labels                         
-    Flagged            1  [#-------]  10%  Imported or computed signals                             
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-   [j/k] navigate ┊ [enter] select ┊ [esc] cancel                                                   
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
+ │ ▶ Lunch at Zomato Bangalore                                                                    │ 
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
+  █ Uber ride t┌────────────────────────────────────────────────────────────────────┐               
+  ▆ Amazon orde│                                                                    │               
+  ▄ Netflix mon│  == Queues ======================================================= │               
+  █ Salary cred│                                                                    │               
+  █ Rent transf│  Review Queues                                                     │               
+  ▇ Coffee at B│  > Pending           10  [########] 100%  Awaiting your label      │               
+  ▂ ATM withdra│    Skipped            0  [--------]   0%  Reviewed but punted      │               
+  │ Refund from│    Marked             0  [--------]   0%  Flagged for follow-up v… │               
+               │                                                                    │               
+               │  Signal Queues                                                     │               
+               │    Low confidence    10  [########] 100%  Predictions with the we… │               
+               │    Disagreements      1  [#-------]  10%  Sources predict differe… │               
+               │    Flagged            1  [#-------]  10%  Imported or computed si… │               
+  ◇ food  #####│                                                                    │               
+    llm:gpt-4  │  Preview: Pending                                                  │               
+               │    Lunch at Zomato Bangalore                                       │               
+               │    src llm:gpt-4   food   92%                                      │               
+  [1]  food  ✓ │                                                                    │               
+  [2]  travel  │                                                                    │               
+  [3]  other   │  [j/k] navigate · [enter] select · [esc] cancel                    │               
+               │                                                                    │               
+               └────────────────────────────────────────────────────────────────────┘               
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;

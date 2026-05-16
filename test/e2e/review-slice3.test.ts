@@ -123,11 +123,12 @@ describe("slice 3: review screen banding + focus + pin", () => {
     const lines = frameLines(frame);
     const topCornerRow = lines.findIndex((l) => l.includes("╭"));
     expect(topCornerRow).toBeGreaterThan(-1);
-    // 24-row renderer, pin = 0.4. After header + spacer (≈3 rows), the band
-    // region runs ~17 rows; focused-record top corner should land at row
-    // ≈ 3 + floor(17 × 0.4) = 9. Allow ±2 rows for flex rounding + spacers.
-    expect(topCornerRow).toBeGreaterThanOrEqual(7);
-    expect(topCornerRow).toBeLessThanOrEqual(11);
+    // 24-row renderer, pin = 0.4. With the 3-row prediction card stacked
+    // below the band, NON_BAND_ROWS=16 so bandRows≈8; focused-record top
+    // corner should land at row ≈ 3 (header + spacer) + floor(8 × 0.4) =
+    // 6. Allow ±2 rows for flex rounding + spacers.
+    expect(topCornerRow).toBeGreaterThanOrEqual(5);
+    expect(topCornerRow).toBeLessThanOrEqual(10);
   });
 
   test("256-color: rounded border, no left-edge markers (banding does the work)", async () => {

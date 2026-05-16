@@ -8,23 +8,41 @@ import type { LabellensConfig } from "../config/config.ts";
 import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
 import { ingestFile } from "../ingest/ingest.ts";
 import { applyDiff, type DiffResult, diffIngest } from "../ingest/reingest.ts";
+import { openQueue } from "../overlay/queue.ts";
 import { bootstrapDisplay } from "../render/capability.ts";
-import { mountQueueScreen } from "../screens/queue.ts";
 import { mountReingestPrompt, type ReingestChoice } from "../screens/reingest-prompt.ts";
 import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts";
+import { mountSplash } from "../screens/splash.ts";
 import { mountStatsScreen } from "../screens/stats.ts";
 import { runSignals } from "../signals/run.ts";
 import { type Db, openDb } from "../store/db.ts";
 import { findUnknownLabels } from "../store/labels.ts";
 import { chooseInitialScreen } from "./initial-screen.ts";
 
+export const MISSING_CONFIG_MESSAGE =
+  "labellens: no labellens.config.json found in this directory. Run 'labellens init <file.jsonl>' first.";
+
+export function shouldShowMissingConfigSplash(args: {
+  stdinIsTTY: boolean | undefined;
+  stdoutIsTTY: boolean | undefined;
+}): boolean {
+  return args.stdinIsTTY === true && args.stdoutIsTTY === true;
+}
+
 export async function runReview(): Promise<void> {
   const configPath = resolve("./labellens.config.json");
   if (!existsSync(configPath)) {
-    console.error(
-      "labellens: no labellens.config.json found in this directory. Run 'labellens init <file.jsonl>' first.",
-    );
-    process.exit(2);
+    if (
+      !shouldShowMissingConfigSplash({
+        stdinIsTTY: process.stdin.isTTY,
+        stdoutIsTTY: process.stdout.isTTY,
+      })
+    ) {
+      console.error(MISSING_CONFIG_MESSAGE);
+      process.exit(2);
+    }
+    await runSplash();
+    return;
   }
 
   const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
@@ -58,6 +76,9 @@ export async function runReview(): Promise<void> {
       env: {
         COLORTERM: process.env.COLORTERM,
         TERM: process.env.TERM,
+        // Used by `detectRichGradient` to allowlist terminals with clean
+        // per-cell gradient rendering (iTerm2, WezTerm, Ghostty, …).
+        TERM_PROGRAM: process.env.TERM_PROGRAM,
         NO_COLOR: process.env.NO_COLOR,
       },
       themeProbe: { waitForThemeMode: (ms) => r.waitForThemeMode(ms) },
@@ -146,22 +167,12 @@ export async function runReview(): Promise<void> {
     reviewHandle = mountReviewScreen({ renderer: r, app, initialQueueId: queueId });
   };
 
+  // Queue picker is now an overlay on top of Review (no separate screen).
+  // The thin shim keeps the old `app.openQueueScreen()` callsite working —
+  // mount Review first if it isn't already, then open the overlay.
   app.openQueueScreen = () => {
-    reviewHandle?.destroy();
-    reviewHandle = null;
-    const queueHandle = mountQueueScreen({
-      renderer: r,
-      app,
-      onSelect: (id) => {
-        queueHandle.destroy();
-        switchQueue(app, id);
-        mountReview(id);
-      },
-      onCancel: () => {
-        queueHandle.destroy();
-        mountReview(app.queueId ?? "pending");
-      },
-    });
+    if (!reviewHandle) mountReview(app.queueId ?? "pending");
+    app.openOverlay({ kind: "queue", state: openQueue(app) });
   };
 
   app.openStatsScreen = () => {
@@ -187,6 +198,36 @@ export async function runReview(): Promise<void> {
   } else {
     mountReview("pending");
   }
+}
+
+/**
+ * No-args splash (plan A7 + A20). Boots a renderer with detected display,
+ * mounts the wordmark + usage hint, exits on the first keypress.
+ */
+async function runSplash(): Promise<void> {
+  const renderer = await createCliRenderer({ exitOnCtrlC: true });
+  const display = await bootstrapDisplay({
+    env: {
+      COLORTERM: process.env.COLORTERM,
+      TERM: process.env.TERM,
+      TERM_PROGRAM: process.env.TERM_PROGRAM,
+      NO_COLOR: process.env.NO_COLOR,
+    },
+    themeProbe: { waitForThemeMode: (ms) => renderer.waitForThemeMode(ms) },
+    config: undefined,
+  });
+  await new Promise<void>((resolveExit) => {
+    const handle = mountSplash({
+      renderer,
+      display,
+      onExit: () => {
+        handle.destroy();
+        renderer.destroy();
+        const delay = Number.parseInt(process.env.LABELLENS_EXIT_DELAY_MS ?? "", 10);
+        setTimeout(resolveExit, Number.isFinite(delay) && delay >= 0 ? delay : 30);
+      },
+    });
+  });
 }
 
 function promptForChoice(

@@ -18,6 +18,7 @@ export type Tone =
   | "muted"
   | "dim"
   | "accent"
+  | "accentDeep"
   | "bold"
   | "success"
   | "warning"
@@ -45,6 +46,8 @@ function chunkFor(seg: Segment, display: ResolvedDisplay): TextChunk {
       return supportsFg ? fgFn(tokens.fg.dim)(seg.text) : dimFn(seg.text);
     case "accent":
       return supportsFg ? boldFn(fgFn(tokens.fg.accent)(seg.text)) : boldFn(seg.text);
+    case "accentDeep":
+      return supportsFg ? fgFn(tokens.fg.accentDeep)(seg.text) : dimFn(seg.text);
     case "bold":
       return boldFn(seg.text);
     case "success":
@@ -86,8 +89,6 @@ export type StatusBarProps = {
   width?: number;
 };
 
-const NARROW_WIDTH = 80;
-
 function segmentsText(segs: Segment[]): string {
   return segs.map((s) => s.text).join("");
 }
@@ -118,12 +119,16 @@ function truncateSegments(segs: Segment[], max: number): Segment[] {
  * Top chrome strip. Left + right clusters in a single row with space-between.
  * Each cluster is one Text node holding a StyledText so segments don't wrap
  * mid-cluster on narrow terminals — OpenTUI wraps per-Text, not per-chunk.
- * When `width` is supplied and the terminal is narrow (<80 cols), the right
+ * When `width` is supplied and the two clusters would overflow, the right
  * cluster is dropped and the left cluster is truncated with an ellipsis.
  */
 export function StatusBar(props: StatusBarProps): ReturnType<typeof Box> {
   const { display, width } = props;
-  const narrow = width !== undefined && width < NARROW_WIDTH;
+  const leftLen = segmentsText(props.left).length;
+  const rightLen = props.right ? segmentsText(props.right).length : 0;
+  const narrow =
+    width !== undefined &&
+    (leftLen > width || (props.right !== undefined && leftLen + rightLen + 1 > width));
   const left = narrow ? truncateSegments(props.left, Math.max(8, width - 2)) : props.left;
   const right = narrow ? undefined : props.right;
   const leftText = Text({

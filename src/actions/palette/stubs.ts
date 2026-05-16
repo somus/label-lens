@@ -7,7 +7,7 @@ function notYet(name: string, palette: string): Command {
     palette,
     paletteMetadata: { category: "actions" },
     run: (ctx) => {
-      ctx.setFlash(`${palette}: not yet implemented`, "info", 3000);
+      ctx.setFlash(`${palette}: not yet implemented`, "warning");
     },
   };
 }

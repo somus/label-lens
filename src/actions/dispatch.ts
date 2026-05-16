@@ -24,7 +24,7 @@ export async function dispatch(
     if (cmd.disabledMessage) {
       const msg =
         typeof cmd.disabledMessage === "function" ? cmd.disabledMessage(ctx) : cmd.disabledMessage;
-      ctx.setFlash(msg, "info");
+      ctx.setFlash(msg, "warning");
     }
     return { kind: "disabled", action: actionName };
   }
