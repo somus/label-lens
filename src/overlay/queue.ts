@@ -3,7 +3,6 @@ import type { AppContext } from "../app/context.ts";
 import { queueRecords } from "../store/queries.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import { QUEUE_CYCLE, type QueueId, resolveQueue } from "../store/queues/registry.ts";
-import { records } from "../store/schema.ts";
 import type { RecordWithPrimaryPrediction } from "../types.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
@@ -80,8 +79,13 @@ export function openQueue(app: AppContext): QueueState {
 }
 
 function totalRecordCount(app: AppContext): number {
-  // Cheap COUNT(*). Lives here so the overlay state is self-contained.
-  return app.db.select({ n: sql<number>`COUNT(*)` }).from(records).get()?.n ?? 0;
+  // Cheap COUNT(*) scoped to non-orphan rows, matching the built-in queue
+  // counts. Including orphans here would make per-queue progress bars
+  // under-report after a re-ingest that flagged rows as orphans (queue
+  // count exclude them, total would not).
+  return (
+    app.db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records WHERE orphan = 0`)[0]?.n ?? 0
+  );
 }
 
 function packed(state: QueueState): Overlay {
