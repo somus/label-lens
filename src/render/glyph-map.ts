@@ -90,6 +90,22 @@ export function kindGlyph(labelName: string, display: ResolvedDisplay): string {
   return KIND_RICH[labelName] ?? "·";
 }
 
+/**
+ * Resolve glyph for a record's label, preferring a config-supplied
+ * `labels[].glyph` over the built-in kind defaults. Returns `undefined`
+ * when the display capability can't render a non-blank glyph (mono /
+ * 16-color) so the caller can skip the left-edge column entirely.
+ */
+export function labelGlyph(
+  labelName: string,
+  configGlyph: string | undefined,
+  display: ResolvedDisplay,
+): string | undefined {
+  if (!richGlyphs(display)) return undefined;
+  if (configGlyph && configGlyph.length > 0) return configGlyph;
+  return KIND_RICH[labelName] ?? "·";
+}
+
 export type KindTintLevel = "heavy" | "medium" | "light";
 
 const KIND_TINT: Record<string, KindTintLevel> = {

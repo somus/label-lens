@@ -70,6 +70,15 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
         { text: "[esc] ", tone: "accent" },
         { text: "close", tone: "muted" },
       ];
+    case "queue":
+      return [
+        { text: "[j/k] ", tone: "accent" },
+        { text: "navigate  ", tone: "muted" },
+        { text: "[enter] ", tone: "accent" },
+        { text: "select  ", tone: "muted" },
+        { text: "[esc] ", tone: "accent" },
+        { text: "cancel", tone: "muted" },
+      ];
     case "assistant":
       return [
         { text: "[esc] ", tone: "accent" },
@@ -93,11 +102,17 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
 export function flashFooterHint(
   flash: { message: string; kind: FlashKind } | null,
   display: ResolvedDisplay,
+  solidBg = false,
 ): Segment[] | undefined {
   if (!flash) return undefined;
   const glyph = flashGlyph(flash.kind, display);
-  const glyphTone: Segment["tone"] =
-    flash.kind === "success"
+  // On a solid-tone toast background (plan D5), the glyph + message fg
+  // need to contrast with the bg, not match it. We force "default" fg
+  // (theme-aware) for the message and drop the tone match on the glyph —
+  // both are legible against any of the four tone bgs we paint.
+  const glyphTone: Segment["tone"] = solidBg
+    ? "default"
+    : flash.kind === "success"
       ? "success"
       : flash.kind === "warning"
         ? "warning"
@@ -106,6 +121,6 @@ export function flashFooterHint(
           : "info";
   return [
     { text: ` ${glyph} `, tone: glyphTone },
-    { text: flash.message, tone: "bold" },
+    { text: flash.message, tone: solidBg ? "default" : "bold" },
   ];
 }

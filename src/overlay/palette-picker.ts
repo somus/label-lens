@@ -9,7 +9,7 @@ export type PickerField = {
   candidateCounts?: Map<string, number>;
   /** Denominator for progress bars rendered alongside `candidateCounts`. Set
    *  by the queue picker so each row renders a count-vs-total bar matching the
-   *  queue screen. Other picker kinds leave this undefined. */
+   *  queue overlay. Other picker kinds leave this undefined. */
   totalForProgress?: number;
   filter: string;
   highlight: number;

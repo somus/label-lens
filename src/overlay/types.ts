@@ -5,6 +5,7 @@ import type { FilterBuilderState } from "./filter-builder.ts";
 import type { GuidelinesState } from "./guidelines.ts";
 import type { HelpState } from "./help.ts";
 import type { PaletteState } from "./palette.ts";
+import type { QueueState } from "./queue.ts";
 import type { StatsOverlayState } from "./stats-overlay.ts";
 
 /** Per-Overlay state types. */
@@ -42,7 +43,8 @@ export type Overlay =
   | { kind: "filter-builder"; state: FilterBuilderState }
   | { kind: "help"; state: HelpState }
   | { kind: "guidelines"; state: GuidelinesState }
-  | { kind: "stats"; state: StatsOverlayState };
+  | { kind: "stats"; state: StatsOverlayState }
+  | { kind: "queue"; state: QueueState };
 
 export type OverlayKind = Overlay["kind"];
 

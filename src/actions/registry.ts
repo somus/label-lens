@@ -17,6 +17,7 @@ import {
   paletteQueue,
   paletteWhere,
 } from "./palette/queue.ts";
+import { paletteToggleSidebar } from "./palette/sidebar.ts";
 import { paletteAssistant, paletteReload } from "./palette/stubs.ts";
 import { nextQueue, prevQueue } from "./queue/cycle-queue.ts";
 import { openQueueScreen } from "./queue/open-screen.ts";
@@ -48,20 +49,23 @@ export const ALL_COMMANDS: Command[] = [
   nextQueue,
   prevQueue,
   openQueueScreen,
-  ...queueSwitchCommands,
   showDoc,
   ...DOC_VIEW_COMMANDS,
   paletteOpen,
   helpShow,
   guidelinesShow,
+  // paletteQueue first so `:queue` (open the queue overlay) renders at the
+  // TOP of the Queues category in the palette overlay. The per-queue
+  // shortcuts (pending / skipped / …) follow below.
   paletteQueue,
+  ...queueSwitchCommands,
+  paletteMarked,
   paletteBySource,
   paletteByReason,
   paletteByLabel,
   paletteByIssue,
   paletteByCorrection,
   paletteWhere,
-  paletteMarked,
   paletteGuidelines,
   paletteHelp,
   paletteStats,
@@ -70,6 +74,7 @@ export const ALL_COMMANDS: Command[] = [
   paletteExportCommand,
   paletteAssistant,
   paletteReload,
+  paletteToggleSidebar,
   quit,
 ];
 

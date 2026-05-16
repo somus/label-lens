@@ -3,7 +3,7 @@ import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
-import { mountQueueScreen } from "../../src/screens/queue.ts";
+import { mountReviewScreen } from "../../src/screens/review.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
 const config: LabellensConfig = {
@@ -38,20 +38,18 @@ async function setup(store: TmpStore, opts: { width?: number; display?: Resolved
     requestRender: () => {},
     onQuit: () => {},
   });
-  mountQueueScreen({
-    renderer,
-    app,
-    onSelect: () => {},
-    onCancel: () => {},
-  });
+  mountReviewScreen({ renderer, app });
+  await renderOnce();
+  mockInput.pressKey("Q", { shift: true });
   await renderOnce();
   return { app, mockInput, renderOnce, captureCharFrame };
 }
 
-describe("queue screen — live preview", () => {
-  test("renders first-record preview for highlighted queue (pending → 'Lunch at Zomato Bangalore')", async () => {
+describe("queue overlay — live preview", () => {
+  test("renders first-record preview for highlighted queue (pending)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, { display: displayFor("truecolor") });
+    const { app, captureCharFrame } = await setup(store, { display: displayFor("truecolor") });
+    expect(app.overlay?.kind).toBe("queue");
     expect(captureCharFrame()).toContain("Lunch at Zomato Bangalore");
   });
 
@@ -60,38 +58,20 @@ describe("queue screen — live preview", () => {
     const { mockInput, renderOnce, captureCharFrame } = await setup(store, {
       display: displayFor("truecolor"),
     });
-    // pending → skipped → marked → low-confidence (three j presses).
     mockInput.pressKey("j");
     await renderOnce();
     mockInput.pressKey("j");
     await renderOnce();
     mockInput.pressKey("j");
     await renderOnce();
-    // Lowest-confidence row in tiny.jsonl is "ATM withdrawal" (0.22).
     expect(captureCharFrame()).toContain("ATM withdrawal");
   });
 
-  test("drops preview at mono", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, { display: displayFor("mono") });
-    expect(captureCharFrame()).not.toContain("Lunch at Zomato Bangalore");
-  });
-
-  test("drops preview at <60 cols", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, {
-      width: 55,
-      display: displayFor("truecolor"),
-    });
-    expect(captureCharFrame()).not.toContain("Lunch at Zomato Bangalore");
-  });
-
-  test("empty queue: preview shows '(no records)' placeholder", async () => {
+  test("empty queue preview shows '(no records)' placeholder", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store, {
       display: displayFor("truecolor"),
     });
-    // pending → skipped (count 0).
     mockInput.pressKey("j");
     await renderOnce();
     expect(captureCharFrame()).toContain("(no records)");

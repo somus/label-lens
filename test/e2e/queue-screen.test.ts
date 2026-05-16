@@ -3,7 +3,10 @@ import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
-import { mountQueueScreen } from "../../src/screens/queue.ts";
+import { mountReviewScreen } from "../../src/screens/review.ts";
+import { queueRecords } from "../../src/store/queries.ts";
+import { resolveQueue } from "../../src/store/queues/registry.ts";
+import { toggleTag } from "../../src/store/tags.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
 function makeConfig(): LabellensConfig {
@@ -30,28 +33,11 @@ async function setup(
     requestRender: () => {},
     onQuit: () => {},
   });
-  let selected: string | null = null;
-  let cancelled = false;
-  const handle = mountQueueScreen({
-    renderer,
-    app,
-    onSelect: (id) => {
-      selected = id;
-    },
-    onCancel: () => {
-      cancelled = true;
-    },
-  });
+  mountReviewScreen({ renderer, app });
   await renderOnce();
-  return {
-    app,
-    mockInput,
-    renderOnce,
-    captureCharFrame,
-    selected: () => selected,
-    cancelled: () => cancelled,
-    destroy: handle.destroy,
-  };
+  mockInput.pressKey("Q", { shift: true });
+  await renderOnce();
+  return { app, mockInput, renderOnce, captureCharFrame };
 }
 
 function display(color: ResolvedDisplay["color"]): ResolvedDisplay {
@@ -67,11 +53,17 @@ function display(color: ResolvedDisplay["color"]): ResolvedDisplay {
   };
 }
 
-describe("queue screen e2e", () => {
+function markFirstPending(store: TmpStore): void {
+  const first = queueRecords(store.db, resolveQueue("pending").query)[0]!;
+  toggleTag(store.db, first.id, "marked");
+}
+
+describe("queue overlay e2e", () => {
   test("renders all built-in queues with counts", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store);
+    const { app, captureCharFrame } = await setup(store);
     const frame = captureCharFrame();
+    expect(app.overlay?.kind).toBe("queue");
     expect(frame).toContain("Queues");
     expect(frame).toContain("Pending");
     expect(frame).toContain("Skipped");
@@ -79,25 +71,39 @@ describe("queue screen e2e", () => {
     expect(frame).toContain("Disagreements");
     expect(frame).toContain("Flagged");
     expect(frame).toContain("Marked");
-    // tiny.jsonl: 10 pending, 0 skipped, 1 flagged (label_issue).
     expect(frame).toContain("10");
-    expect(frame).toContain("Pending  ");
+    expect(frame).toContain("Awaiting your label");
     expect(frame).toMatchSnapshot();
   });
 
-  test("Enter on the first queue calls onSelect with that id", async () => {
+  test("Enter on the first queue switches to pending and closes", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, selected } = await setup(store);
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(selected()).toBe("pending");
+    expect(app.queueId).toBe("pending");
+    expect(app.overlay).toBeNull();
   });
 
-  test("j/k moves the highlight; Enter picks low-confidence after three j's (skipping the Signal section header)", async () => {
+  test("Enter on Marked switches through the registered queue command", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, selected } = await setup(store);
-    // Section order: pending, skipped, marked, low-confidence, disagreements, flagged.
-    // Three j's from pending lands on low-confidence (10 records → not empty → selects).
+    markFirstPending(store);
+    const { app, mockInput, renderOnce } = await setup(store);
+    mockInput.pressKey("j");
+    await renderOnce();
+    mockInput.pressKey("j");
+    await renderOnce();
+    mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
+    await renderOnce();
+    expect(app.queueId).toBe("marked");
+    expect(app.overlay).toBeNull();
+  });
+
+  test("j/k moves the highlight; Enter picks low-confidence after three j's", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey("j");
     await renderOnce();
     mockInput.pressKey("j");
@@ -105,25 +111,27 @@ describe("queue screen e2e", () => {
     mockInput.pressKey("j");
     await renderOnce();
     mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(selected()).toBe("low-confidence");
+    expect(app.queueId).toBe("low-confidence");
+    expect(app.overlay).toBeNull();
   });
 
-  test("escape calls onCancel", async () => {
+  test("escape closes the overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, cancelled } = await setup(store);
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressEscape();
     await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(cancelled()).toBe(true);
+    expect(app.overlay).toBeNull();
   });
 
-  test("q calls onCancel", async () => {
+  test("q closes the overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, cancelled } = await setup(store);
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey("q");
     await renderOnce();
-    expect(cancelled()).toBe(true);
+    expect(app.overlay).toBeNull();
   });
 
   test("renders section headers with Unicode icons on truecolor", async () => {
@@ -146,45 +154,14 @@ describe("queue screen e2e", () => {
     expect(frame).toContain("Signal Queues");
   });
 
-  test("renders per-queue description text", async () => {
+  test("Enter on an empty queue stays open and does not switch", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, { display: display("truecolor") });
-    const frame = captureCharFrame();
-    expect(frame).toContain("Awaiting your label");
-  });
-
-  test("renders progress bar on wide terminal", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, { display: display("truecolor") });
-    const frame = captureCharFrame();
-    // Bracketed bar appears at least once. Truecolor renders block glyphs.
-    expect(frame).toContain("[");
-    expect(frame).toMatch(/[█░]/);
-  });
-
-  test("Enter on an empty queue flashes a hint and does not select", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, selected, app } = await setup(store);
-    // tiny.jsonl: skipped is empty (count 0). Section order puts skipped at
-    // index 1. One j press lands on it.
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey("j");
     await renderOnce();
     mockInput.pressKey("RETURN");
     await renderOnce();
-    expect(selected()).toBeNull();
-    expect(app.flash?.message).toContain("empty");
-    expect(app.flash?.kind).toBe("warning");
-  });
-
-  test("drops progress bars on narrow terminal (<60 cols)", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, {
-      width: 55,
-      display: display("truecolor"),
-    });
-    const frame = captureCharFrame();
-    expect(frame).not.toMatch(/[█░]/);
-    // Counts still visible.
-    expect(frame).toContain("10");
+    expect(app.queueId).toBe("pending");
+    expect(app.overlay?.kind).toBe("queue");
   });
 });

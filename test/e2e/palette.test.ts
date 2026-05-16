@@ -3,7 +3,6 @@ import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
-import { mountQueueScreen } from "../../src/screens/queue.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
 import { mountStatsScreen } from "../../src/screens/stats.ts";
 import { displayFor } from "../util/display.ts";
@@ -151,13 +150,9 @@ describe("palette e2e", () => {
     expect(app.queueId).toBe("by-source:llm:gpt-4");
   });
 
-  test(":queue with no argument opens the same Queue screen path as Shift+Q", async () => {
+  test(":queue with no argument opens the queue overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { app, mockInput, renderOnce } = await setup(store);
-    let opened = 0;
-    app.openQueueScreen = () => {
-      opened += 1;
-    };
     mockInput.pressKey(":");
     await renderOnce();
     for (const ch of "queue") {
@@ -167,23 +162,13 @@ describe("palette e2e", () => {
     mockInput.pressKey("RETURN");
     await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(opened).toBe(1);
-    expect(app.overlay).toBeNull();
+    // Palette closed, queue overlay opened on top of review.
+    expect(app.overlay?.kind).toBe("queue");
   });
 
-  test(":queue opens the Queue screen instead of repainting review after palette close", async () => {
+  test(":queue opens the queue overlay over the review screen", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { app, renderer, reviewHandle, mockInput, renderOnce, captureCharFrame } =
-      await setup(store);
-    app.openQueueScreen = () => {
-      reviewHandle.destroy();
-      mountQueueScreen({
-        renderer,
-        app,
-        onSelect: () => {},
-        onCancel: () => {},
-      });
-    };
+    const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
 
     mockInput.pressKey(":");
     await renderOnce();
@@ -192,10 +177,13 @@ describe("palette e2e", () => {
       await renderOnce();
     }
     mockInput.pressKey("RETURN");
+    // Palette commit fires `runCommand` as a fire-and-forget — wait long
+    // enough for the dispatch's microtask + the queue overlay's open to
+    // settle into AppContext before we sample.
     await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
 
-    expect(app.activeScope).toBe("queue");
+    expect(app.overlay?.kind).toBe("queue");
     expect(captureCharFrame()).toContain("Queues");
   });
 

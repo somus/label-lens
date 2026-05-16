@@ -6,6 +6,7 @@ import {
   createMotionController,
   type MotionController,
   type MotionSchedulerOptions,
+  progressTick,
 } from "../render/anim.ts";
 import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Db } from "../store/db.ts";
@@ -86,6 +87,14 @@ export type AppContext = {
    * screen mounts call it after switching scope).
    */
   getSidebarData(mode?: "queue" | "stats"): SidebarData;
+  /**
+   * Tween the sidebar progress bar (plan A12). Renderer passes the latest
+   * `queueProgress.reviewed` value; this helper compares it to the last
+   * observed value, fires a `progressTick` motion token on increment, and
+   * returns the (possibly mid-tween) display value to render. When motion
+   * is gated off this is a pass-through.
+   */
+  observeProgress(reviewed: number): number;
   motion: MotionController;
   noteInput(): void;
   requestRender(): void;
@@ -102,8 +111,7 @@ export type AppContext = {
   closeDocView(): void;
   /**
    * Set by the orchestrator (cli/run.ts) so review-scope commands can pop the
-   * Queue screen. Unset in tests; the corresponding command flashes "Queue
-   * screen unavailable" rather than crashing.
+   * queue overlay over Review.
    */
   openQueueScreen?: () => void;
   /**
@@ -138,6 +146,7 @@ export function createAppContext(args: {
   const cursors = new Map<QueueId, Cursor>();
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
   let inputPendingUntil = 0;
+  let lastObservedProgress: number | null = null;
   let ctx: AppContext;
   const motion = createMotionController({
     enabled: args.display.motion,
@@ -155,6 +164,21 @@ export function createAppContext(args: {
     display: args.display,
     docView: null,
     sessionCounters: { reviewed: 0, skipped: 0, marked: 0 },
+    observeProgress(reviewed) {
+      // Tween the bar on increment (plan A12). Update the cached `prev`
+      // value BEFORE calling `motion.play` — play() invokes requestRender
+      // synchronously, which re-enters this function. If we updated the
+      // cursor after play(), the recursive call would still see the old
+      // value, trigger play() again, and overflow the stack.
+      const prev = lastObservedProgress;
+      lastObservedProgress = reviewed;
+      if (prev !== null && reviewed !== prev && args.display.motion) {
+        motion.play("sidebar.progress", progressTick(prev, reviewed, 600));
+      }
+      const snap = motion.snapshot("sidebar.progress");
+      if (snap.active && snap.value !== null) return snap.value;
+      return reviewed;
+    },
     getSidebarData(mode = "queue") {
       const datasetPath = args.config.input.path;
       if (mode === "stats") {

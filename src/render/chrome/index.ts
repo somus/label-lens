@@ -40,6 +40,8 @@ export type ChromeProps =
       statusLeft: Segment[];
       statusRight?: Segment[];
       footerHint?: Segment[];
+      /** When set, the footer paints in this flash kind's tone bg (toast). */
+      flashKind?: "success" | "info" | "warning" | "error";
       /** Sidebar snapshot. When supplied and `pickSidebar(display, width)` is
        *  true, sidebar replaces the top status bar. */
       sidebar?: SidebarData;
@@ -56,6 +58,7 @@ export type ChromeProps =
       statusRight?: Segment[];
       /** Required in registry-less mode — footer renders verbatim. */
       footerHint: Segment[];
+      flashKind?: "success" | "info" | "warning" | "error";
       sidebar?: SidebarData;
       width?: number;
       body: ReturnType<typeof Box>;
@@ -75,10 +78,17 @@ export type ChromeProps =
  * by screens that mount before AppContext is wired (reingest prompt, ADR 0008).
  */
 export function Chrome(props: ChromeProps): ReturnType<typeof Box> {
-  const { display, statusLeft, statusRight, footerHint, width, body, sidebar } = props;
+  const { display, statusLeft, statusRight, footerHint, width, body, sidebar, flashKind } = props;
   const footer = props.app
-    ? ActionFooter({ display, app: props.app, scope: props.scope, hint: footerHint, width })
-    : ActionFooter({ display, hint: footerHint as Segment[], width });
+    ? ActionFooter({
+        display,
+        app: props.app,
+        scope: props.scope,
+        hint: footerHint,
+        flashKind,
+        width,
+      })
+    : ActionFooter({ display, hint: footerHint as Segment[], flashKind, width });
 
   const sidebarVisible =
     width !== undefined && sidebar !== undefined && pickSidebar(display, width);
@@ -91,7 +101,13 @@ export function Chrome(props: ChromeProps): ReturnType<typeof Box> {
         { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
         Box({ flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" }, body),
         Box({ width: 1, flexShrink: 0 }),
-        Sidebar({ display, data: sidebar, width: sbWidth, motion: props.app?.motion }),
+        Sidebar({
+          display,
+          data: sidebar,
+          width: sbWidth,
+          motion: props.app?.motion,
+          observeProgress: props.app?.observeProgress,
+        }),
       ),
       footer,
     );

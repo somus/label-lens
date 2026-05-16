@@ -90,12 +90,18 @@ function renderBrowseModal(
   const useColor = display.color === "truecolor" || display.color === "256";
   const fading = display.motion && fadeProgress < 0.99;
   let flatIdx = 0;
+  // Track the entryChildren-index of the highlighted row so we can scroll
+  // the entries box to keep it visible when the total content exceeds the
+  // modal height.
+  let highlightChildIdx = -1;
 
   if (state.categories.length > 0) {
-    for (const cat of state.categories) {
+    for (let ci = 0; ci < state.categories.length; ci++) {
+      const cat = state.categories[ci]!;
       entryChildren.push(renderCategoryHeader(cat, useColor, t, fading));
       for (const entry of cat.entries) {
         const isHighlighted = flatIdx === state.highlight;
+        if (isHighlighted) highlightChildIdx = entryChildren.length;
         entryChildren.push(
           renderEntry(
             entry.palette,
@@ -110,7 +116,11 @@ function renderBrowseModal(
         );
         flatIdx++;
       }
-      entryChildren.push(Text({ content: "" }));
+      // Spacer between categories; skip after the last so the entries Box
+      // doesn't burn a row on a trailing blank the user never sees.
+      if (ci < state.categories.length - 1) {
+        entryChildren.push(Text({ content: "" }));
+      }
     }
   } else {
     for (let i = 0; i < state.entries.length && i < 16; i++) {
@@ -137,6 +147,17 @@ function renderBrowseModal(
     attributes: TextAttributes.DIM,
   });
 
+  // Scroll the entries box so the highlighted row stays in view. Without
+  // this the modal silently clips entries top-down when the total content
+  // exceeds the viewport (e.g. after adding per-queue palette shortcuts).
+  // Entries box height = modal interior height minus the column's fixed
+  // children: top/bottom padding (2) + ModalHeader (2 rows) + filter (1)
+  // + hint (1) = 6. Plus the border edges that the inner Box itself
+  // doesn't see. Empirically `modalHeight - 8` matches what the entries
+  // column actually has to draw into.
+  const viewportRows = Math.max(4, modalHeight - 8);
+  const visibleEntries = scrollWindow(entryChildren, highlightChildIdx, viewportRows);
+
   return Box(
     {
       flexDirection: "column",
@@ -157,9 +178,42 @@ function renderBrowseModal(
       content: ` :${state.filter}_`,
       attributes: fading ? TextAttributes.DIM : TextAttributes.BOLD,
     }),
-    Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...entryChildren),
+    Box({ flexDirection: "column", flexGrow: 1, overflow: "hidden" }, ...visibleEntries),
     hintLine,
   );
+}
+
+/**
+ * Slice the entries column so the highlighted row stays in view. Adds
+ * `…` markers on the trimmed end(s) so the user knows there's more.
+ * Returns the full list unchanged when content already fits.
+ */
+function scrollWindow(
+  rows: ReturnType<typeof Text>[],
+  highlightIdx: number,
+  viewport: number,
+): ReturnType<typeof Text>[] {
+  if (rows.length <= viewport) return rows;
+  // Center highlight in viewport when possible; clamp at start/end.
+  const halfWindow = Math.floor(viewport / 2);
+  let start = Math.max(0, (highlightIdx >= 0 ? highlightIdx : 0) - halfWindow);
+  const maxStart = rows.length - viewport;
+  if (start > maxStart) start = maxStart;
+  const end = start + viewport;
+  const slice = rows.slice(start, end);
+  if (start > 0) {
+    slice[0] = Text({
+      content: `   … ${start} more above`,
+      attributes: TextAttributes.DIM,
+    });
+  }
+  if (end < rows.length) {
+    slice[slice.length - 1] = Text({
+      content: `   … ${rows.length - end} more below`,
+      attributes: TextAttributes.DIM,
+    });
+  }
+  return slice;
 }
 
 function renderPickerModal(

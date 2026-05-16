@@ -698,9 +698,9 @@ The layout draws from three sources: k9s (thin top strip with context + key hint
 
 For the **boundary task**, see §14.5 — the rendering strategy preserves vertical context with the candidate anchored at a stable viewport position.
 
-### 14.2 Queue screen
+### 14.2 Queue overlay
 
-Switch active queue. Shows queue list with pending counts, recent activity, label/source/reason distributions.
+Switch active queue without leaving Review. `Shift+Q` and bare `:queue` open a modal overlay on top of the current Review screen; `j`/`k` move through built-in queues, `Enter` selects a non-empty queue and closes the overlay, and `Esc`/`q` cancel back to Review. Empty queues stay open on `Enter` so the reviewer can pick another queue. The overlay shows queue counts, progress bars, and a first-record preview for the highlighted queue.
 
 ### 14.3 Stats screen
 
@@ -801,7 +801,7 @@ Each screen registers its own commands at mount; the palette is the filtered sub
 
 | Palette                    | Effect                                                 |
 | -------------------------- | ------------------------------------------------------ |
-| `:queue`                   | Open the Queue screen                                  |
+| `:queue`                   | Open the Queue overlay                                 |
 | `:queue <name>`            | Switch to a named queue, e.g., `:queue low-confidence` |
 | `:by-source <s>`           | Filter to records from a specific source               |
 | `:by-reason <r>`           | Filter to a single failure mode                        |
@@ -823,7 +823,7 @@ Each screen registers its own commands at mount; the palette is the filtered sub
 
 The palette is a thin layer over commands that also have direct keys; nothing is *only* reachable via `:`. Commands and their short forms are autocompleted as the user types.
 
-**Contextual help (`?` / `:help`).** Pressing `?` or entering bare `:help` opens an overlay listing the commands whose `scope` matches the current screen, plus globals. The review screen, queue screen, stats screen, and assistant panel each show different keys — not a global cheat sheet. (k9s, lazygit, and tig all use this pattern; visidata does the same.) Hidden commands (`hidden: true`) are excluded from the help overlay even when their scope matches.
+**Contextual help (`?` / `:help`).** Pressing `?` or entering bare `:help` opens an overlay listing the commands whose `scope` matches the current surface, plus globals. Review, the queue overlay, stats, and assistant each show different keys — not a global cheat sheet. (k9s, lazygit, and tig all use this pattern; visidata does the same.) Hidden commands (`hidden: true`) are excluded from the help overlay even when their scope matches.
 
 **Long-form help via man pages (aerc pattern).** LabelLens ships its tutorial and how-tos as installable man pages (`man labellens-tutorial`, `man labellens-config`, `man labellens-keymap`, `man labellens-assistant`). From inside the TUI, `:help topics` opens the topic picker and `:help <topic>` runs `less` on the same content. This means the help system is also useful outside the TUI and integrates cleanly with the man infrastructure on Unix-like systems.
 
@@ -1038,7 +1038,7 @@ The smallest version that proves the review-loop wedge while preserving the pers
 **Surfaces**
 
 - Review screen with rendering strategy (§14.5)
-- Queue screen
+- Queue overlay
 - Stats screen with corrections, source-quality, reason breakdown, imported-issue counts
 - Guidelines viewer
 

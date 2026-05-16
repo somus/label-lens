@@ -5,12 +5,12 @@ import { records } from "../../src/store/schema.ts";
 import { openTmpStore } from "../util/tmp.ts";
 
 describe("chooseInitialScreen", () => {
-  test("zero effective reviews → queue screen", async () => {
+  test("zero effective reviews → queue overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     expect(chooseInitialScreen(store.db)).toBe("queue");
   });
 
-  test("any effective review → review screen", async () => {
+  test("any effective review → review", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const first = store.db.select({ id: records.id }).from(records).limit(1).get();
     expect(first?.id).toBeDefined();

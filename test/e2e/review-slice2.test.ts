@@ -100,8 +100,8 @@ describe("review screen slice 2 UI", () => {
     expect(frame).toContain("Relabel");
     expect(frame).toContain("food");
     expect(frame).toContain("travel");
-    expect(frame).toContain("enter commit");
-    expect(frame).toContain("esc cancel");
+    expect(frame).toContain("[enter] commit");
+    expect(frame).toContain("[esc] cancel");
   });
 
   test("picker filter narrows candidates", async () => {
@@ -132,7 +132,7 @@ describe("review screen slice 2 UI", () => {
     expect(app.overlay?.kind).toBe("note");
     const frame = captureCharFrame();
     expect(frame).toContain("Note");
-    expect(frame).toContain("enter save");
+    expect(frame).toContain("[enter] save");
   });
 
   test("'m' shows persistent marked badge in header strip", async () => {

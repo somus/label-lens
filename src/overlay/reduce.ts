@@ -4,6 +4,7 @@ import { reduceHelp } from "./help.ts";
 import { reduceNote } from "./note.ts";
 import { reducePalette } from "./palette.ts";
 import { reducePicker } from "./picker.ts";
+import { reduceQueue } from "./queue.ts";
 import { reduceStatsOverlay } from "./stats-overlay.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
@@ -27,5 +28,7 @@ export function reduceOverlay(overlay: Overlay, event: OverlayEvent): ReduceResu
       return reduceGuidelines(overlay.state, event);
     case "stats":
       return reduceStatsOverlay(overlay.state, event);
+    case "queue":
+      return reduceQueue(overlay.state, event);
   }
 }

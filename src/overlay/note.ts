@@ -1,3 +1,4 @@
+import type { KeyEvent } from "../keymap/engine.ts";
 import type { NoteState, Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 export type OpenNoteArgs = {
@@ -30,7 +31,7 @@ export function reduceNote(state: NoteState, event: OverlayEvent): ReduceResult 
     case "commit":
       return commit(state);
     case "key":
-      return reduceKey(state, event.event.name);
+      return reduceKey(state, event.event);
     case "streamToken":
     case "streamEnd":
     case "streamError":
@@ -38,9 +39,16 @@ export function reduceNote(state: NoteState, event: OverlayEvent): ReduceResult 
   }
 }
 
-function reduceKey(state: NoteState, name: string): ReduceResult {
+function reduceKey(state: NoteState, event: KeyEvent): ReduceResult {
+  const name = event.name;
   if (name === "escape") return { overlay: null, effects: [{ kind: "close" }] };
-  if (name === "return") return commit(state);
+  if (name === "return") {
+    // shift+enter inserts a newline; plain enter commits. Plan G2.
+    if (event.shift) {
+      return { overlay: packed({ ...state, value: `${state.value}\n` }), effects: [] };
+    }
+    return commit(state);
+  }
   if (name === "backspace") {
     return { overlay: packed({ ...state, value: state.value.slice(0, -1) }), effects: [] };
   }

@@ -1,9 +1,12 @@
+import { bg as bgFn, bold as boldFn, fg as fgFn, StyledText } from "@opentui/core";
 import type { Command, CommandRegistry } from "../../actions/command.ts";
 import type { AppContext } from "../../app/context.ts";
 import type { Scope } from "../../keymap/engine.ts";
 import type { FeedbackTone } from "../anim.ts";
-import type { Box } from "../box.ts";
+import { Box } from "../box.ts";
 import type { ResolvedDisplay } from "../capability.ts";
+import { Text } from "../text.ts";
+import { resolveTheme } from "../theme.ts";
 import { type Segment, StatusBar } from "./status-bar.ts";
 
 export type FooterEntry = {
@@ -122,6 +125,9 @@ export type ActionFooterProps =
       scope: Scope;
       /** Override — when set, renders this segment list instead of derived hints. */
       hint?: Segment[];
+      /** When a flash is the active hint, paint the entire footer row in the
+       *  flash kind's solid tone background (CRUSH-style toast). Plan D2/D5. */
+      flashKind?: "success" | "info" | "warning" | "error";
       /** Terminal width — when the combined primary + utility clusters would
        *  overflow, we collapse utility into the left cluster instead of letting
        *  OpenTUI overlap them. */
@@ -132,6 +138,7 @@ export type ActionFooterProps =
       app?: undefined;
       scope?: undefined;
       hint: Segment[];
+      flashKind?: "success" | "info" | "warning" | "error";
       width?: number;
     };
 
@@ -159,8 +166,94 @@ function segmentsLength(segs: Segment[]): number {
   return n;
 }
 
+const TOAST_LABEL: Record<"success" | "info" | "warning" | "error", string> = {
+  success: "OK",
+  info: "INFO",
+  warning: "WARN",
+  error: "FAIL",
+};
+
+// Hand-picked hex pairs per kind. Chip = darker, message = our normal
+// `fg.<kind>` tone. Hardcoded (not derived) so we can hit specific
+// values without the dark/light palette branching.
+const TOAST_PALETTE: Record<
+  "success" | "info" | "warning" | "error",
+  { chip: string; message: string }
+> = {
+  success: { chip: "#3d9c5a", message: "#7fd793" },
+  info: { chip: "#5078c8", message: "#8ab4ff" },
+  warning: { chip: "#b8893d", message: "#e0b46a" },
+  error: { chip: "#b85a5a", message: "#e07b7b" },
+};
+
+/**
+ * CRUSH-style two-tone toast (plan D2/D5). Layout:
+ *
+ *   [ LABEL ][ message …………………………………………… ]
+ *
+ * - LABEL chip: saturated `fg.<kind>` bg + page-bg fg + bold.
+ * - Message bg: same tone blended ~55% toward page bg so the label chip
+ *   reads as the louder anchor; message bg stays tinted but softer.
+ * - Both halves share the same fg (page-bg color) so text contrasts under
+ *   either theme without per-theme tuning.
+ *
+ * Mono/16 callers hit the StatusBar path higher up — this function only
+ * runs at truecolor / 256-color.
+ */
+function toastRow(
+  display: ResolvedDisplay,
+  hint: Segment[],
+  flashKind: "success" | "info" | "warning" | "error",
+  _width: number | undefined,
+): ReturnType<typeof Box> {
+  const t = resolveTheme(display);
+  const pageBg = t.bg.chrome !== "transparent" ? t.bg.chrome : "#0d1117";
+  const { chip: chipBg, message: messageBg } = TOAST_PALETTE[flashKind];
+  const fgColor = pageBg;
+  const labelText = ` ${TOAST_LABEL[flashKind]} `;
+  // Drop the segment-bundled leading glyph from `flashFooterHint` — the
+  // chip already conveys kind. Take the LAST hint segment (the bare
+  // message text) and prepend a single space for breathing room.
+  const messageText = ` ${hint[hint.length - 1]?.text.trim() ?? ""}`;
+  // `height: 1` keeps the toast bounded to a single row. Without it the
+  // wrapping Box (inside Chrome's column-flex) would grow vertically and
+  // swallow the body area.
+  return Box(
+    {
+      flexDirection: "row",
+      height: 1,
+      shouldFill: true,
+      backgroundColor: messageBg,
+    },
+    Box(
+      {
+        flexDirection: "row",
+        flexShrink: 0,
+        height: 1,
+        shouldFill: true,
+        backgroundColor: chipBg,
+      },
+      Text({
+        content: new StyledText([bgFn(chipBg)(boldFn(fgFn(fgColor)(labelText)))]),
+      }),
+    ),
+    Text({
+      content: new StyledText([bgFn(messageBg)(boldFn(fgFn(fgColor)(messageText)))]),
+    }),
+  );
+}
+
 export function ActionFooter(props: ActionFooterProps): ReturnType<typeof Box> {
-  const { display, hint, width } = props;
+  const { display, hint, width, flashKind } = props;
+  if (hint && flashKind) {
+    // Solid-bg toast (CRUSH-style, plan D2/D5). At mono/16 fall back to
+    // the plain hint row — bg fills are unreliable there.
+    const rich = display.color === "truecolor" || display.color === "256";
+    if (!rich) {
+      return StatusBar({ display, left: [{ text: " " }, ...hint], width });
+    }
+    return toastRow(display, hint, flashKind, width);
+  }
   if (hint) {
     return StatusBar({ display, left: [{ text: " " }, ...hint], width });
   }

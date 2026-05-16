@@ -13,6 +13,7 @@ exports[`review screen e2e initial render: progress strip + first record + prima
   █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
+                                                                                                    
   ◇ food  ########- 92%                                                                             
     llm:gpt-4                                                                                       
                                                                                                     
@@ -22,8 +23,7 @@ exports[`review screen e2e initial render: progress strip + first record + prima
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -36,6 +36,7 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
  │ ▶ Uber ride to airport                                                                         │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   ▆ Amazon order #12345                                                                             
+  ▄ Netflix monthly                                                                                 
                                                                                                     
   ◇ travel  ########- 88%                                                                           
     llm:gpt-4                                                                                       
@@ -50,8 +51,7 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
                                                                                                     
   +  food  Lunch at Zomato Bangalore                                                                
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -69,6 +69,7 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
   █ Salary credit October                                                                           
   █ Rent transfer to landlord                                                                       
                                                                                                     
+                                                                                                    
   ◇ travel  ########- 88%                                                                           
     llm:gpt-4                                                                                       
                                                                                                     
@@ -78,8 +79,7 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -88,9 +88,9 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  0 / 0            Reviewed: 10 / 10  ·  Skipped: 0  ·  Pending: 0  
                                                                                                     
+     *  All records reviewed                                                                        
                                                                                                     
-                                                                                                    
-   All records reviewed. Press q to quit.                                                           
+      [/] switch queue · [q] quit                                                                   
                                                                                                     
                                                                                                     
                                                                                                     
@@ -106,8 +106,8 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
   +  food         Coffee at Blue Tokai                                                              
   ⋅             ⋅             ⋅             ⋅                                                       
   +  rent         Rent transfer to landlord                                                         
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+                                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;

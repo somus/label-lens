@@ -86,8 +86,14 @@ export function Sidebar(props: {
    * registry-less re-ingest screen don't have a motion controller.
    */
   motion?: MotionController;
+  /**
+   * Plan A12 — tween the progress bar between reviewed-count increments
+   * rather than snapping. AppContext threads this through; tests and the
+   * registry-less screen leave it unset and get the static (untweened) bar.
+   */
+  observeProgress?: (reviewed: number) => number;
 }): ReturnType<typeof Box> {
-  const { display, data, width, motion } = props;
+  const { display, data, width, motion, observeProgress } = props;
   // Floor of 22 mirrors the 24-col `sidebarWidth` contract minus left/right
   // padding. Counter rows and truncate-middle assume the inner column has
   // room for an 8-char label + count + gap.
@@ -100,7 +106,7 @@ export function Sidebar(props: {
   ];
 
   if (data.mode === "queue") {
-    children.push(...renderQueueBody(display, data, innerWidth, motion));
+    children.push(...renderQueueBody(display, data, innerWidth, motion, observeProgress));
   } else {
     children.push(...renderStatsBody(display, data, innerWidth));
   }
@@ -122,6 +128,7 @@ function renderQueueBody(
   data: Extract<SidebarData, { mode: "queue" }>,
   innerWidth: number,
   motion: MotionController | undefined,
+  observeProgress: ((reviewed: number) => number) | undefined,
 ): ReturnType<typeof Box | typeof Text>[] {
   const out: ReturnType<typeof Box | typeof Text>[] = [];
 
@@ -203,7 +210,10 @@ function renderQueueBody(
   out.push(counterRow(display, "skipped", data.counters.skipped, innerWidth, motion));
   out.push(counterRow(display, "marked", data.counters.marked, innerWidth, motion));
   out.push(blankRow());
-  out.push(progressRow(display, data.queueProgress.reviewed, data.queueProgress.total, innerWidth));
+  const tweened = observeProgress
+    ? observeProgress(data.queueProgress.reviewed)
+    : data.queueProgress.reviewed;
+  out.push(progressRow(display, tweened, data.queueProgress.total, innerWidth));
   out.push(blankRow());
 
   // Signals section
@@ -332,13 +342,24 @@ function progressRow(
   // session-scoped. Showing `8/43` next to `19%` makes the source of
   // the percentage legible: without it a non-zero bar after a fresh
   // launch reads as a bug rather than "you reviewed 8 records earlier".
-  const countText = total > 0 ? `${reviewed}/${total}` : "0/0";
+  // `reviewed` arrives as a float while the progress bar tweens (plan A12).
+  // Round for the textual count so the label width stays stable (`13/43`
+  // not `12.7/43`); the bar itself still uses the fractional value for
+  // smooth fill steps.
+  const countText = total > 0 ? `${Math.round(reviewed)}/${total}` : "0/0";
   const prefix = `${PROGRESS_LABEL} `;
-  const reservedForPct = 6;
+  // `progressSegments` emits `[<bar>] <pct>` — that's 1 (`[`) + barWidth +
+  // 2 (`] `) + 4 (` 37%` padStart) = barWidth + 7 cells. So we reserve 7
+  // for the bar wrapper + percent, not 6 — earlier off-by-one pushed the
+  // `%` onto a second row whenever the count column hit 5 chars.
+  const reservedForBarChrome = 7;
   const reservedForCount = countText.length + 1;
   const barWidth = Math.max(
     4,
-    Math.min(PROGRESS_BAR_WIDTH, innerWidth - prefix.length - reservedForCount - reservedForPct),
+    Math.min(
+      PROGRESS_BAR_WIDTH,
+      innerWidth - prefix.length - reservedForCount - reservedForBarChrome,
+    ),
   );
   const barSegs = progressSegments(reviewed, total, barWidth, display);
   return fixedRow(

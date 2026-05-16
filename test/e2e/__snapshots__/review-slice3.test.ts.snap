@@ -13,6 +13,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
+                                                                                                    
   ◇ food  ████████░ 92%                                                                             
     llm:gpt-4                                                                                       
                                                                                                     
@@ -22,8 +23,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -41,6 +41,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   █ Salary credit October                                                                           
   █ Rent transfer to landlord                                                                       
                                                                                                     
+                                                                                                    
   ◇ travel  ████████░ 88%                                                                           
     llm:gpt-4                                                                                       
                                                                                                     
@@ -50,8 +51,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -69,6 +69,7 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
   █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
+                                                                                                    
   ◇ food  ########- 92%                                                                             
     llm:gpt-4                                                                                       
                                                                                                     
@@ -78,8 +79,7 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -97,6 +97,7 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
+                                                                                                    
   ◇ food  ########- 92%                                                                             
     llm:gpt-4                                                                                       
                                                                                                     
@@ -106,8 +107,7 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -125,6 +125,7 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
+                                                                                                    
   ◇ food  ████████░ 92%                                                                             
     llm:gpt-4                                                                                       
                                                                                                     
@@ -134,8 +135,7 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -153,6 +153,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
+                                                                                                    
   ◇ food  ████████░ 92%                                                                             
     llm:gpt-4                                                                                       
                                                                                                     
@@ -162,8 +163,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;
@@ -181,6 +181,7 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
+                                                                                                    
   ◇ food  ████████░ 92%                                                                             
     llm:gpt-4                                                                                       
                                                                                                     
@@ -190,8 +191,7 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   [3]  other                                                                                        
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t]   
- stats ┊[?] help                                                                                    
+  [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
 `;

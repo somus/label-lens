@@ -1,3 +1,4 @@
+import { openQueue } from "../../overlay/queue.ts";
 import type { Command } from "../command.ts";
 
 export const openQueueScreen: Command = {
@@ -8,10 +9,6 @@ export const openQueueScreen: Command = {
   footer: { label: "queues", order: 95, group: "utility" },
   enabled: () => true,
   run: (ctx) => {
-    if (!ctx.openQueueScreen) {
-      ctx.setFlash("Queue screen unavailable", "warning");
-      return;
-    }
-    ctx.openQueueScreen();
+    ctx.openOverlay({ kind: "queue", state: openQueue(ctx) });
   },
 };
