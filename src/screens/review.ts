@@ -16,7 +16,7 @@ import { pulse } from "../render/anim.ts";
 import { BadgeLine, type BadgeVariant } from "../render/badge.ts";
 import { BandedRecord } from "../render/banded-record.ts";
 import { Box } from "../render/box.ts";
-import { pickLayout, type ResolvedDisplay } from "../render/capability.ts";
+import { pickLayout, pickSidebar, type ResolvedDisplay } from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
 import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { splitContextLines } from "../render/context-strip.ts";
@@ -243,6 +243,12 @@ export function mountReviewScreen(args: {
     const flashActive = !app.overlay && flash !== null;
     const footerHint = app.overlay ? undefined : flashFooterHint(flash, app.display, flashActive);
 
+    // Skip the per-frame sidebar snapshot when the sidebar is hidden.
+    // `getSidebarData` queries the DB (signal counts, queue progress) +
+    // pulls cursor.recordIds() — wasted work on every keystroke when the
+    // chrome path won't render the sidebar anyway. Keystroke perf regressed
+    // from ~19ms → ~80ms on the 10K-record medium fixture before this skip.
+    const sidebarVisible = pickSidebar(app.display, renderer.terminalWidth);
     renderer.root.add(
       Chrome({
         display: app.display,
@@ -253,7 +259,7 @@ export function mountReviewScreen(args: {
         footerHint,
         flashKind: flashActive ? flash.kind : undefined,
         width: renderer.terminalWidth,
-        sidebar: app.getSidebarData("queue"),
+        sidebar: sidebarVisible ? app.getSidebarData("queue") : undefined,
         body,
       }),
     );
