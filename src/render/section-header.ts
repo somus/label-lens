@@ -4,12 +4,17 @@ import { type Segment, segmentsToStyledText } from "./chrome/status-bar.ts";
 import { Text, TextAttributes } from "./text.ts";
 
 /**
- * Target total visual length for every section header in the main
- * column. The label + space + rule + (optional trailing meta) collapse
- * to this width so headers stay visually aligned regardless of label
- * length. Wider than the typical 32-col sidebar so the rule reads as a
- * generous divider in the work column.
+ * Maximum visual length for any main-column section header / content
+ * row. Callers pass the available width and the helper clamps to
+ * `min(MAX_CONTENT_WIDTH, available)`. The cap exists because the
+ * focus box + dashed rule both lose legibility past ~160ch — long
+ * lines fight the eye, and the surrounding chrome already provides
+ * structure.
  */
+export const MAX_CONTENT_WIDTH = 160;
+
+/** Backwards-compat shim — default total width when callers don't pass
+ *  available space. Equals the historical fixed-80 value. */
 const SECTION_HEADER_WIDTH = 80;
 
 /**
@@ -57,3 +62,9 @@ export function SectionHeader(args: {
 }
 
 export { SECTION_HEADER_WIDTH };
+
+/** `min(MAX_CONTENT_WIDTH, available)` clamp for callers that already
+ *  know the parent's available width. */
+export function clampContentWidth(available: number): number {
+  return Math.max(20, Math.min(MAX_CONTENT_WIDTH, available));
+}

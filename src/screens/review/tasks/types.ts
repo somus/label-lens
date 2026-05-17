@@ -9,6 +9,9 @@ export type DecisionRenderArgs = {
   record: RecordWithPrimaryPrediction | null;
   labels: LabelConfigEntry[];
   display: ResolvedDisplay;
+  /** Width budget for section headers / decision rows — matches the
+   *  shared content width passed to other regions. */
+  contentWidth: number;
 };
 
 /**

@@ -45,11 +45,23 @@ export type SubjectArgs = {
    */
   slotsBefore: number;
   slotsAfter: number;
+  /** Width budget for the focused row's bg so it caps at the same
+   *  column as every other content row, instead of stretching to fill
+   *  the entire main-column flex container. */
+  contentWidth: number;
 };
 
 export function Subject(args: SubjectArgs): ReturnType<typeof Box> {
-  const { window, display, contextStrip, boundary, contextIntensity, slotsBefore, slotsAfter } =
-    args;
+  const {
+    window,
+    display,
+    contextStrip,
+    boundary,
+    contextIntensity,
+    slotsBefore,
+    slotsAfter,
+    contentWidth,
+  } = args;
   if (window.records.length === 0 || window.focusedIndex < 0) {
     const rich = display.color === "truecolor" || display.color === "256";
     return EmptyState({
@@ -145,20 +157,27 @@ export function Subject(args: SubjectArgs): ReturnType<typeof Box> {
   // gathering between subject and decision. Slot padding (`blankRows`
   // above and below) keeps the focus box at the same screen position
   // when scrolling through the queue.
+  // Focused row is wrapped in a `width: contentWidth` Box so its bg /
+  // focus border stop at the same column as every section header.
+  // Without the cap the focused row stretched the full main-column
+  // width while headers stopped early — visually misaligned.
   return Box(
     { flexDirection: "column", flexShrink: 0, overflow: "hidden" },
     ...beforeChildren,
-    (() => {
-      const meta = boundaryMetaFor(focused, boundary);
-      return BandedRecord({
-        text: focused.text,
-        isFocused: true,
-        bandSlot: slotFor(focusedAbsolute),
-        display,
-        kindGlyph: meta?.kindGlyph,
-        kindTintLevel: meta?.kindTintLevel,
-      });
-    })(),
+    Box(
+      { width: contentWidth, flexShrink: 0 },
+      (() => {
+        const meta = boundaryMetaFor(focused, boundary);
+        return BandedRecord({
+          text: focused.text,
+          isFocused: true,
+          bandSlot: slotFor(focusedAbsolute),
+          display,
+          kindGlyph: meta?.kindGlyph,
+          kindTintLevel: meta?.kindTintLevel,
+        });
+      })(),
+    ),
     ...afterChildren,
   );
 }

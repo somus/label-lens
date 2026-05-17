@@ -29,10 +29,14 @@ export type SignalsArgs = {
   /** Current record's marked tag state — prefixes the headline with
    *  `⦿ marked` when true. */
   marked: boolean;
+  /** Width budget for the section header rule. Computed once in the
+   *  screen orchestrator so every region's header lines up at the
+   *  same column. */
+  contentWidth: number;
 };
 
 export function Signals(args: SignalsArgs): ReturnType<typeof Box> {
-  const { record, predictions, issues, display, totalRecords, marked } = args;
+  const { record, predictions, issues, display, totalRecords, marked, contentWidth } = args;
   if (!record) return Box({});
   const primary = record.primaryPrediction;
   const rows: ReturnType<typeof Box | typeof Text>[] = [];
@@ -46,7 +50,7 @@ export function Signals(args: SignalsArgs): ReturnType<typeof Box> {
   if (rows.length === 0) return Box({});
   return Box(
     { flexDirection: "column", flexShrink: 0, marginTop: 1 },
-    SectionHeader({ display, label: "prediction" }),
+    SectionHeader({ display, label: "prediction", width: contentWidth }),
     Text({ content: " " }),
     ...rows,
   );

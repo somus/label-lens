@@ -4,8 +4,7 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
 "                                                                                
   LabelLens  tiny.jsonl  Pending  1 / 10                                        
                                                                                 
-  Pending ───────────────────────────────────────────────────────────────  1 /  
- 10                                                                             
+  Pending ─────────────────────────────────────────────────────────────  1 / 10 
                                                                                 
                                                                                 
                                                                                 
@@ -16,16 +15,17 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
   ▆ Amazon order #12345                                                         
                                                                                 
   prediction ────────────────────────────────────────────────────────────────── 
- ──                                                                             
                                                                                 
   label      ◇ food                                                             
   confidence ████████░  92%                                                     
   source     [llm:gpt-4]                                                        
                                                                                 
   labels ────────────────────────────────────────────────────────────────────── 
- ──                                                                             
                                                                                 
   ◆ [1]  food  92%      [2]  travel      [3]  other                             
+                                                                                
+                                                                                
+                                                                                
                                                                                 
                                                                                 
                                                                                 
@@ -104,7 +104,7 @@ exports[`multi-width snapshot sweep (plan A16) splash screen @ 80x30 1`] = `
 
 exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
 "                                                                                                                        
-  Pending ───────────────────────────────────────────────────────────────  1 / 10                                       
+  Pending ────────────────────────────────────────────────────────────────  1 / 10                                      
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -114,13 +114,13 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
   █ Uber ride to airport                                                                                                
   ▆ Amazon order #12345                                                                                                 
                                                                                                                         
-  prediction ────────────────────────────────────────────────────────────────────                                       
+  prediction ─────────────────────────────────────────────────────────────────────                                      
                                                                                                                         
   label      ◇ food                                                                                                     
   confidence ████████░  92%                                                         pending                             
   source     [llm:gpt-4]                                                            1 / 10                              
                                                                                     test/fixtures/tiny.jsonl            
-  labels ────────────────────────────────────────────────────────────────────────                                       
+  labels ─────────────────────────────────────────────────────────────────────────                                      
                                                                                     Counters ─────────────────────────  
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                                     
                                                                                     reviewed                         0  
@@ -206,7 +206,7 @@ exports[`multi-width snapshot sweep (plan A16) splash screen @ 120x30 1`] = `
 
 exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
 "                                                                                                                                                                
-  Pending ───────────────────────────────────────────────────────────────  1 / 10                                                                               
+  Pending ────────────────────────────────────────────────────────────────────────────────────────────  1 / 10                                                  
                                                                                                                                                                 
                                                                                                                                                                 
                                                                                                                                                                 
@@ -216,13 +216,13 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
   █ Uber ride to airport                                                                                                                                        
   ▆ Amazon order #12345                                                                                                                                         
                                                                                                                                                                 
-  prediction ────────────────────────────────────────────────────────────────────                                                                               
+  prediction ─────────────────────────────────────────────────────────────────────────────────────────────────                                                  
                                                                                                                                                                 
   label      ◇ food                                                                                                                                             
   confidence ████████░  92%                                                                                     pending                                         
   source     [llm:gpt-4]                                                                                        1 / 10                                          
                                                                                                                 test/fixtures/tiny.jsonl                        
-  labels ────────────────────────────────────────────────────────────────────────                                                                               
+  labels ─────────────────────────────────────────────────────────────────────────────────────────────────────                                                  
                                                                                                                 Counters ─────────────────────────────────────  
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                                                                             
                                                                                                                 reviewed                                     0  

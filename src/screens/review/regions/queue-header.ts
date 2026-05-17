@@ -14,9 +14,10 @@ export function QueueHeader(args: {
   queueLabel: string;
   position: number;
   total: number;
+  contentWidth: number;
 }): ReturnType<typeof Box> {
-  const { display, queueLabel, position, total } = args;
+  const { display, queueLabel, position, total, contentWidth } = args;
   const positionText = total === 0 ? "0 / 0" : `${position} / ${total}`;
   const trailing: Segment[] = [{ text: positionText, tone: "muted" }];
-  return SectionHeader({ display, label: queueLabel, trailing });
+  return SectionHeader({ display, label: queueLabel, trailing, width: contentWidth });
 }

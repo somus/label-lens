@@ -4,7 +4,7 @@ exports[`review screen e2e initial render: progress strip + first record + prima
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
-  Pending ───────────────────────────────────────────────────────────────  1 / 10                   
+  Pending ─────────────────────────────────────────────────────────────────────────────────  1 / 10 
                                                                                                     
                                                                                                     
                                                                                                     
@@ -14,13 +14,13 @@ exports[`review screen e2e initial render: progress strip + first record + prima
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
                                                                                                     
-  prediction ────────────────────────────────────────────────────────────────────                   
+  prediction ────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   label      ◇ food                                                                                 
   confidence ########-  92%                                                                         
   source     [llm:gpt-4]                                                                            
                                                                                                     
-  labels ────────────────────────────────────────────────────────────────────────                   
+  labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   * [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -32,7 +32,7 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 9             Reviewed: 1 / 10  ·  Skipped: 0  ·  Pending: 9  
                                                                                                     
-  Pending ────────────────────────────────────────────────────────────────  1 / 9                   
+  Pending ──────────────────────────────────────────────────────────────────────────────────  1 / 9 
                                                                                                     
                                                                                                     
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
@@ -41,13 +41,13 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
                                                                                                     
-  prediction ────────────────────────────────────────────────────────────────────                   
+  prediction ────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   label      ◇ travel                                                                               
   confidence ########-  88%                                                                         
   source     [llm:gpt-4]                                                                            
                                                                                                     
-  labels ────────────────────────────────────────────────────────────────────────                   
+  labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
     [1]  food    * [2]  travel  88%      [3]  other                                                 
                                                                                                     
@@ -60,7 +60,7 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  2 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
-  Pending ───────────────────────────────────────────────────────────────  2 / 10                   
+  Pending ─────────────────────────────────────────────────────────────────────────────────  2 / 10 
                                                                                                     
                                                                                                     
   █ Lunch at Zomato Bangalore                                                                       
@@ -70,13 +70,13 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
                                                                                                     
-  prediction ────────────────────────────────────────────────────────────────────                   
+  prediction ────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   label      ◇ travel                                                                               
   confidence ########-  88%                                                                         
   source     [llm:gpt-4]                                                                            
                                                                                                     
-  labels ────────────────────────────────────────────────────────────────────────                   
+  labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
     [1]  food    * [2]  travel  88%      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -88,7 +88,7 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  0 / 0            Reviewed: 10 / 10  ·  Skipped: 0  ·  Pending: 0  
                                                                                                     
-  Pending ────────────────────────────────────────────────────────────────  0 / 0                   
+  Pending ──────────────────────────────────────────────────────────────────────────────────  0 / 0 
                                                                                                     
                                                                                                     
                                                                                                     
@@ -98,7 +98,7 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
-  labels ────────────────────────────────────────────────────────────────────────                   
+  labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
     [1]  food      [2]  travel      [3]  other                                                      
                                                                                                     

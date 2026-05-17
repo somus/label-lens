@@ -4,7 +4,7 @@ exports[`chrome — status bar + action footer review chrome renders on truecolo
 "                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                         
-  Pending ───────────────────────────────────────────────────────────────  1 / 10                                       
+  Pending ─────────────────────────────────────────────────────────────────────────────────────────────────────  1 / 10 
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -14,13 +14,13 @@ exports[`chrome — status bar + action footer review chrome renders on truecolo
   █ Uber ride to airport                                                                                                
   ▆ Amazon order #12345                                                                                                 
                                                                                                                         
-  prediction ────────────────────────────────────────────────────────────────────                                       
+  prediction ────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   label      ◇ food                                                                                                     
   confidence ████████░  92%                                                                                             
   source     [llm:gpt-4]                                                                                                
                                                                                                                         
-  labels ────────────────────────────────────────────────────────────────────────                                       
+  labels ────────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
@@ -32,7 +32,7 @@ exports[`chrome — status bar + action footer review chrome renders on 256-colo
 "                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                         
-  Pending ───────────────────────────────────────────────────────────────  1 / 10                                       
+  Pending ─────────────────────────────────────────────────────────────────────────────────────────────────────  1 / 10 
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -42,13 +42,13 @@ exports[`chrome — status bar + action footer review chrome renders on 256-colo
   █ Uber ride to airport                                                                                                
   ▆ Amazon order #12345                                                                                                 
                                                                                                                         
-  prediction ────────────────────────────────────────────────────────────────────                                       
+  prediction ────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   label      ◇ food                                                                                                     
   confidence ████████░  92%                                                                                             
   source     [llm:gpt-4]                                                                                                
                                                                                                                         
-  labels ────────────────────────────────────────────────────────────────────────                                       
+  labels ────────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
@@ -60,7 +60,7 @@ exports[`chrome — status bar + action footer review chrome renders on 16-color
 "                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                         
-  Pending ───────────────────────────────────────────────────────────────  1 / 10                                       
+  Pending ─────────────────────────────────────────────────────────────────────────────────────────────────────  1 / 10 
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -70,13 +70,13 @@ exports[`chrome — status bar + action footer review chrome renders on 16-color
   █ Uber ride to airport                                                                                                
   ▆ Amazon order #12345                                                                                                 
                                                                                                                         
-  prediction ────────────────────────────────────────────────────────────────────                                       
+  prediction ────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   label      ◇ food                                                                                                     
   confidence ########-  92%                                                                                             
   source     [llm:gpt-4]                                                                                                
                                                                                                                         
-  labels ────────────────────────────────────────────────────────────────────────                                       
+  labels ────────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   * [1]  food  92%      [2]  travel      [3]  other                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
@@ -88,7 +88,7 @@ exports[`chrome — status bar + action footer review chrome renders on mono 1`]
 "                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                         
-  Pending ───────────────────────────────────────────────────────────────  1 / 10                                       
+  Pending ─────────────────────────────────────────────────────────────────────────────────────────────────────  1 / 10 
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -98,13 +98,13 @@ exports[`chrome — status bar + action footer review chrome renders on mono 1`]
   █ Uber ride to airport                                                                                                
   ▆ Amazon order #12345                                                                                                 
                                                                                                                         
-  prediction ────────────────────────────────────────────────────────────────────                                       
+  prediction ────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   label      ◇ food                                                                                                     
   confidence ########-  92%                                                                                             
   source     [llm:gpt-4]                                                                                                
                                                                                                                         
-  labels ────────────────────────────────────────────────────────────────────────                                       
+  labels ────────────────────────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                                         
   * [1]  food  92%      [2]  travel      [3]  other                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  

@@ -12,7 +12,13 @@ import { reduceOverlay } from "../overlay/reduce.ts";
 import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
 import { pulse } from "../render/anim.ts";
 import { Box } from "../render/box.ts";
-import { pickQueuePreview, pickSidebar, type ResolvedDisplay } from "../render/capability.ts";
+import {
+  pickQueuePreview,
+  pickSidebar,
+  queuePreviewWidth,
+  type ResolvedDisplay,
+  sidebarWidth,
+} from "../render/capability.ts";
 import { Chrome, type Segment } from "../render/chrome/index.ts";
 import type { QueuePreviewRow } from "../render/chrome/queue-preview.ts";
 import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
@@ -25,6 +31,7 @@ import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { progressSegments } from "../render/progress-segments.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Scrollbar } from "../render/scrollbar.ts";
+import { clampContentWidth } from "../render/section-header.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole, resolveTheme } from "../render/theme.ts";
 import { issuesForRecord } from "../store/issues.ts";
@@ -173,6 +180,20 @@ export function mountReviewScreen(args: {
     const sidebarVisible = pickSidebar(app.display, renderer.terminalWidth);
     const previewVisible = sidebarVisible && pickQueuePreview(app.display, renderer.terminalWidth);
 
+    // Main-column content width — used to cap section headers + focused
+    // record bg so every row stops at the same column regardless of how
+    // wide the terminal is. Reserve the chrome's outer padding (2),
+    // sidebar + gap (when visible), and queue-preview + gap (when
+    // visible) so the cap reflects actual room in the main column.
+    const chromePad = 2;
+    const sidebarUsed = sidebarVisible ? sidebarWidth(renderer.terminalWidth) + 1 : 0;
+    const previewUsed = previewVisible ? queuePreviewWidth() + 1 : 0;
+    const mainColWidth = Math.max(
+      40,
+      renderer.terminalWidth - chromePad - sidebarUsed - previewUsed,
+    );
+    const contentWidth = clampContentWidth(mainColWidth);
+
     const subject = Subject({
       window,
       display: app.display,
@@ -181,6 +202,7 @@ export function mountReviewScreen(args: {
       contextIntensity: taskRenderer.contextIntensity,
       slotsBefore: taskRenderer.contextRowsBefore,
       slotsAfter: taskRenderer.contextRowsAfter,
+      contentWidth,
     });
     const signals = Signals({
       record,
@@ -189,11 +211,13 @@ export function mountReviewScreen(args: {
       display: app.display,
       totalRecords: counts.total,
       marked,
+      contentWidth,
     });
     const decision = taskRenderer.renderDecision({
       record,
       labels: app.config.labels,
       display: app.display,
+      contentWidth,
     });
     const historyStrip = sidebarVisible
       ? Box({})
@@ -216,6 +240,7 @@ export function mountReviewScreen(args: {
       queueLabel,
       position: queuePosition,
       total: queueTotal,
+      contentWidth,
     });
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },

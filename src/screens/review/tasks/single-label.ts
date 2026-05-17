@@ -35,7 +35,7 @@ export function createSingleLabelTask(args: {
  * more than `MAX_LABELS_PER_ROW` labels.
  */
 function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box> {
-  const { record, labels, display } = args;
+  const { record, labels, display, contentWidth } = args;
   const predicted = record?.primaryPrediction?.label ?? null;
   const confidence = record?.primaryPrediction?.confidence ?? null;
   // Mono / 16-color: filled diamond falls back to `*` to match the
@@ -104,7 +104,7 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
 
   return Box(
     { flexDirection: "column", marginTop: 1, flexShrink: 0 },
-    SectionHeader({ display, label: "labels" }),
+    SectionHeader({ display, label: "labels", width: contentWidth }),
     Text({ content: " " }),
     ...rows.map((segs, idx) =>
       Text({
