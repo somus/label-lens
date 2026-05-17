@@ -56,11 +56,17 @@ describe("review screen slice 2 UI", () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store);
     const frame = captureCharFrame();
-    // Label list now uses `[N]` accelerator chips per plan B7.
-    expect(frame).toContain("[1]  food");
-    expect(frame).toContain("[2]  travel");
-    expect(frame).toContain("[3]  utility");
-    expect(frame).toContain("[4]  other");
+    // Decision chip rail: `<marker> [N]  label [conf%]`. Predicted row
+    // carries `◆` and inline confidence; non-predicted rows reserve the
+    // marker column with a space for column alignment.
+    expect(frame).toContain("[1]");
+    expect(frame).toContain("[2]");
+    expect(frame).toContain("food");
+    expect(frame).toContain("travel");
+    expect(frame).toContain("utility");
+    // ◆ at truecolor/256, `*` fallback at 16/mono. Test renderer is mono.
+    expect(/[◆*]\s+\[1]\s+food/.test(frame)).toBe(true);
+    expect(frame).toContain("92%");
   });
 
   test("action bar advertises slice 2 shortcuts", async () => {

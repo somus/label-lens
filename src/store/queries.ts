@@ -56,6 +56,37 @@ export function recordById(db: Db, id: string): RecordWithPrimaryPrediction | nu
   return row ? hydrate(row) : null;
 }
 
+/**
+ * All predictions attached to a record, ordered by confidence descending
+ * (NULL last) so the primary is first and the secondary alternatives
+ * follow. Used by the review screen's "also:" alternatives strip.
+ */
+export function predictionsForRecord(db: TxOrDb, recordId: string): StoredPrediction[] {
+  const rows = db.all<{
+    id: number;
+    record_id: string;
+    label: string;
+    confidence: number | null;
+    source: string;
+    reason: string | null;
+    raw: string;
+  }>(
+    sql`SELECT id, record_id, label, confidence, source, reason, raw
+        FROM predictions
+        WHERE record_id = ${recordId}
+        ORDER BY confidence IS NULL, confidence DESC, id ASC`,
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    record_id: r.record_id,
+    label: r.label,
+    confidence: r.confidence,
+    source: r.source,
+    reason: r.reason,
+    raw: r.raw,
+  }));
+}
+
 /** All records sharing the given document_id, ordered by row_index ASC. */
 export function recordsInDoc(db: TxOrDb, documentId: string): RecordWithPrimaryPrediction[] {
   const rows = db

@@ -10,12 +10,21 @@ import type { StatsOverlayState } from "./stats-overlay.ts";
 
 /** Per-Overlay state types. */
 
-export type PickerCandidate = { label: string; predicted: boolean };
+export type PickerCandidate = {
+  label: string;
+  predicted: boolean;
+  /** Confidence rendered inline next to the predicted row. Non-predicted
+   *  rows ignore it (only the model's primary prediction carries it). */
+  confidence: number | null;
+};
 
 export type PickerState = {
   recordId: string;
   allLabels: string[];
   predicted: string | null;
+  /** Confidence of the predicted label — surfaced in the picker so the
+   *  reviewer sees signal strength while choosing a relabel. */
+  predictedConfidence: number | null;
   filter: string;
   candidates: PickerCandidate[];
   highlight: number;

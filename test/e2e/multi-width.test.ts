@@ -34,6 +34,7 @@ const TRUECOLOR_AUTO: ResolvedDisplay = displayFor({
   color: "truecolor",
   banding: true,
   sidebar: "auto",
+  queuePreview: "auto",
 });
 
 async function setupReview(

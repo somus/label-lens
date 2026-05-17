@@ -102,6 +102,7 @@ describe("resolveDisplay", () => {
       layout: "auto",
       motion: true,
       sidebar: "auto",
+      queuePreview: "auto",
       richGradient: false,
     });
   });
@@ -370,15 +371,20 @@ describe("pickSidebar", () => {
 });
 
 describe("sidebarWidth", () => {
-  test("fixed 32ch across all terminal widths", () => {
-    expect(sidebarWidth(120)).toBe(32);
-    expect(sidebarWidth(159)).toBe(32);
-    expect(sidebarWidth(160)).toBe(32);
-    expect(sidebarWidth(240)).toBe(32);
+  test("scales as 30% of terminal width", () => {
+    expect(sidebarWidth(120)).toBe(36); // floor(120 * 0.3) = 36
+    expect(sidebarWidth(160)).toBe(48); // floor(160 * 0.3) = 48
+    expect(sidebarWidth(200)).toBe(60); // floor(200 * 0.3) = 60
   });
 
-  test("returns 32 even at tiny terminal widths — parent layout clips", () => {
+  test("clamps to floor of 32 to preserve inner-width contracts", () => {
     expect(sidebarWidth(40)).toBe(32);
+    expect(sidebarWidth(100)).toBe(32); // 30 < floor → 32
     expect(sidebarWidth(0)).toBe(32);
+  });
+
+  test("clamps to ceiling of 64 so the main column stays readable on very wide terminals", () => {
+    expect(sidebarWidth(240)).toBe(64); // floor(240 * 0.3) = 72, capped
+    expect(sidebarWidth(320)).toBe(64);
   });
 });

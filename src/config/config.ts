@@ -18,6 +18,12 @@ export type DisplayConfig = {
   layout?: "auto" | "stack" | "split";
   motion?: "auto" | "on" | "off";
   sidebar?: "auto" | "on" | "off";
+  /**
+   * Left rail with queue preview (upcoming records). Visible at very wide
+   * terminals (≥200 cols) only when sidebar is also visible. Reviewer sees
+   * what's next without opening the modal queue overlay.
+   */
+  queuePreview?: "auto" | "on" | "off";
 };
 
 /**
@@ -40,11 +46,22 @@ export type BoundaryConfig = {
   contextLines: number;
 };
 
+export type ClassificationConfig = {
+  /**
+   * Queue siblings shown above/below the focused record in the subject
+   * pane. Default 2. Set to 0 to hide neighbours. Independent of
+   * `boundary.contextLines`: classification neighbours are queue preview
+   * (no semantic adjacency claim) and render at half intensity.
+   */
+  previewLines: number;
+};
+
 export type LabellensConfig = {
   task: "classification" | "boundary";
   labels: LabelConfigEntry[];
   guidelines?: string;
   boundary?: BoundaryConfig;
+  classification?: ClassificationConfig;
   input: {
     path: string;
     format: "jsonl";
@@ -70,7 +87,9 @@ export function defaultConfig(args: {
   return {
     task,
     labels,
-    ...(task === "boundary" ? { boundary: { documentField: "document_id", contextLines: 3 } } : {}),
+    ...(task === "boundary"
+      ? { boundary: { documentField: "document_id", contextLines: 3 } }
+      : { classification: { previewLines: 2 } }),
     input: {
       path: args.inputPath,
       format: "jsonl",
@@ -88,6 +107,7 @@ export function defaultConfig(args: {
       layout: "auto",
       motion: "auto",
       sidebar: "auto",
+      queuePreview: "auto",
     },
     navigation: {
       smartNext: false,

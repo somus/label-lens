@@ -10,6 +10,7 @@ import {
 } from "../render/anim.ts";
 import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Db } from "../store/db.ts";
+import { recentReviewsWithText } from "../store/queries.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { queueProgress, type SidebarData, signalCounts, statsTotals } from "./sidebar-data.ts";
 
@@ -195,6 +196,11 @@ export function createAppContext(args: {
       const queueTotal = cursor?.total ?? 0;
       const queuePosition = cursor && cursor.total > 0 ? cursor.position + 1 : 0;
       const ids = cursor ? cursor.recordIds() : null;
+      const history = recentReviewsWithText(args.db, 5).map((h) => ({
+        status: h.status,
+        label: h.final_label ?? h.prev_label,
+        recordText: h.recordText,
+      }));
       return {
         mode: "queue",
         queueLabel,
@@ -204,6 +210,7 @@ export function createAppContext(args: {
         counters: { ...ctx.sessionCounters },
         queueProgress: queueProgress(args.db),
         signals: signalCounts(args.db, ids),
+        history,
         smartNext: args.config.navigation?.smartNext ?? false,
       };
     },

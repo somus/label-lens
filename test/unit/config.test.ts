@@ -39,6 +39,7 @@ describe("defaultConfig", () => {
       layout: "auto",
       motion: "auto",
       sidebar: "auto",
+      queuePreview: "auto",
     });
   });
 });

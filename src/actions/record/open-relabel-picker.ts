@@ -16,6 +16,7 @@ export const openRelabelPicker: Command = {
       recordId: record.id,
       allLabels,
       predicted: record.primaryPrediction?.label ?? null,
+      predictedConfidence: record.primaryPrediction?.confidence ?? null,
     });
     ctx.openOverlay({ kind: "picker", state });
   },

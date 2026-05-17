@@ -105,6 +105,13 @@ export function BandedRecord(props: BandedRecordProps): ReturnType<typeof Box> {
   if (display.banding && !isContext) {
     if (kindTintLevel !== null) {
       opts.backgroundColor = kindTintColor(display, kindTintLevel);
+    } else if (isFocused) {
+      // Focused row uses a single, slot-independent bg. Earlier passes
+      // inherited `bandColor(slot)` here — leftover from when every
+      // record carried alternating banding — which made the focus tint
+      // flicker between two shades as the reviewer scrolled. Pin to the
+      // `even` band so the focus box always looks the same.
+      opts.backgroundColor = bandColor(display, "even");
     } else {
       opts.backgroundColor = bandColor(display, bandSlot);
     }
