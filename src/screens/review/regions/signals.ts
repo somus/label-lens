@@ -108,12 +108,39 @@ function predictionStatRows(
     out.push(statRow(display, "reason", [{ text: primary.reason, tone: "muted" }]));
   }
 
-  // agreement (only when there are alternative predictions to compare).
+  // agreement + alternatives — only when there are non-primary sources.
   if (predictions.length > 1) {
     out.push(statRow(display, "agreement", agreementSegs(primary, predictions)));
+    const others = predictions.filter((p) => p.id !== primary.id);
+    others.forEach((p, idx) => {
+      const label = idx === 0 ? "alternatives" : "";
+      const agrees = p.label === primary.label;
+      out.push(statRow(display, label, alternativeSegs(p, agrees)));
+    });
   }
 
   return out;
+}
+
+/**
+ * One line under `alternatives`. `[source] → label (conf%)`. Rows that
+ * agree with the primary render dim so the disagreeing source pops to
+ * the eye; the agreeing rows are still legible — useful when the
+ * reviewer wants to read off agreeing-source confidences.
+ */
+function alternativeSegs(p: StoredPrediction, agreesWithPrimary: boolean): Segment[] {
+  const labelTone: Segment["tone"] = agreesWithPrimary ? "dim" : "default";
+  const muteTone: Segment["tone"] = agreesWithPrimary ? "dim" : "muted";
+  const segs: Segment[] = [
+    { text: "[", tone: muteTone },
+    ...foldNamespace(p.source, muteTone),
+    { text: "]", tone: muteTone },
+    { text: " → ", tone: muteTone },
+    ...foldNamespace(p.label, labelTone),
+  ];
+  const conf = p.confidence !== null ? `${Math.round(p.confidence * 100)}%` : "—";
+  segs.push({ text: ` (${conf})`, tone: muteTone });
+  return segs;
 }
 
 const STAT_LABEL_WIDTH = 12;
