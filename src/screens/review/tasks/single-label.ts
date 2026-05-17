@@ -85,6 +85,23 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
   }
   if (current.length > 0) rows.push(current);
 
+  // Trailing `+N more (r)` hint when the dataset has labels beyond the
+  // 9-digit accelerator range. Without it the chip rail silently caps
+  // and reviewers don't know the picker reaches the rest.
+  const hiddenCount = labels.length - visible.length;
+  if (hiddenCount > 0) {
+    const hint: Segment[] = [
+      { text: "   ", tone: "default" },
+      { text: `+${hiddenCount} more`, tone: "muted" },
+      { text: "  ", tone: "dim" },
+      { text: "[r]", tone: "accent" },
+      { text: " to filter all labels", tone: "muted" },
+    ];
+    const lastRow = rows[rows.length - 1];
+    if (lastRow) lastRow.push(...hint);
+    else rows.push(hint);
+  }
+
   return Box(
     { flexDirection: "column", marginTop: 1, flexShrink: 0 },
     SectionHeader({ display, label: "labels" }),
