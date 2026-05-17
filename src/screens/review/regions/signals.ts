@@ -44,7 +44,34 @@ export function Signals(args: SignalsArgs): ReturnType<typeof Box> {
   if (record.note) rows.push(noteRow(record.note));
 
   if (rows.length === 0) return Box({});
-  return Box({ flexDirection: "column", flexShrink: 0, marginTop: 1 }, ...rows);
+  return Box(
+    { flexDirection: "column", flexShrink: 0, marginTop: 2 },
+    sectionHeader(display, "prediction"),
+    Text({ content: " " }),
+    ...rows,
+  );
+}
+
+function sectionHeader(display: ResolvedDisplay, label: string): ReturnType<typeof Box> {
+  // Mirrors `sidebar.ts:sectionHeader` — label followed by a dim
+  // horizontal rule. The rule is rendered at a fixed generous length
+  // (60ch) and clips inside the containing Box's overflow:hidden.
+  const labelWithSpace = `${label} `;
+  const ruleLen = 60;
+  return Box(
+    { flexDirection: "row", flexShrink: 0, overflow: "hidden" },
+    Text({
+      content: segmentsToStyledText(
+        [
+          { text: ` ${labelWithSpace}`, tone: "muted" },
+          { text: "─".repeat(ruleLen), tone: "dim" },
+        ],
+        display,
+      ),
+      attributes: TextAttributes.BOLD,
+      wrapMode: "char",
+    }),
+  );
 }
 
 function headlineRow(

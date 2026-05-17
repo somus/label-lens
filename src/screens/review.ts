@@ -34,6 +34,7 @@ import { hasTag } from "../store/tags.ts";
 import type { RecordWithPrimaryPrediction } from "../types.ts";
 import { renderDocView } from "./doc-view.ts";
 import { HistoryStrip } from "./review/regions/history-strip.ts";
+import { QueueHeader } from "./review/regions/queue-header.ts";
 import { Signals } from "./review/regions/signals.ts";
 import { type BoundaryRowMeta, type ContextStrip, Subject } from "./review/regions/subject.ts";
 import { resolveTaskRenderer } from "./review/tasks/index.ts";
@@ -123,18 +124,6 @@ export function mountReviewScreen(args: {
       focusedIndex: -1,
       startIndex: 0,
     };
-    const pin = app.display.candidatePin;
-    // Boundary mode always renders contextLines above and below, so the
-    // full pin is correct there. Classification preview may have fewer
-    // preceding records than configured — collapse the top region
-    // proportionally so the focused row floats up rather than sitting in
-    // a tall void.
-    const hasContextStrip = app.config.task === "boundary";
-    const effectivePin = hasContextStrip
-      ? pin
-      : taskRenderer.contextRowsBefore > 0
-        ? Math.min(pin, (window.focusedIndex / taskRenderer.contextRowsBefore) * pin)
-        : 0;
     const record = cursor?.current() ?? null;
     const history = recentReviewsWithText(app.db, 5);
     const marked = record ? hasTag(app.db, record.id, "marked") : false;
@@ -188,9 +177,10 @@ export function mountReviewScreen(args: {
       window,
       display: app.display,
       contextStrip: contextStripFor(app, record),
-      effectivePin,
       boundary: boundaryRowMetaFor(app.config, app.display),
       contextIntensity: taskRenderer.contextIntensity,
+      slotsBefore: taskRenderer.contextRowsBefore,
+      slotsAfter: taskRenderer.contextRowsAfter,
     });
     const signals = Signals({
       record,
@@ -216,11 +206,25 @@ export function mountReviewScreen(args: {
           display: app.display,
         });
 
+    // Cluster-at-top: queue header + subject + signals + decision hug
+    // each other at the top of the main column. The spacer below
+    // absorbs leftover height so any whitespace lands beneath the work
+    // cluster rather than between its rows. History-strip (sidebar-off
+    // fallback) pins to the bottom alongside the action footer.
+    const queueHeader = QueueHeader({
+      display: app.display,
+      queueLabel,
+      position: queuePosition,
+      total: queueTotal,
+    });
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+      queueHeader,
+      Text({ content: " " }),
       subject,
       signals,
       decision,
+      Box({ flexGrow: 1, flexShrink: 1 }),
       historyStrip,
       app.overlay
         ? renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight)

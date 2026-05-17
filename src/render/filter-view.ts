@@ -34,7 +34,7 @@ export function renderFilterBuilder(
       zIndex: 100,
       shouldFill: true,
       overflow: "hidden",
-      backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : undefined,
+      backgroundColor: t.bg.overlay !== "transparent" ? t.bg.overlay : "black",
       borderColor:
         display.color === "truecolor" || display.color === "256" ? t.fg.accent : undefined,
     },

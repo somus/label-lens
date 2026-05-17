@@ -4,6 +4,10 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+  Pending ────────────────────────────────────────────────────────────  1 / 10                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
@@ -11,16 +15,12 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   ▆ Amazon order #12345                                                                             
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+  prediction ────────────────────────────────────────────────────────────                           
                                                                                                     
   ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+                                                                                                    
+  labels ────────────────────────────────────────────────────────────                               
                                                                                                     
   ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -32,6 +32,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  2 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+  Pending ────────────────────────────────────────────────────────────  2 / 10                      
                                                                                                     
                                                                                                     
   █ Lunch at Zomato Bangalore                                                                       
@@ -42,13 +43,12 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   ▄ Netflix monthly                                                                                 
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+  prediction ────────────────────────────────────────────────────────────                           
                                                                                                     
   ◇ travel  ████████░ 88%   src llm:gpt-4                                                           
+                                                                                                    
+                                                                                                    
+  labels ────────────────────────────────────────────────────────────                               
                                                                                                     
    1 food    ▸2 travel 88%     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -60,6 +60,10 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+  Pending ────────────────────────────────────────────────────────────  1 / 10                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Lunch at Zomato Bangalore                                                                    │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
@@ -67,16 +71,12 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
   ▆ Amazon order #12345                                                                             
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+  prediction ────────────────────────────────────────────────────────────                           
                                                                                                     
   ◇ food  ########- 92%   src llm:gpt-4                                                             
+                                                                                                    
+                                                                                                    
+  labels ────────────────────────────────────────────────────────────                               
                                                                                                     
   ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -88,6 +88,10 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+  Pending ────────────────────────────────────────────────────────────  1 / 10                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Lunch at Zomato Bangalore                                                                    │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
@@ -95,16 +99,12 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   ▆ Amazon order #12345                                                                             
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+  prediction ────────────────────────────────────────────────────────────                           
                                                                                                     
   ◇ food  ########- 92%   src llm:gpt-4                                                             
+                                                                                                    
+                                                                                                    
+  labels ────────────────────────────────────────────────────────────                               
                                                                                                     
   ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -116,6 +116,10 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+  Pending ────────────────────────────────────────────────────────────  1 / 10                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
@@ -123,16 +127,12 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   ▆ Amazon order #12345                                                                             
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+  prediction ────────────────────────────────────────────────────────────                           
                                                                                                     
   ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+                                                                                                    
+  labels ────────────────────────────────────────────────────────────                               
                                                                                                     
   ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -144,6 +144,10 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+  Pending ────────────────────────────────────────────────────────────  1 / 10                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
@@ -151,16 +155,12 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   ▆ Amazon order #12345                                                                             
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+  prediction ────────────────────────────────────────────────────────────                           
                                                                                                     
   ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+                                                                                                    
+  labels ────────────────────────────────────────────────────────────                               
                                                                                                     
   ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
@@ -172,6 +172,10 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  1 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+  Pending ────────────────────────────────────────────────────────────  1 / 10                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                                      │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
@@ -179,16 +183,12 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   ▆ Amazon order #12345                                                                             
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+  prediction ────────────────────────────────────────────────────────────                           
                                                                                                     
   ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+                                                                                                    
+  labels ────────────────────────────────────────────────────────────                               
                                                                                                     
   ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 

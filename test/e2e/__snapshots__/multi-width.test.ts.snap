@@ -4,6 +4,10 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
 "                                                                                
   LabelLens  tiny.jsonl  Pending  1 / 10                                        
                                                                                 
+  Pending ────────────────────────────────────────────────────────────  1 / 10  
+                                                                                
+                                                                                
+                                                                                
  ╭────────────────────────────────────────────────────────────────────────────╮ 
  │ Lunch at Zomato Bangalore                                                  │ 
  ╰────────────────────────────────────────────────────────────────────────────╯ 
@@ -11,24 +15,20 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
   ▆ Amazon order #12345                                                         
                                                                                 
                                                                                 
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
+  prediction ────────────────────────────────────────────────────────────       
                                                                                 
   ◇ food  ████████░ 92%   src llm:gpt-4                                         
                                                                                 
+                                                                                
+  labels ────────────────────────────────────────────────────────────           
+                                                                                
   ▸1 food 92%     2 travel     3 other                                          
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues 
                                                                                 
 "
@@ -104,6 +104,10 @@ exports[`multi-width snapshot sweep (plan A16) splash screen @ 80x30 1`] = `
 
 exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
 "                                                                                                                        
+  Pending ────────────────────────────────────────────────────────────  1 / 10                                          
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
  ╭───────────────────────────────────────────────────────────────────────────────╮                                      
  │ Lunch at Zomato Bangalore                                                     │                                      
  ╰───────────────────────────────────────────────────────────────────────────────╯                                      
@@ -111,26 +115,22 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
   ▆ Amazon order #12345                                                                                                 
                                                                                                                         
                                                                                                                         
+  prediction ────────────────────────────────────────────────────────────                                               
                                                                                                                         
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                    pending                             
+  ◇ food  ████████░ 92%   src llm:gpt-4                                             pending                             
                                                                                     1 / 10                              
                                                                                     test/fixtures/tiny.jsonl            
-                                                                                                                        
+  labels ────────────────────────────────────────────────────────────                                                   
                                                                                     Counters ─────────────────────────  
-                                                                                                                        
+  ▸1 food 92%     2 travel     3 other                                                                                  
                                                                                     reviewed                         0  
                                                                                     skipped                          0  
                                                                                     marked                           0  
                                                                                                                         
                                                                                     overall 0/10 [░░░░░░░░░░]   0%      
-  ◇ food  ████████░ 92%   src llm:gpt-4                                             Signals ──────────────────────────  
+                                                                                    Signals ──────────────────────────  
                                                                                                                         
-  ▸1 food 92%     2 travel     3 other                                              ●  label_issue                   1  
+                                                                                    ●  label_issue                   1  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                         
 "
@@ -206,6 +206,10 @@ exports[`multi-width snapshot sweep (plan A16) splash screen @ 120x30 1`] = `
 
 exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
 "                                                                                                                                                                
+  Pending ────────────────────────────────────────────────────────────  1 / 10                                                                                  
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
  ╭───────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                  
  │ Lunch at Zomato Bangalore                                                                                 │                                                  
  ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                  
@@ -213,26 +217,22 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
   ▆ Amazon order #12345                                                                                                                                         
                                                                                                                                                                 
                                                                                                                                                                 
+  prediction ────────────────────────────────────────────────────────────                                                                                       
                                                                                                                                                                 
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                pending                                         
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                                         pending                                         
                                                                                                                 1 / 10                                          
                                                                                                                 test/fixtures/tiny.jsonl                        
-                                                                                                                                                                
+  labels ────────────────────────────────────────────────────────────                                                                                           
                                                                                                                 Counters ─────────────────────────────────────  
-                                                                                                                                                                
+  ▸1 food 92%     2 travel     3 other                                                                                                                          
                                                                                                                 reviewed                                     0  
                                                                                                                 skipped                                      0  
                                                                                                                 marked                                       0  
                                                                                                                                                                 
                                                                                                                 overall 0/10 [░░░░░░░░░░]   0%                  
-  ◇ food  ████████░ 92%   src llm:gpt-4                                                                         Signals ──────────────────────────────────────  
+                                                                                                                Signals ──────────────────────────────────────  
                                                                                                                                                                 
-  ▸1 food 92%     2 travel     3 other                                                                          ●  label_issue                               1  
+                                                                                                                ●  label_issue                               1  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                               [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                 
 "

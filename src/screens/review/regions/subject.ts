@@ -29,12 +29,6 @@ export type SubjectArgs = {
    * siblings) and a dashed separator divides strip from focus.
    */
   contextStrip: ContextStrip | null;
-  /**
-   * Pin position to use for layout this render. Smaller than
-   * `display.candidatePin` when there are fewer preceding records than
-   * the pin reserves room for.
-   */
-  effectivePin: number;
   /** Boundary-task per-row meta (label → glyph + kind tint). Null for
    *  classification. */
   boundary: BoundaryRowMeta | null;
@@ -42,10 +36,20 @@ export type SubjectArgs = {
    *  queue siblings render as dim context (classification preview);
    *  `strong` keeps full band tints. */
   contextIntensity: "strong" | "weak";
+  /**
+   * How many neighbour rows the task wants above and below the focused
+   * record. When the cursor is near the start/end of the queue and we
+   * have fewer than `slotsBefore` / `slotsAfter` real neighbours, the
+   * shortfall is padded with blank rows so the focus box stays in the
+   * same screen position when scrolling.
+   */
+  slotsBefore: number;
+  slotsAfter: number;
 };
 
 export function Subject(args: SubjectArgs): ReturnType<typeof Box> {
-  const { window, display, contextStrip, effectivePin, boundary, contextIntensity } = args;
+  const { window, display, contextStrip, boundary, contextIntensity, slotsBefore, slotsAfter } =
+    args;
   if (window.records.length === 0 || window.focusedIndex < 0) {
     const rich = display.color === "truecolor" || display.color === "256";
     return EmptyState({
@@ -64,94 +68,98 @@ export function Subject(args: SubjectArgs): ReturnType<typeof Box> {
   // siblings read as queue preview rather than semantic context.
   const previewVariant = contextIntensity === "weak" ? "context" : "queue";
 
-  const beforeChildren = contextStrip
-    ? [
-        ...contextStrip.before.map((line, i) =>
-          BandedRecord({
-            text: line,
-            isFocused: false,
-            bandSlot: slotFor(i),
-            display,
-            variant: "context",
-          }),
-        ),
-        contextSeparator(display),
-      ]
-    : window.records.slice(0, window.focusedIndex).map((r, i) => {
-        const meta = boundaryMetaFor(r, boundary);
-        return BandedRecord({
-          text: r.text,
-          isFocused: false,
-          bandSlot: slotFor(window.startIndex + i),
-          display,
-          variant: previewVariant,
-          confidence: r.primaryPrediction?.confidence ?? null,
-          kindGlyph: meta?.kindGlyph,
-          kindTintLevel: meta?.kindTintLevel,
-        });
-      });
+  // Padding when the cursor is near the start of the queue (and we have
+  // fewer real preceding records than the task wants). Renders as blank
+  // rows so the focus box keeps its screen position as the reviewer
+  // scrolls — no section-shift on first/last record.
+  const realBefore = contextStrip ? contextStrip.before.length : window.focusedIndex;
+  const realAfter = contextStrip
+    ? contextStrip.after.length
+    : window.records.length - window.focusedIndex - 1;
+  const padBefore = Math.max(0, slotsBefore - realBefore);
+  const padAfter = Math.max(0, slotsAfter - realAfter);
 
-  const afterChildren = contextStrip
-    ? [
-        contextSeparator(display),
-        ...contextStrip.after.map((line, i) =>
-          BandedRecord({
-            text: line,
+  const beforeChildren: ReturnType<typeof BandedRecord | typeof Text>[] = [
+    ...blankRows(padBefore),
+    ...(contextStrip
+      ? [
+          ...contextStrip.before.map((line, i) =>
+            BandedRecord({
+              text: line,
+              isFocused: false,
+              bandSlot: slotFor(i),
+              display,
+              variant: "context",
+            }),
+          ),
+          contextSeparator(display),
+        ]
+      : window.records.slice(0, window.focusedIndex).map((r, i) => {
+          const meta = boundaryMetaFor(r, boundary);
+          return BandedRecord({
+            text: r.text,
             isFocused: false,
-            bandSlot: slotFor(i),
+            bandSlot: slotFor(window.startIndex + i),
             display,
-            variant: "context",
-          }),
-        ),
-      ]
-    : window.records.slice(window.focusedIndex + 1).map((r, i) => {
-        const meta = boundaryMetaFor(r, boundary);
-        return BandedRecord({
-          text: r.text,
-          isFocused: false,
-          bandSlot: slotFor(focusedAbsolute + 1 + i),
-          display,
-          variant: previewVariant,
-          confidence: r.primaryPrediction?.confidence ?? null,
-          kindGlyph: meta?.kindGlyph,
-          kindTintLevel: meta?.kindTintLevel,
-        });
-      });
+            variant: previewVariant,
+            confidence: r.primaryPrediction?.confidence ?? null,
+            kindGlyph: meta?.kindGlyph,
+            kindTintLevel: meta?.kindTintLevel,
+          });
+        })),
+  ];
 
+  const afterChildren: ReturnType<typeof BandedRecord | typeof Text>[] = [
+    ...(contextStrip
+      ? [
+          contextSeparator(display),
+          ...contextStrip.after.map((line, i) =>
+            BandedRecord({
+              text: line,
+              isFocused: false,
+              bandSlot: slotFor(i),
+              display,
+              variant: "context",
+            }),
+          ),
+        ]
+      : window.records.slice(window.focusedIndex + 1).map((r, i) => {
+          const meta = boundaryMetaFor(r, boundary);
+          return BandedRecord({
+            text: r.text,
+            isFocused: false,
+            bandSlot: slotFor(focusedAbsolute + 1 + i),
+            display,
+            variant: previewVariant,
+            confidence: r.primaryPrediction?.confidence ?? null,
+            kindGlyph: meta?.kindGlyph,
+            kindTintLevel: meta?.kindTintLevel,
+          });
+        })),
+    ...blankRows(padAfter),
+  ];
+
+  // Cluster-at-top layout: subject is auto-sized to its children's combined
+  // height. The parent body adds a flexGrow spacer below the work cluster
+  // so any leftover vertical space falls beneath the cluster rather than
+  // gathering between subject and decision. Slot padding (`blankRows`
+  // above and below) keeps the focus box at the same screen position
+  // when scrolling through the queue.
   return Box(
-    { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-    Box(
-      {
-        flexDirection: "column",
-        flexBasis: 0,
-        flexGrow: effectivePin,
-        flexShrink: 0,
-        justifyContent: "flex-end",
-        overflow: "hidden",
-      },
-      ...beforeChildren,
-    ),
-    Box(
-      {
-        flexDirection: "column",
-        flexBasis: 0,
-        flexGrow: 1 - effectivePin,
-        flexShrink: 1,
-        overflow: "hidden",
-      },
-      (() => {
-        const meta = boundaryMetaFor(focused, boundary);
-        return BandedRecord({
-          text: focused.text,
-          isFocused: true,
-          bandSlot: slotFor(focusedAbsolute),
-          display,
-          kindGlyph: meta?.kindGlyph,
-          kindTintLevel: meta?.kindTintLevel,
-        });
-      })(),
-      ...afterChildren,
-    ),
+    { flexDirection: "column", flexShrink: 0, overflow: "hidden" },
+    ...beforeChildren,
+    (() => {
+      const meta = boundaryMetaFor(focused, boundary);
+      return BandedRecord({
+        text: focused.text,
+        isFocused: true,
+        bandSlot: slotFor(focusedAbsolute),
+        display,
+        kindGlyph: meta?.kindGlyph,
+        kindTintLevel: meta?.kindTintLevel,
+      });
+    })(),
+    ...afterChildren,
   );
 }
 
@@ -171,6 +179,12 @@ function boundaryMetaFor(
     kindGlyph: labelGlyph(label, configGlyph, boundary.display),
     kindTintLevel: kindTintLevel(label),
   };
+}
+
+function blankRows(n: number): ReturnType<typeof Text>[] {
+  const out: ReturnType<typeof Text>[] = [];
+  for (let i = 0; i < n; i++) out.push(Text({ content: " " }));
+  return out;
 }
 
 function contextSeparator(display: ResolvedDisplay): ReturnType<typeof Text> {
