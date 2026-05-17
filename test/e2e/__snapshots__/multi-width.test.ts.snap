@@ -25,7 +25,7 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
   labels ────────────────────────────────────────────────────────────────────── 
  ──                                                                             
                                                                                 
-  ▸1 food 92%     2 travel     3 other                                          
+  ◆ [1]  food  92%      [2]  travel      [3]  other                             
                                                                                 
                                                                                 
                                                                                 
@@ -122,7 +122,7 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
                                                                                     test/fixtures/tiny.jsonl            
   labels ────────────────────────────────────────────────────────────────────────                                       
                                                                                     Counters ─────────────────────────  
-  ▸1 food 92%     2 travel     3 other                                                                                  
+  ◆ [1]  food  92%      [2]  travel      [3]  other                                                                     
                                                                                     reviewed                         0  
                                                                                     skipped                          0  
                                                                                     marked                           0  
@@ -224,7 +224,7 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
                                                                                                                 test/fixtures/tiny.jsonl                        
   labels ────────────────────────────────────────────────────────────────────────                                                                               
                                                                                                                 Counters ─────────────────────────────────────  
-  ▸1 food 92%     2 travel     3 other                                                                                                                          
+  ◆ [1]  food  92%      [2]  travel      [3]  other                                                                                                             
                                                                                                                 reviewed                                     0  
                                                                                                                 skipped                                      0  
                                                                                                                 marked                                       0  

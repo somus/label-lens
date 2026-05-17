@@ -785,26 +785,31 @@ function pickerRow(
   display: ResolvedDisplay,
 ): ReturnType<typeof Text> {
   const rich = display.color === "truecolor" || display.color === "256";
-  const cursor = highlighted ? ">" : " ";
   const chip = `[${i + 1}]`;
-  const check = c.predicted ? (rich ? " ✓" : " *") : "  ";
-  // Namespace fold puts the `policy:` prefix in dim + `spam` value in
-  // default/accent. Mono falls back to a plain string render.
+  // `◆` marks the model's prediction; mono falls back to `*`. The
+  // keyboard-highlighted row uses accent tone + bold rather than a
+  // separate cursor glyph — same numbered chip pattern as the chip rail.
+  const predictedMark = c.predicted ? (rich ? "◆" : "*") : " ";
+  const confText =
+    c.predicted && c.confidence !== null ? `  ${Math.round(c.confidence * 100)}%` : "";
   if (!rich) {
-    const line = ` ${cursor} ${chip}  ${c.label}${check}`;
+    const line = ` ${predictedMark} ${chip}  ${c.label}${confText}`;
     return Text({
       content: line,
       attributes: highlighted ? TextAttributes.BOLD : TextAttributes.DIM,
     });
   }
   const tone: Segment["tone"] = highlighted ? "accent" : "default";
+  const chipTone: Segment["tone"] = highlighted ? "accent" : c.predicted ? "accent" : "accentDeep";
   const segs: Segment[] = [
-    { text: ` ${cursor} `, tone },
-    { text: chip, tone: highlighted ? "accent" : "accentDeep" },
+    { text: " ", tone: "default" },
+    { text: predictedMark, tone: c.predicted ? "accent" : "default" },
+    { text: " ", tone: "default" },
+    { text: chip, tone: chipTone },
     { text: "  ", tone: "default" },
     ...foldNamespace(c.label, tone),
-    { text: check, tone: c.predicted ? "success" : "dim" },
   ];
+  if (confText) segs.push({ text: confText, tone: "muted" });
   return Text({
     content: segmentsToStyledText(segs, display),
     attributes: highlighted ? TextAttributes.BOLD : TextAttributes.NONE,

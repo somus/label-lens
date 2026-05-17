@@ -91,11 +91,17 @@ describe("review screen wide-terminal layout (≥160 cols)", () => {
       height: 24,
     });
     const frame = captureCharFrame();
-    // Decision chip rail: predicted label gets `▸N`, others render
-    // numbered without the marker.
-    expect(frame).toContain("▸1 food");
-    expect(frame).toContain("2 travel");
-    expect(frame).toContain("3 other");
+    // Decision chip rail: predicted label gets `◆ [N]  label conf%`,
+    // others render `[N] label` (reserving the marker column with a
+    // space for alignment).
+    expect(frame).toContain("[1]");
+    expect(frame).toContain("[2]");
+    expect(frame).toContain("[3]");
+    expect(frame).toContain("food");
+    expect(frame).toContain("travel");
+    expect(frame).toContain("other");
+    expect(frame).toContain("◆");
+    expect(frame).toContain("92%");
     // Source row renders the prediction source as a chip.
     expect(frame).toContain("source");
     expect(frame).toContain("[llm:gpt-4]");

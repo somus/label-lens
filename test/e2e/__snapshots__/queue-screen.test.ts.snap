@@ -22,7 +22,7 @@ exports[`queue overlay e2e renders all built-in queues with counts 1`] = `
               │    Lunch at Zomato Bangalore                                       │                
   labels ─────│    src llm:gpt-4   food   92%                                      │                
               │                                                                    │                
-  ▸1 food 92% │                                                                    │                
+  * [1]  food │                                                                    │                
               │  [j/k] navigate · [enter] select · [esc] cancel                    │                
               │                                                                    │                
               └────────────────────────────────────────────────────────────────────┘                

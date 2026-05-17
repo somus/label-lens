@@ -6,7 +6,12 @@ const LABELS = ["food", "travel", "utility", "other", "transport", "fashion"];
 const RECORD = "rec-1";
 
 function init(predicted: string | null = "food"): PickerState {
-  return openPicker({ recordId: RECORD, allLabels: LABELS, predicted });
+  return openPicker({
+    recordId: RECORD,
+    allLabels: LABELS,
+    predicted,
+    predictedConfidence: predicted ? 0.83 : null,
+  });
 }
 
 describe("openPicker", () => {

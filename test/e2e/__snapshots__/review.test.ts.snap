@@ -22,7 +22,7 @@ exports[`review screen e2e initial render: progress strip + first record + prima
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-  ▸1 food 92%     2 travel     3 other                                                              
+  * [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -49,7 +49,7 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-   1 food    ▸2 travel 88%     3 other                                                              
+    [1]  food    * [2]  travel  88%      [3]  other                                                 
                                                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
@@ -78,7 +78,7 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-   1 food    ▸2 travel 88%     3 other                                                              
+    [1]  food    * [2]  travel  88%      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -100,7 +100,7 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-   1 food     2 travel     3 other                                                                  
+    [1]  food      [2]  travel      [3]  other                                                      
                                                                                                     
                                                                                                     
                                                                                                     

@@ -38,6 +38,11 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
   const { record, labels, display } = args;
   const predicted = record?.primaryPrediction?.label ?? null;
   const confidence = record?.primaryPrediction?.confidence ?? null;
+  // Mono / 16-color: filled diamond falls back to `*` to match the
+  // picker overlay's mono fallback. Same glyph appears in both
+  // surfaces.
+  const rich = display.color === "truecolor" || display.color === "256";
+  const predictedGlyph = rich ? "◆" : "*";
   // Cap at 9 since digit keys 1-9 are the accelerator surface. Labels
   // beyond 9 are still reachable via the relabel picker (`r`).
   const visible = labels.slice(0, 9);
@@ -55,18 +60,26 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
     }
     if (inRow > 0) current.push({ text: "   ", tone: "default" });
     current.push({ text: " ", tone: "default" });
-    if (isPredicted) {
-      current.push({ text: "▸", tone: "accent" });
-    } else {
-      current.push({ text: " ", tone: "default" });
-    }
-    current.push({ text: `${i + 1} `, tone: "accent" });
+    // `◆` marks the model's prediction; non-predicted rows reserve the
+    // same column with a space so chips stay column-aligned. Matches
+    // the picker overlay so both surfaces speak the same visual
+    // language.
+    current.push({
+      text: isPredicted ? predictedGlyph : " ",
+      tone: isPredicted ? "accent" : "default",
+    });
+    current.push({ text: " ", tone: "default" });
+    current.push({
+      text: `[${i + 1}]`,
+      tone: isPredicted ? "accent" : "accentDeep",
+    });
+    current.push({ text: "  ", tone: "default" });
     for (const seg of foldNamespace(name, isPredicted ? "default" : "muted")) {
       current.push(seg);
     }
     if (isPredicted && confidence !== null) {
       const pct = Math.round(confidence * 100);
-      current.push({ text: ` ${pct}%`, tone: "muted" });
+      current.push({ text: `  ${pct}%`, tone: "muted" });
     }
     inRow += 1;
   }

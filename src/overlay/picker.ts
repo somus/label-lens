@@ -12,15 +12,17 @@ export type OpenPickerArgs = {
   recordId: string;
   allLabels: string[];
   predicted: string | null;
+  predictedConfidence: number | null;
 };
 
 export function openPicker(args: OpenPickerArgs): PickerState {
-  const candidates = candidatesFrom(args.allLabels, "", args.predicted);
+  const candidates = candidatesFrom(args.allLabels, "", args.predicted, args.predictedConfidence);
   const idx = candidates.findIndex((c) => c.predicted);
   return {
     recordId: args.recordId,
     allLabels: args.allLabels,
     predicted: args.predicted,
+    predictedConfidence: args.predictedConfidence,
     filter: "",
     candidates,
     highlight: idx >= 0 ? idx : 0,
@@ -31,16 +33,21 @@ function candidatesFrom(
   allLabels: string[],
   filter: string,
   predicted: string | null,
+  predictedConfidence: number | null,
 ): PickerCandidate[] {
   const labels = filter.length === 0 ? allLabels.slice() : filterLabels(allLabels, filter);
-  return labels.map((label) => ({ label, predicted: label === predicted }));
+  return labels.map((label) => ({
+    label,
+    predicted: label === predicted,
+    confidence: label === predicted ? predictedConfidence : null,
+  }));
 }
 
 function withFilter(state: PickerState, filter: string): PickerState {
   return {
     ...state,
     filter,
-    candidates: candidatesFrom(state.allLabels, filter, state.predicted),
+    candidates: candidatesFrom(state.allLabels, filter, state.predicted, state.predictedConfidence),
     highlight: 0,
   };
 }

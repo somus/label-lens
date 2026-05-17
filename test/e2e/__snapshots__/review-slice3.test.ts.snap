@@ -22,7 +22,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-  ▸1 food 92%     2 travel     3 other                                                              
+  ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -50,7 +50,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-   1 food    ▸2 travel 88%     3 other                                                              
+    [1]  food    ◆ [2]  travel  88%      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -78,7 +78,7 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-  ▸1 food 92%     2 travel     3 other                                                              
+  * [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -106,7 +106,7 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-  ▸1 food 92%     2 travel     3 other                                                              
+  * [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -134,7 +134,7 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-  ▸1 food 92%     2 travel     3 other                                                              
+  ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -162,7 +162,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-  ▸1 food 92%     2 travel     3 other                                                              
+  ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -190,7 +190,7 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
                                                                                                     
   labels ────────────────────────────────────────────────────────────────────────                   
                                                                                                     
-  ▸1 food 92%     2 travel     3 other                                                              
+  ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
