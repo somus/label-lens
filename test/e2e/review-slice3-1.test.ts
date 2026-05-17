@@ -96,8 +96,9 @@ describe("review screen wide-terminal layout (≥160 cols)", () => {
     expect(frame).toContain("▸1 food");
     expect(frame).toContain("2 travel");
     expect(frame).toContain("3 other");
-    // Headline includes source.
-    expect(frame).toContain("src");
+    // Source row renders the prediction source as a chip.
+    expect(frame).toContain("source");
+    expect(frame).toContain("[llm:gpt-4]");
   });
 
   test("empty queue renders 'All records reviewed' with no focus box", async () => {

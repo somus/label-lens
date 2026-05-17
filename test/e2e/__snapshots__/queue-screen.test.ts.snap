@@ -14,15 +14,15 @@ exports[`queue overlay e2e renders all built-in queues with counts 1`] = `
   █ Uber ride │    Marked             0  [--------]   0%  Flagged for follow-up v… │                
   ▆ Amazon ord│                                                                    │                
               │  Signal Queues                                                     │                
-              │    Low confidence    10  [########] 100%  Predictions with the we… │                
-  prediction ─│    Disagreements      1  [#-------]  10%  Sources predict differe… │                
-              │    Flagged            1  [#-------]  10%  Imported or computed si… │                
-  ◇ food  ####│                                                                    │                
+  prediction ─│    Low confidence    10  [########] 100%  Predictions with the we… │                
+  label      ◇│    Disagreements      1  [#-------]  10%  Sources predict differe… │                
+  confidence #│    Flagged            1  [#-------]  10%  Imported or computed si… │                
+  source     [│                                                                    │                
               │  Preview: Pending                                                  │                
-              │    Lunch at Zomato Bangalore                                       │                
-  labels ─────│    src llm:gpt-4   food   92%                                      │                
+  labels ─────│    Lunch at Zomato Bangalore                                       │                
+  ▸1 food 92% │    src llm:gpt-4   food   92%                                      │                
               │                                                                    │                
-  ▸1 food 92% │                                                                    │                
+              │                                                                    │                
               │  [j/k] navigate · [enter] select · [esc] cancel                    │                
               │                                                                    │                
               └────────────────────────────────────────────────────────────────────┘                

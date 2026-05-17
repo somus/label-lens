@@ -36,18 +36,16 @@ export function Signals(args: SignalsArgs): ReturnType<typeof Box> {
   const primary = record.primaryPrediction;
   const rows: ReturnType<typeof Box | typeof Text>[] = [];
 
-  if (primary) rows.push(headlineRow(primary, display, marked));
+  if (primary) rows.push(...predictionStatRows(primary, predictions, display, marked));
   if (issues.length > 0) {
     rows.push(Box({ height: 1 }), issueBadges(issues, totalRecords, predictions.length, display));
   }
-  if (predictions.length > 1) rows.push(alternativesRow(predictions, display));
   if (record.note) rows.push(noteRow(record.note));
 
   if (rows.length === 0) return Box({});
   return Box(
-    { flexDirection: "column", flexShrink: 0, marginTop: 2 },
+    { flexDirection: "column", flexShrink: 0, marginTop: 1 },
     sectionHeader(display, "prediction"),
-    Text({ content: " " }),
     ...rows,
   );
 }
@@ -74,60 +72,101 @@ function sectionHeader(display: ResolvedDisplay, label: string): ReturnType<type
   );
 }
 
-function headlineRow(
-  p: StoredPrediction,
+/**
+ * Stat-block render of a prediction. Each field renders as a labeled
+ * key-value row:
+ *
+ *   label        ◇ utility            (marked tag prefix when set)
+ *   confidence   ████████░░ 67%
+ *   source       [llm:gpt-4]          (chip-bracketed for visual lift)
+ *   reason       monthly subscription (only when set)
+ *   agreement    2 / 3 sources agree  (only when multi-prediction)
+ */
+function predictionStatRows(
+  primary: StoredPrediction,
+  predictions: StoredPrediction[],
   display: ResolvedDisplay,
   marked: boolean,
-): ReturnType<typeof Text> {
-  const labelSegs = foldNamespace(p.label, "bold");
-  const segs: Segment[] = [{ text: " ", tone: "default" }];
+): ReturnType<typeof Text>[] {
+  const out: ReturnType<typeof Text>[] = [];
+
+  // label row
+  const labelSegs: Segment[] = [{ text: "◇ ", tone: "accent" }];
+  for (const seg of foldNamespace(primary.label, "bold")) labelSegs.push(seg);
   if (marked) {
-    segs.push({ text: "⦿ marked", tone: "warning" });
-    segs.push({ text: "  ", tone: "dim" });
+    labelSegs.push({ text: "   ", tone: "dim" });
+    labelSegs.push({ text: "⦿ marked", tone: "warning" });
   }
-  segs.push({ text: "◇ ", tone: "accent" });
-  for (const seg of labelSegs) segs.push(seg);
-  if (p.confidence !== null) {
-    const pct = Math.round(p.confidence * 100);
-    const tone = confidenceTone(p.confidence);
+  out.push(statRow(display, "label", labelSegs, TextAttributes.BOLD));
+
+  // confidence row
+  if (primary.confidence !== null) {
+    const pct = Math.round(primary.confidence * 100);
+    const tone = confidenceTone(primary.confidence);
     const bar = progressBar(pct, 100, CONF_BAR_WIDTH, display);
-    segs.push({ text: "  ", tone: "dim" });
-    segs.push({ text: bar, tone });
-    segs.push({ text: ` ${pct}%`, tone });
+    out.push(
+      statRow(display, "confidence", [
+        { text: bar, tone },
+        { text: `  ${pct}%`, tone },
+      ]),
+    );
   }
-  segs.push({ text: "   ", tone: "dim" });
-  segs.push({ text: "src ", tone: "muted" });
-  for (const seg of foldNamespace(p.source, "muted")) segs.push(seg);
-  if (p.reason) {
-    segs.push({ text: "   ", tone: "dim" });
-    segs.push({ text: p.reason, tone: "muted" });
+
+  // source chip
+  const sourceSegs: Segment[] = [
+    { text: "[", tone: "dim" },
+    ...foldNamespace(primary.source, "muted"),
+    { text: "]", tone: "dim" },
+  ];
+  out.push(statRow(display, "source", sourceSegs));
+
+  if (primary.reason) {
+    out.push(statRow(display, "reason", [{ text: primary.reason, tone: "muted" }]));
   }
+
+  // agreement (only when there are alternative predictions to compare).
+  if (predictions.length > 1) {
+    out.push(statRow(display, "agreement", agreementSegs(primary, predictions)));
+  }
+
+  return out;
+}
+
+const STAT_LABEL_WIDTH = 12;
+
+/** One stat-row: `  <label-padded> <value-segments>`. */
+function statRow(
+  display: ResolvedDisplay,
+  label: string,
+  valueSegs: Segment[],
+  textAttrs: number = TextAttributes.NONE,
+): ReturnType<typeof Text> {
+  const padded = ` ${label}`.padEnd(STAT_LABEL_WIDTH, " ");
   return Text({
-    content: segmentsToStyledText(segs, display),
-    attributes: TextAttributes.BOLD,
+    content: segmentsToStyledText([{ text: padded, tone: "muted" }, ...valueSegs], display),
+    attributes: textAttrs,
     wrapMode: "word",
   });
 }
 
-function alternativesRow(
-  predictions: StoredPrediction[],
-  display: ResolvedDisplay,
-): ReturnType<typeof Text> {
-  const others = predictions.slice(1);
-  const segs: Segment[] = [{ text: " also ", tone: "muted" }];
-  others.forEach((p, i) => {
-    if (i > 0) segs.push({ text: "   ·   ", tone: "dim" });
-    for (const seg of foldNamespace(p.source, "muted")) segs.push(seg);
-    segs.push({ text: " → ", tone: "dim" });
-    for (const seg of foldNamespace(p.label, "default")) segs.push(seg);
-    const conf = p.confidence !== null ? `${Math.round(p.confidence * 100)}%` : "—";
-    segs.push({ text: ` (${conf})`, tone: "dim" });
-  });
-  return Text({
-    content: segmentsToStyledText(segs, display),
-    wrapMode: "word",
-    attributes: TextAttributes.DIM,
-  });
+/**
+ * Build the `agreement` row's value segments. Counts predictions whose
+ * label matches the primary; emits `unanimous (n / n)` when all agree,
+ * `<agreed> / <n> sources agree` otherwise.
+ */
+function agreementSegs(primary: StoredPrediction, predictions: StoredPrediction[]): Segment[] {
+  const n = predictions.length;
+  const agreed = predictions.filter((p) => p.label === primary.label).length;
+  if (agreed === n) {
+    return [
+      { text: "unanimous ", tone: "success" },
+      { text: `(${agreed} / ${n})`, tone: "dim" },
+    ];
+  }
+  return [
+    { text: `${agreed} / ${n}`, tone: "warning" },
+    { text: "  sources agree", tone: "muted" },
+  ];
 }
 
 function issueBadges(

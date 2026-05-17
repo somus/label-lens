@@ -14,15 +14,15 @@ exports[`review screen e2e initial render: progress strip + first record + prima
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
                                                                                                     
-                                                                                                    
   prediction ────────────────────────────────────────────────────────────                           
-                                                                                                    
-  ◇ food  ########- 92%   src llm:gpt-4                                                             
-                                                                                                    
+  label      ◇ food                                                                                 
+  confidence ########-  92%                                                                         
+  source     [llm:gpt-4]                                                                            
                                                                                                     
   labels ────────────────────────────────────────────────────────────                               
-                                                                                                    
   ▸1 food 92%     2 travel     3 other                                                              
+                                                                                                    
+                                                                                                    
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -35,22 +35,22 @@ exports[`review screen e2e pressing 'a' writes an accepted review row and advanc
   Pending ────────────────────────────────────────────────────────────  1 / 9                       
                                                                                                     
                                                                                                     
+                                                                                                    
  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐ 
  │ ▶ Uber ride to airport                                                                         │ 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
                                                                                                     
-                                                                                                    
   prediction ────────────────────────────────────────────────────────────                           
-                                                                                                    
-  ◇ travel  ########- 88%   src llm:gpt-4                                                           
-                                                                                                    
+  label      ◇ travel                                                                               
+  confidence ########-  88%                                                                         
+  source     [llm:gpt-4]                                                                            
                                                                                                     
   labels ────────────────────────────────────────────────────────────                               
-                                                                                                    
    1 food    ▸2 travel 88%     3 other                                                              
                                                                                                     
+  history  + food      [u] undo                                                                     
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -70,15 +70,15 @@ exports[`review screen e2e pressing 'j' moves to the next record without writing
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
                                                                                                     
-                                                                                                    
   prediction ────────────────────────────────────────────────────────────                           
-                                                                                                    
-  ◇ travel  ########- 88%   src llm:gpt-4                                                           
-                                                                                                    
+  label      ◇ travel                                                                               
+  confidence ########-  88%                                                                         
+  source     [llm:gpt-4]                                                                            
                                                                                                     
   labels ────────────────────────────────────────────────────────────                               
-                                                                                                    
    1 food    ▸2 travel 88%     3 other                                                              
+                                                                                                    
+                                                                                                    
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -91,6 +91,7 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
   Pending ────────────────────────────────────────────────────────────  0 / 0                       
                                                                                                     
                                                                                                     
+                                                                                                    
      *  All records reviewed                                                                        
                                                                                                     
       [/] switch queue · [q] quit                                                                   
@@ -98,10 +99,9 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
   labels ────────────────────────────────────────────────────────────                               
-                                                                                                    
    1 food     2 travel     3 other                                                                  
+                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     

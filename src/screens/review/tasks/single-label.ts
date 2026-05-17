@@ -73,9 +73,8 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
   if (current.length > 0) rows.push(current);
 
   return Box(
-    { flexDirection: "column", marginTop: 2, flexShrink: 0 },
+    { flexDirection: "column", marginTop: 1, flexShrink: 0 },
     sectionHeader(display, "labels"),
-    Text({ content: " " }),
     ...rows.map((segs, idx) =>
       Text({
         content: segmentsToStyledText(segs, display),
