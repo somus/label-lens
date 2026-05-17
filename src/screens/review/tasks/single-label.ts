@@ -1,9 +1,9 @@
 import { labelName } from "../../../config/config.ts";
 import { Box } from "../../../render/box.ts";
-import type { ResolvedDisplay } from "../../../render/capability.ts";
 import type { Segment } from "../../../render/chrome/status-bar.ts";
 import { segmentsToStyledText } from "../../../render/chrome/status-bar.ts";
 import { foldNamespace } from "../../../render/label-fold.ts";
+import { SectionHeader } from "../../../render/section-header.ts";
 import { Text, TextAttributes } from "../../../render/text.ts";
 import type { DecisionRenderArgs, TaskKind, TaskRenderer } from "./types.ts";
 
@@ -74,7 +74,8 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
 
   return Box(
     { flexDirection: "column", marginTop: 1, flexShrink: 0 },
-    sectionHeader(display, "labels"),
+    SectionHeader({ display, label: "labels" }),
+    Text({ content: " " }),
     ...rows.map((segs, idx) =>
       Text({
         content: segmentsToStyledText(segs, display),
@@ -82,24 +83,5 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
         wrapMode: "word",
       }),
     ),
-  );
-}
-
-function sectionHeader(display: ResolvedDisplay, label: string): ReturnType<typeof Box> {
-  const labelWithSpace = `${label} `;
-  const ruleLen = 60;
-  return Box(
-    { flexDirection: "row", flexShrink: 0, overflow: "hidden" },
-    Text({
-      content: segmentsToStyledText(
-        [
-          { text: ` ${labelWithSpace}`, tone: "muted" },
-          { text: "─".repeat(ruleLen), tone: "dim" },
-        ],
-        display,
-      ),
-      attributes: TextAttributes.BOLD,
-      wrapMode: "char",
-    }),
   );
 }
