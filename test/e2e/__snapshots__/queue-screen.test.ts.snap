@@ -9,26 +9,26 @@ exports[`queue overlay e2e renders all built-in queues with counts 1`] = `
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   █ Uber ride t┌────────────────────────────────────────────────────────────────────┐               
   ▆ Amazon orde│                                                                    │               
-  ▄ Netflix mon│  == Queues ======================================================= │               
-  █ Salary cred│                                                                    │               
-  █ Rent transf│  Review Queues                                                     │               
-  ▇ Coffee at B│  > Pending           10  [########] 100%  Awaiting your label      │               
-  ▂ ATM withdra│    Skipped            0  [--------]   0%  Reviewed but punted      │               
-  │ Refund from│    Marked             0  [--------]   0%  Flagged for follow-up v… │               
+               │  == Queues ======================================================= │               
+               │                                                                    │               
+               │  Review Queues                                                     │               
+               │  > Pending           10  [########] 100%  Awaiting your label      │               
+               │    Skipped            0  [--------]   0%  Reviewed but punted      │               
+               │    Marked             0  [--------]   0%  Flagged for follow-up v… │               
                │                                                                    │               
                │  Signal Queues                                                     │               
                │    Low confidence    10  [########] 100%  Predictions with the we… │               
                │    Disagreements      1  [#-------]  10%  Sources predict differe… │               
                │    Flagged            1  [#-------]  10%  Imported or computed si… │               
-  ◇ food  #####│                                                                    │               
-    llm:gpt-4  │  Preview: Pending                                                  │               
+               │                                                                    │               
+               │  Preview: Pending                                                  │               
                │    Lunch at Zomato Bangalore                                       │               
                │    src llm:gpt-4   food   92%                                      │               
-  [1]  food  ✓ │                                                                    │               
-  [2]  travel  │                                                                    │               
-  [3]  other   │  [j/k] navigate · [enter] select · [esc] cancel                    │               
                │                                                                    │               
-               └────────────────────────────────────────────────────────────────────┘               
+               │                                                                    │               
+  ◇ food  #####│  [j/k] navigate · [enter] select · [esc] cancel                    │               
+               │                                                                    │               
+  ▸1 food 92%  └────────────────────────────────────────────────────────────────────┘               
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "

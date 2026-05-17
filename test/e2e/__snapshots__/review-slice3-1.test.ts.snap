@@ -1,17 +1,14 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, truecolor light 1`] = `
+exports[`review screen wide-terminal layout (≥160 cols) snapshot: 200x24, truecolor light 1`] = `
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                    
- │ Lunch at Zomato Bangalore                                                                                                       │  ◇ food  ████████░ 92%                                             
- ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯    llm:gpt-4                                                       
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                                                                                                                                          │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                                                                                                                                                
   ▆ Amazon order #12345                                                                                                                                                                                 
-  ▄ Netflix monthly                                                                                                                   [1]  food  ✓                                                      
-  █ Salary credit October                                                                                                             [2]  travel                                                       
-                                                                                                                                      [3]  other                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -23,23 +20,23 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                                                                                                                                 
+                                                                                                                                                                                                        
+  ▸1 food 92%     2 travel     3 other                                                                                                                                                                  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                                                         
 "
 `;
 
-exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, 256-color light 1`] = `
+exports[`review screen wide-terminal layout (≥160 cols) snapshot: 200x24, 256-color light 1`] = `
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                    
- │ Lunch at Zomato Bangalore                                                                                                       │  ◇ food  ████████░ 92%                                             
- ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯    llm:gpt-4                                                       
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                                                                                                                                          │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                                                                                                                                                
   ▆ Amazon order #12345                                                                                                                                                                                 
-  ▄ Netflix monthly                                                                                                                   [1]  food  ✓                                                      
-  █ Salary credit October                                                                                                             [2]  travel                                                       
-                                                                                                                                      [3]  other                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -51,23 +48,23 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                                                                                                                                 
+                                                                                                                                                                                                        
+  ▸1 food 92%     2 travel     3 other                                                                                                                                                                  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                                                         
 "
 `;
 
-exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, 16-color light (markers) 1`] = `
+exports[`review screen wide-terminal layout (≥160 cols) snapshot: 200x24, 16-color light (markers) 1`] = `
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐                                                                    
- │ ▶ Lunch at Zomato Bangalore                                                                                                     │  ◇ food  ########- 92%                                             
- └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘    llm:gpt-4                                                       
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ 
+ │ ▶ Lunch at Zomato Bangalore                                                                                                                                                                        │ 
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   █ Uber ride to airport                                                                                                                                                                                
   ▆ Amazon order #12345                                                                                                                                                                                 
-  ▄ Netflix monthly                                                                                                                   [1]  food  ✓                                                      
-  █ Salary credit October                                                                                                             [2]  travel                                                       
-                                                                                                                                      [3]  other                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -79,23 +76,23 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
+  ◇ food  ########- 92%   src llm:gpt-4                                                                                                                                                                 
+                                                                                                                                                                                                        
+  ▸1 food 92%     2 travel     3 other                                                                                                                                                                  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                                                         
 "
 `;
 
-exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layout at 200x24, truecolor dark 1`] = `
+exports[`review screen wide-terminal layout (≥160 cols) snapshot: 200x24, truecolor dark 1`] = `
 "                                                                                                                                                                                                        
   LabelLens  tiny.jsonl  Pending  1 / 10                                                                                                               Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                                                                                                                         
- ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                                    
- │ Lunch at Zomato Bangalore                                                                                                       │  ◇ food  ████████░ 92%                                             
- ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯    llm:gpt-4                                                       
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ 
+ │ Lunch at Zomato Bangalore                                                                                                                                                                          │ 
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                                                                                                                                                
   ▆ Amazon order #12345                                                                                                                                                                                 
-  ▄ Netflix monthly                                                                                                                   [1]  food  ✓                                                      
-  █ Salary credit October                                                                                                             [2]  travel                                                       
-                                                                                                                                      [3]  other                                                        
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
@@ -107,6 +104,9 @@ exports[`slice 3.1: responsive split layout at width >= 160 snapshot: split layo
                                                                                                                                                                                                         
                                                                                                                                                                                                         
                                                                                                                                                                                                         
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                                                                                                                                 
+                                                                                                                                                                                                        
+  ▸1 food 92%     2 travel     3 other                                                                                                                                                                  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                                                                       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                                                         
 "

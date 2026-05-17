@@ -17,16 +17,6 @@ function makeConfig(): LabellensConfig {
 }
 
 const TRUECOLOR_AUTO: ResolvedDisplay = displayFor({ color: "truecolor", banding: true });
-const TRUECOLOR_FORCE_STACK: ResolvedDisplay = displayFor({
-  color: "truecolor",
-  banding: true,
-  layout: "stack",
-});
-const TRUECOLOR_FORCE_SPLIT: ResolvedDisplay = displayFor({
-  color: "truecolor",
-  banding: true,
-  layout: "split",
-});
 const TWO_FIFTY_SIX_LIGHT: ResolvedDisplay = displayFor({ color: "256", banding: true });
 const SIXTEEN_LIGHT: ResolvedDisplay = displayFor({ color: "16" });
 const TRUECOLOR_DARK: ResolvedDisplay = displayFor({
@@ -60,15 +50,15 @@ function frameLines(frame: string): string[] {
   return frame.split("\n");
 }
 
-describe("slice 3.1: responsive split layout at width >= 160", () => {
-  test("auto + width 200: exactly one focus box", async () => {
+describe("review screen wide-terminal layout (≥160 cols)", () => {
+  test("exactly one focus box rendered", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store, TRUECOLOR_AUTO, { width: 200, height: 24 });
     const frame = captureCharFrame();
     expect((frame.match(/╭/g) ?? []).length).toBe(1);
   });
 
-  test("auto + width 200: prev records appear ABOVE the focus box (vertical band)", async () => {
+  test("classification preview shows neighbours above and below the focus", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
       width: 200,
@@ -79,92 +69,38 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
       await renderOnce();
     }
     const frame = captureCharFrame();
-    // Earlier records show as vertical context above focus.
-    expect(frame).toContain("Uber ride to airport");
-    // Currently focused: Salary credit October (index 4).
+    // previewLines = 2 (default), so the focus has 2 neighbours visible
+    // above and 2 below — at index 4 those are indexes 2,3 (Netflix,
+    // Amazon) above and 5,6 (Rent, Coffee) below.
     expect(frame).toContain("Salary credit October");
+    expect(frame).toContain("Netflix monthly");
+    expect(frame).toContain("Rent transfer to landlord");
     expect((frame.match(/╭/g) ?? []).length).toBe(1);
     const lines = frameLines(frame);
-    const uberRow = lines.findIndex((l) => l.includes("Uber ride to airport"));
+    const netflixRow = lines.findIndex((l) => l.includes("Netflix monthly"));
     const cornerRow = lines.findIndex((l) => l.includes("╭"));
-    expect(uberRow).toBeGreaterThan(-1);
-    expect(cornerRow).toBeGreaterThan(-1);
-    expect(uberRow).toBeLessThan(cornerRow);
+    const rentRow = lines.findIndex((l) => l.includes("Rent transfer to landlord"));
+    expect(netflixRow).toBeLessThan(cornerRow);
+    expect(rentRow).toBeGreaterThan(cornerRow);
   });
 
-  test("auto + width 200: history strip + label list render in right column", async () => {
+  test("decision chip rail and headline render in the main column", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
-      width: 200,
-      height: 24,
-    });
-    for (let i = 0; i < 3; i++) {
-      mockInput.pressKey("a");
-      await renderOnce();
-    }
-    const frame = captureCharFrame();
-    expect(frame).toContain("history");
-    expect(frame).toContain("[1]  food");
-    expect(frame).toContain("[2]  travel");
-    expect(frame).toContain("[3]  other");
-    // Right column metadata sits in the right ~third of the frame.
-    const lines = frameLines(frame);
-    const histLine = lines.find((l) => l.includes("history"))!;
-    const labelLine = lines.find((l) => l.includes("[1]  food"))!;
-    // Split right column starts roughly 2/3 of width. At 200 cols, expect col >= 100.
-    expect(histLine.indexOf("history")).toBeGreaterThan(100);
-    expect(labelLine.indexOf("[1]  food")).toBeGreaterThan(100);
-  });
-
-  test("auto + width 200: focused record's top corner sits near pin row", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
-      width: 200,
-      height: 24,
-    });
-    for (let i = 0; i < 4; i++) {
-      mockInput.pressKey("j");
-      await renderOnce();
-    }
-    const frame = captureCharFrame();
-    const lines = frameLines(frame);
-    const topCornerRow = lines.findIndex((l) => l.includes("╭"));
-    expect(topCornerRow).toBeGreaterThan(-1);
-    // 24-row terminal, pin = 0.4. Header + spacer ≈3 rows, band region
-    // ≈17 rows; focused-record top corner ≈ row 3 + floor(17 × 0.4) = 9. ±2.
-    expect(topCornerRow).toBeGreaterThanOrEqual(7);
-    expect(topCornerRow).toBeLessThanOrEqual(11);
-  });
-
-  test("display.layout = 'stack' at width 200: label list at LEFT (no right column)", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, TRUECOLOR_FORCE_STACK, {
+    const { captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
       width: 200,
       height: 24,
     });
     const frame = captureCharFrame();
-    const lines = frameLines(frame);
-    // Stack: label list sits at far left of frame, not in a right column.
-    const labelLine = lines.find((l) => l.includes("[1]  food"))!;
-    expect(labelLine).toBeDefined();
-    expect(labelLine.indexOf("[1]  food")).toBeLessThan(20);
+    // Decision chip rail: predicted label gets `▸N`, others render
+    // numbered without the marker.
+    expect(frame).toContain("▸1 food");
+    expect(frame).toContain("2 travel");
+    expect(frame).toContain("3 other");
+    // Headline includes source.
+    expect(frame).toContain("src");
   });
 
-  test("display.layout = 'split' at width 100: label list at RIGHT third", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { captureCharFrame } = await setup(store, TRUECOLOR_FORCE_SPLIT, {
-      width: 100,
-      height: 24,
-    });
-    const frame = captureCharFrame();
-    const lines = frameLines(frame);
-    // Split: label list sits in the right ~third of frame; at 100 cols, expect col >= 50.
-    const labelLine = lines.find((l) => l.includes("[1]  food"))!;
-    expect(labelLine).toBeDefined();
-    expect(labelLine.indexOf("[1]  food")).toBeGreaterThan(50);
-  });
-
-  test("split: empty queue renders 'All records reviewed' with no focus box", async () => {
+  test("empty queue renders 'All records reviewed' with no focus box", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
       width: 200,
@@ -179,7 +115,7 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     expect((frame.match(/╭/g) ?? []).length).toBe(0);
   });
 
-  test("split: picker overlay opens via 'r' and renders prompt visibly", async () => {
+  test("picker overlay opens via 'r' and renders prompt visibly", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { mockInput, renderOnce, captureCharFrame } = await setup(store, TRUECOLOR_AUTO, {
       width: 200,
@@ -191,14 +127,14 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     expect(frame).toContain("Relabel");
   });
 
-  test("snapshot: split layout at 200x24, truecolor light", async () => {
+  test("snapshot: 200x24, truecolor light", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store, TRUECOLOR_AUTO, { width: 200, height: 24 });
     const frame = captureCharFrame();
     expect(frame).toMatchSnapshot();
   });
 
-  test("snapshot: split layout at 200x24, 256-color light", async () => {
+  test("snapshot: 200x24, 256-color light", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store, TWO_FIFTY_SIX_LIGHT, {
       width: 200,
@@ -208,14 +144,14 @@ describe("slice 3.1: responsive split layout at width >= 160", () => {
     expect(frame).toMatchSnapshot();
   });
 
-  test("snapshot: split layout at 200x24, 16-color light (markers)", async () => {
+  test("snapshot: 200x24, 16-color light (markers)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store, SIXTEEN_LIGHT, { width: 200, height: 24 });
     const frame = captureCharFrame();
     expect(frame).toMatchSnapshot();
   });
 
-  test("snapshot: split layout at 200x24, truecolor dark", async () => {
+  test("snapshot: 200x24, truecolor dark", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setup(store, TRUECOLOR_DARK, { width: 200, height: 24 });
     const frame = captureCharFrame();

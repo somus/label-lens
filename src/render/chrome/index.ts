@@ -2,8 +2,15 @@ import type { AppContext } from "../../app/context.ts";
 import type { SidebarData } from "../../app/sidebar-data.ts";
 import type { Scope } from "../../keymap/engine.ts";
 import { Box } from "../box.ts";
-import { pickSidebar, type ResolvedDisplay, sidebarWidth } from "../capability.ts";
+import {
+  pickQueuePreview,
+  pickSidebar,
+  queuePreviewWidth,
+  type ResolvedDisplay,
+  sidebarWidth,
+} from "../capability.ts";
 import { ActionFooter } from "./action-footer.ts";
+import { QueuePreview, type QueuePreviewRow } from "./queue-preview.ts";
 import { Sidebar } from "./sidebar.ts";
 import { type Segment, StatusBar } from "./status-bar.ts";
 
@@ -45,6 +52,9 @@ export type ChromeProps =
       /** Sidebar snapshot. When supplied and `pickSidebar(display, width)` is
        *  true, sidebar replaces the top status bar. */
       sidebar?: SidebarData;
+      /** Queue-preview left rail. Rendered when present and
+       *  `pickQueuePreview(display, width)` is true. */
+      queuePreview?: { rows: QueuePreviewRow[]; focusedIndex: number };
       /** Terminal width in columns; forwarded to StatusBar for narrow-terminal
        *  truncation and used to decide sidebar visibility / width. */
       width?: number;
@@ -60,6 +70,7 @@ export type ChromeProps =
       footerHint: Segment[];
       flashKind?: "success" | "info" | "warning" | "error";
       sidebar?: SidebarData;
+      queuePreview?: { rows: QueuePreviewRow[]; focusedIndex: number };
       width?: number;
       body: ReturnType<typeof Box>;
     };
@@ -78,7 +89,17 @@ export type ChromeProps =
  * by screens that mount before AppContext is wired (reingest prompt, ADR 0008).
  */
 export function Chrome(props: ChromeProps): ReturnType<typeof Box> {
-  const { display, statusLeft, statusRight, footerHint, width, body, sidebar, flashKind } = props;
+  const {
+    display,
+    statusLeft,
+    statusRight,
+    footerHint,
+    width,
+    body,
+    sidebar,
+    queuePreview,
+    flashKind,
+  } = props;
   const footer = props.app
     ? ActionFooter({
         display,
@@ -92,13 +113,27 @@ export function Chrome(props: ChromeProps): ReturnType<typeof Box> {
 
   const sidebarVisible =
     width !== undefined && sidebar !== undefined && pickSidebar(display, width);
+  const previewVisible =
+    sidebarVisible && queuePreview !== undefined && pickQueuePreview(display, width!);
 
   if (sidebarVisible) {
-    const sbWidth = sidebarWidth(width);
+    const sbWidth = sidebarWidth(width!);
+    const previewBlock = previewVisible
+      ? [
+          QueuePreview({
+            display,
+            width: queuePreviewWidth(),
+            rows: queuePreview.rows,
+            focusedIndex: queuePreview.focusedIndex,
+          }),
+          Box({ width: 1, flexShrink: 0 }),
+        ]
+      : [];
     return Box(
       { flexDirection: "column", flexGrow: 1, padding: 1 },
       Box(
         { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
+        ...previewBlock,
         Box({ flexDirection: "column", flexBasis: 0, flexGrow: 1, overflow: "hidden" }, body),
         Box({ width: 1, flexShrink: 0 }),
         Sidebar({

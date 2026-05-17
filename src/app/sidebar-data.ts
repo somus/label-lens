@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "../store/db.ts";
+import type { StoredReview } from "../types.ts";
 
 /**
  * Sidebar data snapshot. Computed once per refresh trigger
@@ -16,6 +17,19 @@ import type { Db } from "../store/db.ts";
 
 export type SidebarSignalRow = { type: string; count: number };
 
+/**
+ * Per-row history snapshot rendered in the sidebar. One row per recent
+ * decision (cap 5). `status` drives the leading glyph + tone in
+ * `sidebar.ts`. `label` is the committed label (`final_label` for
+ * accept/relabel, `prev_label` for reject/undone). `recordText` is the
+ * source record text, truncated by the renderer to fit the rail width.
+ */
+export type SidebarHistoryRow = {
+  status: StoredReview["status"];
+  label: string | null;
+  recordText: string;
+};
+
 export type SidebarQueueData = {
   mode: "queue";
   queueLabel: string;
@@ -25,6 +39,7 @@ export type SidebarQueueData = {
   counters: { reviewed: number; skipped: number; marked: number };
   queueProgress: { reviewed: number; total: number };
   signals: SidebarSignalRow[];
+  history: SidebarHistoryRow[];
   smartNext: boolean;
 };
 

@@ -9,20 +9,20 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
-  ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
-  ◇ food  ████████░ 92%                                                                             
-    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  [1]  food  ✓                                                                                      
-  [2]  travel                                                                                       
-  [3]  other                                                                                        
                                                                                                     
                                                                                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+  ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -32,25 +32,25 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
 "                                                                                                    
   LabelLens  tiny.jsonl  Pending  2 / 10           Reviewed: 0 / 10  ·  Skipped: 0  ·  Pending: 10  
                                                                                                     
+                                                                                                    
+                                                                                                    
   █ Lunch at Zomato Bangalore                                                                       
  ╭────────────────────────────────────────────────────────────────────────────────────────────────╮ 
  │ Uber ride to airport                                                                           │ 
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   ▆ Amazon order #12345                                                                             
   ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
-  █ Rent transfer to landlord                                                                       
                                                                                                     
                                                                                                     
-  ◇ travel  ████████░ 88%                                                                           
-    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  [1]  food                                                                                         
-  [2]  travel  ✓                                                                                    
-  [3]  other                                                                                        
                                                                                                     
                                                                                                     
+                                                                                                    
+                                                                                                    
+  ◇ travel  ████████░ 88%   src llm:gpt-4                                                           
+                                                                                                    
+   1 food    ▸2 travel 88%     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -65,20 +65,20 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
-  ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
-  ◇ food  ########- 92%                                                                             
-    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  [1]  food  ✓                                                                                      
-  [2]  travel                                                                                       
-  [3]  other                                                                                        
                                                                                                     
                                                                                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  ◇ food  ########- 92%   src llm:gpt-4                                                             
+                                                                                                    
+  ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -93,20 +93,20 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
  └────────────────────────────────────────────────────────────────────────────────────────────────┘ 
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
-  ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
-  ◇ food  ########- 92%                                                                             
-    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  [1]  food  ✓                                                                                      
-  [2]  travel                                                                                       
-  [3]  other                                                                                        
                                                                                                     
                                                                                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  ◇ food  ########- 92%   src llm:gpt-4                                                             
+                                                                                                    
+  ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -121,20 +121,20 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
-  ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
-  ◇ food  ████████░ 92%                                                                             
-    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  [1]  food  ✓                                                                                      
-  [2]  travel                                                                                       
-  [3]  other                                                                                        
                                                                                                     
                                                                                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+  ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -149,20 +149,20 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
-  ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
-  ◇ food  ████████░ 92%                                                                             
-    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  [1]  food  ✓                                                                                      
-  [2]  travel                                                                                       
-  [3]  other                                                                                        
                                                                                                     
                                                                                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+  ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "
@@ -177,20 +177,20 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
  ╰────────────────────────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                                            
   ▆ Amazon order #12345                                                                             
-  ▄ Netflix monthly                                                                                 
-  █ Salary credit October                                                                           
                                                                                                     
                                                                                                     
                                                                                                     
-  ◇ food  ████████░ 92%                                                                             
-    llm:gpt-4                                                                                       
                                                                                                     
                                                                                                     
-  [1]  food  ✓                                                                                      
-  [2]  travel                                                                                       
-  [3]  other                                                                                        
                                                                                                     
                                                                                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                             
+                                                                                                    
+  ▸1 food 92%     2 travel     3 other                                                              
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues ┊[:] palette ┊[t] … 
                                                                                                     
 "

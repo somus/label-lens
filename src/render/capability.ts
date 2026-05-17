@@ -29,6 +29,8 @@ export type Layout = "auto" | "stack" | "split";
 
 export type SidebarMode = "auto" | "on" | "off";
 
+export type QueuePreviewMode = "auto" | "on" | "off";
+
 export type ResolvedDisplay = {
   color: CapabilityColor;
   banding: boolean;
@@ -37,6 +39,7 @@ export type ResolvedDisplay = {
   layout: Layout;
   motion: boolean;
   sidebar: SidebarMode;
+  queuePreview: QueuePreviewMode;
   /**
    * Smooth gradient rendering is OK on this terminal. Wordmark renders
    * with the cyan colour ramp when true, single accent colour when false.
@@ -47,7 +50,11 @@ export type ResolvedDisplay = {
 
 const SPLIT_MIN_WIDTH = 160;
 const SIDEBAR_MIN_WIDTH = 120;
-const SIDEBAR_FIXED_WIDTH = 32;
+const SIDEBAR_FLOOR_WIDTH = 32;
+const SIDEBAR_CEILING_WIDTH = 64;
+const SIDEBAR_WIDTH_PERCENT = 0.3;
+const QUEUE_PREVIEW_MIN_WIDTH = 200;
+const QUEUE_PREVIEW_FIXED_WIDTH = 28;
 
 export function pickLayout(layout: Layout, terminalWidth: number): "stack" | "split" {
   if (layout === "stack") return "stack";
@@ -72,20 +79,39 @@ export function pickSidebar(display: ResolvedDisplay, terminalWidth: number): bo
 }
 
 /**
- * Sidebar width in columns when visible. Fixed at 32ch regardless of
- * terminal size — the 24/32 two-step earlier in the slice produced
- * cramped half-scale logo + tight counter rows at narrow terminals
- * without a real payoff at wide terminals. One width keeps the visual
- * rhythm stable across resizes.
+ * Sidebar width in columns when visible. Scales as 30% of terminal width,
+ * clamped to [32, 64]. The floor preserves the inner-width contract that
+ * existing blocks (counter rows, truncate-middle, progress bar, half-scale
+ * wordmark) assume; the ceiling keeps the main column readable on very
+ * wide terminals where prose comfort tops out around 60–90ch.
  *
- * Contract: always returns 32. Sidebar rendering (counter rows,
- * truncate-middle, progress bar, half-scale logo) assumes ≥22ch of
- * inner width. Forcing `sidebar: "on"` on a terminal narrower than 32
- * still allocates 32 cols; the parent layout will clip. Callers must
- * not bypass this helper.
+ * Forcing `sidebar: "on"` on a terminal narrower than 32 still allocates
+ * 32 cols and the parent layout will clip. Callers must not bypass this
+ * helper.
  */
-export function sidebarWidth(_terminalWidth: number): number {
-  return SIDEBAR_FIXED_WIDTH;
+export function sidebarWidth(terminalWidth: number): number {
+  const scaled = Math.floor(terminalWidth * SIDEBAR_WIDTH_PERCENT);
+  return Math.max(SIDEBAR_FLOOR_WIDTH, Math.min(SIDEBAR_CEILING_WIDTH, scaled));
+}
+
+/**
+ * Resolve whether the left-side queue preview rail is visible. Wide
+ * terminals only — below 200 cols the main column would shrink under ~80ch
+ * once the sidebar takes its 30% share, which hurts reading more than the
+ * rail helps navigation. Also requires the sidebar to be visible (the rail
+ * is the "and you also have lots of horizontal room" affordance, not a
+ * replacement for the sidebar).
+ */
+export function pickQueuePreview(display: ResolvedDisplay, terminalWidth: number): boolean {
+  if (display.queuePreview === "off") return false;
+  const sidebarVisible = pickSidebar(display, terminalWidth);
+  if (display.queuePreview === "on") return sidebarVisible;
+  return sidebarVisible && terminalWidth >= QUEUE_PREVIEW_MIN_WIDTH;
+}
+
+/** Fixed 28ch — enough for `r####` id + truncated label + confidence. */
+export function queuePreviewWidth(): number {
+  return QUEUE_PREVIEW_FIXED_WIDTH;
 }
 
 /**
@@ -174,10 +200,21 @@ export function resolveDisplay(args: {
   // matching the `banding` clamp above.
   const motion = motionMode === "off" ? false : supportsMotion;
   const sidebar: SidebarMode = args.config?.sidebar ?? "auto";
+  const queuePreview: QueuePreviewMode = args.config?.queuePreview ?? "auto";
   // Gradient detection only meaningful at truecolor. If the user forces
   // a lower color level via config, gradient is off regardless.
   const richGradient = color === "truecolor" && args.detectedColor.richGradient;
-  return { color, banding, theme, candidatePin, layout, motion, sidebar, richGradient };
+  return {
+    color,
+    banding,
+    theme,
+    candidatePin,
+    layout,
+    motion,
+    sidebar,
+    queuePreview,
+    richGradient,
+  };
 }
 
 export type ThemeProbe = {
@@ -194,6 +231,7 @@ export function defaultDisplay(): ResolvedDisplay {
     layout: "auto",
     motion: false,
     sidebar: "auto",
+    queuePreview: "auto",
     richGradient: false,
   };
 }

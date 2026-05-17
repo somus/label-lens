@@ -182,10 +182,13 @@ describe("slice 3: review screen banding + focus + pin", () => {
     const frame = captureCharFrame();
     const frameLines = frame.split("\n");
     const contextLines = frameLines.filter((l) => /^\s+│\s/.test(l)).length;
-    // On a 60-row terminal the band region accommodates well over a dozen
-    // context records; with a hardcoded window of 6 we'd cap at ~12 (6 above
-    // + 6 below). Dynamic sizing should beat that floor.
-    expect(contextLines).toBeGreaterThan(14);
+    // Classification preview is fixed to `classification.previewLines`
+    // (default 2 above + 2 below). On a tall terminal the focused row
+    // floats centred via `display.candidatePin` rather than dragging
+    // more context rows in to fill the band — the redesign prioritises
+    // a focused-record-first view over visual density. Boundary tasks
+    // use their own `boundary.contextLines` budget.
+    expect(contextLines).toBeLessThanOrEqual(6);
   });
 
   test("empty queue: no focus box, completion message rendered", async () => {

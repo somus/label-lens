@@ -658,43 +658,47 @@ Detection uses a per-source fingerprint stored in `ingest_fingerprints` (sha256 
 
 ### 14.1 Review screen
 
-The layout draws from three sources: k9s (thin top strip with context + key hints, no boxed header), Argilla (predicted label marked inline on the label list with confidence percentage), and Prodigy (recent-decision history strip, clickable to revisit).
+Single-column main column composed of five top-down regions (subject → signals → decision → footer) plus a persistent right sidebar (when visible) holding nav + counters + signals + history. The layout draws from three sources: k9s (whitespace-bounded chrome, no boxed header), Argilla (predicted label marked inline on the decision chip rail with confidence percentage), and Prodigy (recent-decision history strip, this app houses it in the sidebar — horizontal-strip fallback when sidebar is hidden).
 
 ```
- LabelLens · transactions.jsonl                          412 / 8,200  · :  ?
- queue: low-confidence                                                · / e
-
-   UPI/9876543210/Zomato                                        [dim band]
-   NEFT/HDFC/SwiggyBangalore/Order#12345                        [med band]
-
-  ╭──────────────────────────────────────────────────────────╮
-  │ Senior Software Engineer at Acme Corporation,            │ [highlight]
-  │ leading the platform infrastructure team responsible     │
-  │ for migrating the monolithic application                 │
-  ╰──────────────────────────────────────────────────────────╯
-  src llm:gpt-4   ⚠ source-disagreement (0.71)   ⓘ ambiguous (0.41)
-
-   IMPS/Razorpay/Netflix                                        [med band]
-   UPI/8765432109/Swiggy                                        [dim band]
-
- ─ history ─────────────────────────────────────────────────────────────────
-   r0411 → travel   ·   r0410 ✓ food   ·   r0409 → other   ·   r0408 ✗ skip
-                                                          (click or u to undo)
- ───────────────────────────────────────────────────────────────────────────
-   ▸1 food (42%)   2 travel   3 shopping   4 utility   5 salary   6 rent   7 other
-   a accept   r relabel   x reject   s skip   m mark   n note   i ask   :
+─── main column ─────────────────────────────────┬─ sidebar (scaled) ──────┐
+                                                 │  LabelLens              │
+                                                 │  low-confidence         │
+                                                 │  412 / 8,200            │
+   UPI/9876543210/Zomato            [dim]        │  ▓▓▓▓▓▓░░░░ 36%         │
+   NEFT/HDFC/SwiggyBangalore        [med]        │                         │
+                                                 │  Counters ──────────    │
+ ╭─────────────────────────────────────────────╮ │  reviewed         142   │
+ │ Senior Software Engineer at Acme Corp,      │ │  skipped            5   │
+ │ leading platform infrastructure             │ │  marked             8   │
+ ╰─────────────────────────────────────────────╯ │                         │
+                                                 │  Signals ───────────    │
+   IMPS/Razorpay/Netflix            [med]        │  ⚠ low-conf      311    │
+   UPI/8765432109/Swiggy            [dim]        │  ⧉ exact-dup      18    │
+─────────────────────────────────────────────────│                         │
+ ◇ ENTRY_START  ████░░ 67%   src rule.entry_b…   │  History ───────────    │
+ ⚠ source-disagreement 0.71  ⧉ exact-dup 3×      │  ✓ SECTION_H  SKILLS    │
+ also  regex → ENTRY_START · model_v1 → ENT 31%  │  ✗ CONTINUATION Cours…  │
+─────────────────────────────────────────────────│  ✓ SECTION_H  EDUCAT…   │
+ ▸1 ENTRY_START 67%   2 SECTION_HEADER            │  ↻ utility    Card/S…  │
+   3 CONTINUATION    4 NOISE                     │  ✓ food       UPI/Zo…  │
+─────────────────────────────────────────────────│                         │
+ [a]ccept [r]elabel [x] reject [s]kip [n]ote [i] │                         │
+─────────────────────────────────────────────────┴─────────────────────────┘
 ```
 
 **Reading the layout:**
 
-- **Line 1–2 (top strip):** Dataset name and progress on the left of line 1; `:` (command palette) and `?` (contextual help) hinted on the right. Queue name on line 2 left; primary single-letter actions (`/` search, `e` export) on the right. No box-drawing chrome — the top strip is whitespace-bounded, not bordered. (k9s pattern.)
-- **Context-and-candidate region:** Banded record rendering per §14.5. The focused record carries a focus box; surrounding records carry alternating band tints; viewport pins the focus to ~40% from the top.
-- **Metadata strip below the focus box:** Source plus per-record issue badges, one per issue type, each with a score. No "prediction" header, no separate prediction pane — the prediction is on the label list (next).
-- **Alternatives strip (multi-prediction):** When a record carries more than one prediction, an additional one-line strip renders below the metadata strip listing the non-primary predictions: `also: regex.tx → utility (no conf) · model_v1 → food (0.31)`. The strip is keyboard-navigable (`[`/`]` cycles primary view across predictions without committing); selecting an alternative only changes which prediction the headline tracks, not the data.
-- **Boundary-task navigation:** `j`/`k` follows queue order even when the queue is filtered (e.g. `low-confidence`). Context strip shows ±N lines from the same source document. When `±N` isn't enough, `g d` opens a full-document view scrolled to the candidate line — escape hatch for boundary decisions that depend on a section header 30 lines up. Doc-mode is exit-only via `Esc` back to the queue.
-- **History strip:** Last 4–5 decisions, each shown as `<record-id> <action-symbol> <label>`. Click any entry (or press `u`) to revisit. (Prodigy pattern.)
-- **Label list:** Number keys 1–9 prefix each label, with the predicted label marked by a `▸` and its confidence percentage. Pressing `1` here is functionally identical to `a` because the model's prediction is on label 1 — the keystrokes coincide. (Argilla pattern.)
-- **Action bar:** Single-letter shortcuts. `m` is the mark/Needs-Review tag (additive, not a status). `:` opens the command palette. `?` is the contextual help (shown in the top strip).
+- **Subject (main column):** Banded record rendering per §14.5. The focused record carries a focus box; surrounding records carry alternating band tints (boundary task) or dim queue-preview tints (classification task — `classification.previewLines`, default ±2, configurable). Viewport pins the focus per `display.candidatePin`.
+- **Signals (main column, below subject):** Headline row `◇ <label>  <bar> <conf>%   src <source>`; an issues row with one badge per `issue type` (`source-disagreement`, `exact-duplicate`, `low_confidence`, imported types); and a multi-prediction alternatives row when `predictions.length > 1`: `also  <src> → <label> (<conf>) · …`. Hidden when empty. The alternatives strip is keyboard-navigable (`[`/`]` cycles primary view across predictions without committing).
+- **Decision (main column):** Horizontal chip rail. Each chip is `<marker>N label [conf%]`; the predicted label is prefixed with `▸` and carries inline confidence. Number keys 1–9 commit a relabel direct; pressing `1` on the predicted label is functionally identical to `a`. Wraps to multiple rows beyond five labels.
+- **Action footer:** Single-letter shortcuts (`a` accept, `r` relabel, `x` reject, `s` skip, `n` note, `i` ask, `:` palette). `m` is the mark/Needs-Review tag (additive, not a status). `?` opens contextual help.
+- **Boundary-task navigation:** `j`/`k` follows queue order even when the queue is filtered (e.g. `low-confidence`). Context strip shows ±N lines from the same source document, separated from the focused candidate by a dashed rule. When `±N` isn't enough, `g d` opens a full-document view scrolled to the candidate line. Doc-mode is exit-only via `Esc` back to the queue.
+- **Sidebar (right column, ≥120 cols at 256+ color):** Wordmark + queue title + `N / total` + dataset progress + counters + signals + a vertical history block at the bottom (last 4–5 decisions, `<glyph> <label> <record-text-truncated>`). Width scales as `max(32, min(64, floor(terminalWidth * 0.30)))` so wide terminals get a roomier rail without starving the main column.
+- **Narrow terminals (sidebar hidden):** Chrome's top status bar takes over for queue + N/M; the history block falls back to a single-line horizontal strip below the decision pane (`history  ✓ SKILLS · ✗ Coursework · ✓ EDUCATION · …  [u] undo`).
+- **Left rail (≥200 cols):** A 28-col queue-preview rail appears on the left at very wide terminals (when sidebar is also visible). Lists upcoming records in the current queue — `▸ <id> <label> <conf%>` — so the reviewer sees "what's coming" without opening the modal queue overlay. Configurable via `display.queuePreview`.
+
+**Task abstraction.** The decision pane is produced by a `TaskRenderer` resolved from `config.task`. Today `SingleLabelTask` covers both classification and boundary; new task types (multi-label, extraction, span/NER) ship as one file each under `src/screens/review/tasks/` without touching the screen orchestrator.
 
 For the **boundary task**, see §14.5 — the rendering strategy preserves vertical context with the candidate anchored at a stable viewport position.
 

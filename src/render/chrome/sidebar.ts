@@ -1,8 +1,9 @@
-import type { SidebarData, SidebarSignalRow } from "../../app/sidebar-data.ts";
+import type { SidebarData, SidebarHistoryRow, SidebarSignalRow } from "../../app/sidebar-data.ts";
+import type { StoredReview } from "../../types.ts";
 import type { MotionController } from "../anim.ts";
 import { Box } from "../box.ts";
 import type { ResolvedDisplay } from "../capability.ts";
-import { issueGlyph } from "../glyph-map.ts";
+import { issueGlyph, statusGlyph } from "../glyph-map.ts";
 import { progressSegments } from "../progress-segments.ts";
 import { Text, TextAttributes } from "../text.ts";
 import { truncateMiddle } from "../truncate.ts";
@@ -236,6 +237,18 @@ function renderQueueBody(
     }
   }
 
+  // History section. One line per entry: glyph + label + record-text.
+  // Sized to the rail width — label gets ~⅓, record-text the rest. Hidden
+  // when empty so an unreviewed dataset doesn't show an empty header.
+  if (data.history.length > 0) {
+    out.push(blankRow());
+    out.push(sectionHeader(display, "History", innerWidth));
+    out.push(blankRow());
+    for (const entry of data.history) {
+      out.push(historyRow(display, entry, innerWidth));
+    }
+  }
+
   return out;
 }
 
@@ -422,6 +435,54 @@ function signalRow(
           { text: labelText, tone: "default" },
           { text: " ".repeat(gap), tone: "default" },
           { text: countText, tone: "muted" },
+        ],
+        display,
+      ),
+      wrapMode: "char",
+    }),
+  );
+}
+
+const HISTORY_STATUS_TONE: Record<StoredReview["status"], Segment["tone"]> = {
+  accepted: "success",
+  relabeled: "info",
+  rejected: "danger",
+  skipped: "muted",
+  undone: "warning",
+  pending: "dim",
+};
+
+/**
+ * One history row: `<glyph> <label> <record-text>`. Label gets ⅓ of the
+ * inner width (capped at 12ch so very wide rails don't waste space on
+ * labels), record text takes the rest. Both truncate end-with-ellipsis.
+ * No-label rows (undone, skipped) render `—`.
+ */
+function historyRow(
+  display: ResolvedDisplay,
+  entry: SidebarHistoryRow,
+  innerWidth: number,
+): ReturnType<typeof Box> {
+  const glyph = statusGlyph(entry.status, display);
+  const glyphCells = visualWidth(glyph);
+  const glyphColumn = Math.max(2, glyphCells + 1);
+  const labelBudget = Math.min(12, Math.max(6, Math.floor((innerWidth - glyphColumn) / 3)));
+  const labelText = truncateEndSafe(entry.label ?? "—", labelBudget);
+  const labelCells = visualWidth(labelText);
+  const labelPad = Math.max(0, labelBudget - labelCells);
+  const used = glyphColumn + labelBudget + 1; // 1ch gap to record-text
+  const textBudget = Math.max(4, innerWidth - used);
+  const textTone: Segment["tone"] = "muted";
+  return fixedRow(
+    innerWidth,
+    Text({
+      content: segmentsToStyledText(
+        [
+          { text: glyph, tone: HISTORY_STATUS_TONE[entry.status] ?? "default" },
+          { text: " ".repeat(glyphColumn - glyphCells), tone: "default" },
+          { text: labelText, tone: "default" },
+          { text: " ".repeat(labelPad + 1), tone: "default" },
+          { text: truncateEndSafe(entry.recordText, textBudget), tone: textTone },
         ],
         display,
       ),

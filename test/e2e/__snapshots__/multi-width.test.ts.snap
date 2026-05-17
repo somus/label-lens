@@ -9,26 +9,26 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
  ╰────────────────────────────────────────────────────────────────────────────╯ 
   █ Uber ride to airport                                                        
   ▆ Amazon order #12345                                                         
-  ▄ Netflix monthly                                                             
-  █ Salary credit October                                                       
-  █ Rent transfer to landlord                                                   
-  ▇ Coffee at Blue Tokai                                                        
-  ▂ ATM withdrawal                                                              
-  Refund from Swiggy                                                            
                                                                                 
                                                                                 
                                                                                 
                                                                                 
                                                                                 
-  ◇ food  ████████░ 92%                                                         
-    llm:gpt-4                                                                   
                                                                                 
                                                                                 
-  [1]  food  ✓                                                                  
-  [2]  travel                                                                   
-  [3]  other                                                                    
                                                                                 
                                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+  ◇ food  ████████░ 92%   src llm:gpt-4                                         
+                                                                                
+  ▸1 food 92%     2 travel     3 other                                          
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues 
                                                                                 
 "
@@ -104,33 +104,33 @@ exports[`multi-width snapshot sweep (plan A16) splash screen @ 80x30 1`] = `
 
 exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
 "                                                                                                                        
- ╭───────────────────────────────────────────────────────────────────────────────────╮                                  
- │ Lunch at Zomato Bangalore                                                         │                                  
- ╰───────────────────────────────────────────────────────────────────────────────────╯                                  
+ ╭───────────────────────────────────────────────────────────────────────────────╮                                      
+ │ Lunch at Zomato Bangalore                                                     │                                      
+ ╰───────────────────────────────────────────────────────────────────────────────╯                                      
   █ Uber ride to airport                                                                                                
   ▆ Amazon order #12345                                                                                                 
-  ▄ Netflix monthly                                                                                                     
-  █ Salary credit October                                                                                               
-  █ Rent transfer to landlord                                                                                           
-  ▇ Coffee at Blue Tokai                                                                                                
-  ▂ ATM withdrawal                                                                                                      
-  Refund from Swiggy                                                                                                    
                                                                                                                         
                                                                                                                         
-                                                                                        pending                         
-                                                                                        1 / 10                          
-                                                                                        test/fixtures/tiny.jsonl        
                                                                                                                         
-                                                                                        Counters ─────────────────────  
-  ◇ food  ████████░ 92%                                                                                                 
-    llm:gpt-4                                                                           reviewed                     0  
-                                                                                        skipped                      0  
-                                                                                        marked                       0  
-  [1]  food  ✓                                                                                                          
-  [2]  travel                                                                           overall 0/10 [░░░░░░░░░░]   0%  
-  [3]  other                                                                            Signals ──────────────────────  
                                                                                                                         
-                                                                                        ●  label_issue               1  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                    pending                             
+                                                                                    1 / 10                              
+                                                                                    test/fixtures/tiny.jsonl            
+                                                                                                                        
+                                                                                    Counters ─────────────────────────  
+                                                                                                                        
+                                                                                    reviewed                         0  
+                                                                                    skipped                          0  
+                                                                                    marked                           0  
+                                                                                                                        
+                                                                                    overall 0/10 [░░░░░░░░░░]   0%      
+  ◇ food  ████████░ 92%   src llm:gpt-4                                             Signals ──────────────────────────  
+                                                                                                                        
+  ▸1 food 92%     2 travel     3 other                                              ●  label_issue                   1  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note       [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                         
 "
@@ -139,32 +139,32 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
 exports[`multi-width snapshot sweep (plan A16) stats screen @ 120x30 1`] = `
 "                                                                                                                        
                                                                                                                         
-  Imported issues ───────────────────────────────────────────────────────────────────                                   
+  Imported issues ───────────────────────────────────────────────────────────────                                       
                                                                                                                         
- > label_issue                      1 record                                       →                                    
+ > label_issue                      1 record                                   →                                        
                                                                                                                         
-  Suggested next queue ──────────────────────────────────────────────────────────────                                   
+  Suggested next queue ──────────────────────────────────────────────────────────                                       
                                                                                                                         
-   low-confidence   (score 5.00)                                                   →                                    
-                                                                                                                        
-                                                                                                                        
+   low-confidence   (score 5.00)                                               →                                        
                                                                                                                         
                                                                                                                         
                                                                                                                         
                                                                                                                         
                                                                                                                         
                                                                                                                         
-                                                                                        test/fixtures/tiny.jsonl        
                                                                                                                         
-                                                                                        Totals ───────────────────────  
                                                                                                                         
-                                                                                        total                       10  
-                                                                                        reviewed                     0  
-                                                                                        pending                     10  
-                                                                                        accepted                     0  
-                                                                                        relabeled                    0  
-                                                                                        rejected                     0  
-                                                                                        skipped                      0  
+                                                                                    test/fixtures/tiny.jsonl            
+                                                                                                                        
+                                                                                    Totals ───────────────────────────  
+                                                                                                                        
+                                                                                    total                           10  
+                                                                                    reviewed                         0  
+                                                                                    pending                         10  
+                                                                                    accepted                         0  
+                                                                                    relabeled                        0  
+                                                                                    rejected                         0  
+                                                                                    skipped                          0  
    [j/k] navigate  [enter] drill  [esc] back                                                                            
                                                                                                                         
 "
@@ -206,33 +206,33 @@ exports[`multi-width snapshot sweep (plan A16) splash screen @ 120x30 1`] = `
 
 exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
 "                                                                                                                                                                
- ╭─────────────────────────────────────────────────────────────────────────────────╮                                                                            
- │ Lunch at Zomato Bangalore                                                       │  ◇ food  ████████░ 92%                                                     
- ╰─────────────────────────────────────────────────────────────────────────────────╯    llm:gpt-4                                                               
+ ╭───────────────────────────────────────────────────────────────────────────────────────────────────────────╮                                                  
+ │ Lunch at Zomato Bangalore                                                                                 │                                                  
+ ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────╯                                                  
   █ Uber ride to airport                                                                                                                                        
   ▆ Amazon order #12345                                                                                                                                         
-  ▄ Netflix monthly                                                                   [1]  food  ✓                                                              
-  █ Salary credit October                                                             [2]  travel                                                               
-  █ Rent transfer to landlord                                                         [3]  other                                                                
-  ▇ Coffee at Blue Tokai                                                                                                                                        
-  ▂ ATM withdrawal                                                                                                                                              
-  Refund from Swiggy                                                                                                                                            
                                                                                                                                                                 
                                                                                                                                                                 
-                                                                                                                                pending                         
-                                                                                                                                1 / 10                          
-                                                                                                                                test/fixtures/tiny.jsonl        
                                                                                                                                                                 
-                                                                                                                                Counters ─────────────────────  
                                                                                                                                                                 
-                                                                                                                                reviewed                     0  
-                                                                                                                                skipped                      0  
-                                                                                                                                marked                       0  
                                                                                                                                                                 
-                                                                                                                                overall 0/10 [░░░░░░░░░░]   0%  
-                                                                                                                                Signals ──────────────────────  
                                                                                                                                                                 
-                                                                                                                                ●  label_issue               1  
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                pending                                         
+                                                                                                                1 / 10                                          
+                                                                                                                test/fixtures/tiny.jsonl                        
+                                                                                                                                                                
+                                                                                                                Counters ─────────────────────────────────────  
+                                                                                                                                                                
+                                                                                                                reviewed                                     0  
+                                                                                                                skipped                                      0  
+                                                                                                                marked                                       0  
+                                                                                                                                                                
+                                                                                                                overall 0/10 [░░░░░░░░░░]   0%                  
+  ◇ food  ████████░ 92%   src llm:gpt-4                                                                         Signals ──────────────────────────────────────  
+                                                                                                                                                                
+  ▸1 food 92%     2 travel     3 other                                                                          ●  label_issue                               1  
   [a] accept ┊[r] relabel ┊[x] reject ┊[s] skip ┊[n] note                                               [gd] doc ┊[Q] queues ┊[:] palette ┊[t] stats ┊[?] help  
                                                                                                                                                                 
 "
@@ -241,32 +241,32 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
 exports[`multi-width snapshot sweep (plan A16) stats screen @ 160x30 1`] = `
 "                                                                                                                                                                
                                                                                                                                                                 
-  Imported issues ───────────────────────────────────────────────────────────────────────────────────────────────────────────                                   
+  Imported issues ───────────────────────────────────────────────────────────────────────────────────────────                                                   
                                                                                                                                                                 
- > label_issue                      1 record                                                                               →                                    
+ > label_issue                      1 record                                                               →                                                    
                                                                                                                                                                 
-  Suggested next queue ──────────────────────────────────────────────────────────────────────────────────────────────────────                                   
+  Suggested next queue ──────────────────────────────────────────────────────────────────────────────────────                                                   
                                                                                                                                                                 
-   low-confidence   (score 5.00)                                                                                           →                                    
-                                                                                                                                                                
-                                                                                                                                                                
+   low-confidence   (score 5.00)                                                                           →                                                    
                                                                                                                                                                 
                                                                                                                                                                 
                                                                                                                                                                 
                                                                                                                                                                 
                                                                                                                                                                 
                                                                                                                                                                 
-                                                                                                                                test/fixtures/tiny.jsonl        
                                                                                                                                                                 
-                                                                                                                                Totals ───────────────────────  
                                                                                                                                                                 
-                                                                                                                                total                       10  
-                                                                                                                                reviewed                     0  
-                                                                                                                                pending                     10  
-                                                                                                                                accepted                     0  
-                                                                                                                                relabeled                    0  
-                                                                                                                                rejected                     0  
-                                                                                                                                skipped                      0  
+                                                                                                                test/fixtures/tiny.jsonl                        
+                                                                                                                                                                
+                                                                                                                Totals ───────────────────────────────────────  
+                                                                                                                                                                
+                                                                                                                total                                       10  
+                                                                                                                reviewed                                     0  
+                                                                                                                pending                                     10  
+                                                                                                                accepted                                     0  
+                                                                                                                relabeled                                    0  
+                                                                                                                rejected                                     0  
+                                                                                                                skipped                                      0  
    [j/k] navigate  [enter] drill  [esc] back                                                                                                                    
                                                                                                                                                                 
 "
