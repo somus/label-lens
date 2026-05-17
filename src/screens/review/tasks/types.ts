@@ -29,6 +29,11 @@ export type DecisionRenderArgs = {
  *   - `contextIntensity` — `strong` renders neighbours with the boundary
  *     band gradient (§14.5); `weak` renders them dimmer so the reviewer
  *     reads them as queue siblings rather than semantic context.
+ *
+ * `contextRowsBefore`, `contextRowsAfter`, and `contextIntensity` are
+ * resolved once at mount and treated as immutable for the session.
+ * Renderers must not vary them per-record; the screen orchestrator reads
+ * them once and threads them into Subject for the lifetime of the screen.
  */
 export type TaskRenderer = {
   id: TaskKind;

@@ -36,8 +36,12 @@ export function createSingleLabelTask(args: {
  */
 function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box> {
   const { record, labels, display, contentWidth } = args;
-  const predicted = record?.primaryPrediction?.label ?? null;
-  const confidence = record?.primaryPrediction?.confidence ?? null;
+  // No focused record → empty-state queue (Subject already renders the
+  // "All records reviewed" pane). Suppress the chip rail so the empty
+  // state isn't crowded by controls that can't act on anything.
+  if (!record) return Box({});
+  const predicted = record.primaryPrediction?.label ?? null;
+  const confidence = record.primaryPrediction?.confidence ?? null;
   // Mono / 16-color: filled diamond falls back to `*` to match the
   // picker overlay's mono fallback. Same glyph appears in both
   // surfaces.

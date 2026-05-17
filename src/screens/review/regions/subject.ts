@@ -77,7 +77,11 @@ export function Subject(args: SubjectArgs): ReturnType<typeof Box> {
   const focusedAbsolute = window.startIndex + window.focusedIndex;
   // Weak-intensity preview uses BandedRecord's `context` variant — same
   // dim attrs the boundary context strip already uses — so classification
-  // siblings read as queue preview rather than semantic context.
+  // siblings read as queue preview rather than semantic context. Contract:
+  // the `context` variant must stay dim/half-intensity. If BandedRecord
+  // changes its `context` styling, classification preview siblings will
+  // start reading as semantic context (or vice versa for boundary), and
+  // this resolver needs to flip to a dedicated variant.
   const previewVariant = contextIntensity === "weak" ? "context" : "queue";
 
   // Padding when the cursor is near the start of the queue (and we have

@@ -92,15 +92,15 @@ exports[`review screen e2e pressing 'a' across all records empties pending and s
                                                                                                     
                                                                                                     
                                                                                                     
+                                                                                                    
      *  All records reviewed                                                                        
                                                                                                     
       [/] switch queue · [q] quit                                                                   
                                                                                                     
                                                                                                     
                                                                                                     
-  labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
-    [1]  food      [2]  travel      [3]  other                                                      
+                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     
