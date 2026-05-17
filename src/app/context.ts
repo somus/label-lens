@@ -196,11 +196,22 @@ export function createAppContext(args: {
       const queueTotal = cursor?.total ?? 0;
       const queuePosition = cursor && cursor.total > 0 ? cursor.position + 1 : 0;
       const ids = cursor ? cursor.recordIds() : null;
-      const history = recentReviewsWithText(args.db, 5).map((h) => ({
-        status: h.status,
-        label: h.final_label ?? h.prev_label,
-        recordText: h.recordText,
-      }));
+      // History strip surfaces committed decisions only. Raw `reviews`
+      // can contain `pending` / `undone` rows whose labels are null; drop
+      // them so the strip never shows a blank-label entry.
+      const history = recentReviewsWithText(args.db, 5)
+        .filter(
+          (h) =>
+            h.status === "accepted" ||
+            h.status === "relabeled" ||
+            h.status === "rejected" ||
+            h.status === "skipped",
+        )
+        .map((h) => ({
+          status: h.status,
+          label: h.final_label ?? h.prev_label,
+          recordText: h.recordText,
+        }));
       return {
         mode: "queue",
         queueLabel,

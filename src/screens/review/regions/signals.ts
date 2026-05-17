@@ -35,6 +35,14 @@ export type SignalsArgs = {
   contentWidth: number;
 };
 
+/**
+ * Signals region: prediction headline (primary label + confidence bar +
+ * alternatives), issue badges, and note line. Renders below Subject in the
+ * main column when a record is focused; returns an empty Box when there
+ * is no focused record (end-of-queue state is handled upstream by
+ * Subject). Hidden sections (no primary, no issues, no note) collapse to
+ * zero rows so the region hugs its content.
+ */
 export function Signals(args: SignalsArgs): ReturnType<typeof Box> {
   const { record, predictions, issues, display, totalRecords, marked, contentWidth } = args;
   if (!record) return Box({});
