@@ -226,9 +226,6 @@ export function mountReviewScreen(args: {
       decision,
       Box({ flexGrow: 1, flexShrink: 1 }),
       historyStrip,
-      app.overlay
-        ? renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight)
-        : Box({}),
     );
 
     const flashActive = !app.overlay && flash !== null;
@@ -255,6 +252,14 @@ export function mountReviewScreen(args: {
         body,
       }),
     );
+    // Overlay mounts at the root level (added after Chrome so it paints
+    // on top) and centers against the full terminal — no clipping by
+    // sidebar / queue-preview rails since it's not inside the main column.
+    if (app.overlay) {
+      renderer.root.add(
+        renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight),
+      );
+    }
   };
 
   app.requestRender = renderState;
