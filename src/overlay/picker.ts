@@ -4,13 +4,14 @@ import type {
   Overlay,
   OverlayEvent,
   PickerCandidate,
+  PickerLabel,
   PickerState,
   ReduceResult,
 } from "./types.ts";
 
 export type OpenPickerArgs = {
   recordId: string;
-  allLabels: string[];
+  allLabels: PickerLabel[];
   predicted: string | null;
   predictedConfidence: number | null;
 };
@@ -30,17 +31,23 @@ export function openPicker(args: OpenPickerArgs): PickerState {
 }
 
 function candidatesFrom(
-  allLabels: string[],
+  allLabels: PickerLabel[],
   filter: string,
   predicted: string | null,
   predictedConfidence: number | null,
 ): PickerCandidate[] {
-  const labels = filter.length === 0 ? allLabels.slice() : filterLabels(allLabels, filter);
-  return labels.map((label) => ({
-    label,
-    predicted: label === predicted,
-    confidence: label === predicted ? predictedConfidence : null,
-  }));
+  const names = allLabels.map((l) => l.name);
+  const visible = filter.length === 0 ? names.slice() : filterLabels(names, filter);
+  const byName = new Map(allLabels.map((l) => [l.name, l]));
+  return visible.map((name) => {
+    const entry = byName.get(name);
+    return {
+      label: name,
+      predicted: name === predicted,
+      confidence: name === predicted ? predictedConfidence : null,
+      ...(entry?.key ? { key: entry.key } : {}),
+    };
+  });
 }
 
 function withFilter(state: PickerState, filter: string): PickerState {
@@ -120,6 +127,13 @@ function reduceKey(state: PickerState, name: string): ReduceResult {
     const n = Number(ch);
     if (n < 1 || n > state.candidates.length) return { overlay: packed(state), effects: [] };
     return { overlay: packed({ ...state, highlight: n - 1 }), effects: [] };
+  }
+  // Configured per-label key (`config.labels[].key`) commits the matching
+  // candidate. Checked before the filter-typing branch so a key like `f`
+  // accelerates instead of typing into the filter.
+  if (ch.length === 1) {
+    const idx = state.candidates.findIndex((c) => c.key === ch);
+    if (idx >= 0) return commit({ ...state, highlight: idx });
   }
   if (ch.length === 1 && /^[\w \-_]$/.test(ch)) {
     return { overlay: packed(withFilter(state, state.filter + ch)), effects: [] };

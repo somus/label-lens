@@ -24,6 +24,7 @@ function displayFor(color: ResolvedDisplay["color"]): ResolvedDisplay {
     sidebar: "auto",
     queuePreview: "auto",
     richGradient: false,
+    labelChip: "configured",
   };
 }
 

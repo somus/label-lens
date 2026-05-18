@@ -16,11 +16,20 @@ export type PickerCandidate = {
   /** Confidence rendered inline next to the predicted row. Non-predicted
    *  rows ignore it (only the model's primary prediction carries it). */
   confidence: number | null;
+  /** Configured single-char accelerator from `config.labels[].key`. When set,
+   * pressing this key in the picker commits the candidate. Rendered in the
+   * chip slot in place of the positional digit. */
+  key?: string;
+};
+
+export type PickerLabel = {
+  name: string;
+  key?: string;
 };
 
 export type PickerState = {
   recordId: string;
-  allLabels: string[];
+  allLabels: PickerLabel[];
   predicted: string | null;
   /** Confidence of the predicted label — surfaced in the picker so the
    *  reviewer sees signal strength while choosing a relabel. */

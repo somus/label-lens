@@ -2,9 +2,12 @@ import { existsSync, renameSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { sql } from "drizzle-orm";
+import { buildRegistry, type Command } from "../actions/command.ts";
 import { switchQueue } from "../actions/queue/switch.ts";
+import { relabelByKeyCommand } from "../actions/record/decisions.ts";
+import { ALL_COMMANDS, reservedReviewKeys } from "../actions/registry.ts";
 import { createAppContext } from "../app/context.ts";
-import type { LabellensConfig } from "../config/config.ts";
+import { type LabellensConfig, validateLabelKeys } from "../config/config.ts";
 import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
 import { ingestFile } from "../ingest/ingest.ts";
 import { applyDiff, type DiffResult, diffIngest } from "../ingest/reingest.ts";
@@ -46,6 +49,13 @@ export async function runReview(): Promise<void> {
   }
 
   const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
+
+  const keyError = validateLabelKeys(config, reservedReviewKeys(ALL_COMMANDS));
+  if (keyError) {
+    console.error(keyError);
+    process.exit(2);
+  }
+
   const inputPath = resolve(config.input.path);
   const stateDir = join(dirname(configPath), ".labellens");
   const stateDbPath = join(stateDir, "state.db");
@@ -163,8 +173,13 @@ export async function runReview(): Promise<void> {
   });
   let reviewHandle: ReviewScreenHandle | null = null;
 
+  const perLabelKeyCommands = config.labels
+    .map(relabelByKeyCommand)
+    .filter((cmd): cmd is Command => cmd !== null);
+  const registry = buildRegistry([...ALL_COMMANDS, ...perLabelKeyCommands]);
+
   const mountReview = (queueId: string) => {
-    reviewHandle = mountReviewScreen({ renderer: r, app, initialQueueId: queueId });
+    reviewHandle = mountReviewScreen({ renderer: r, app, registry, initialQueueId: queueId });
   };
 
   // Queue picker is now an overlay on top of Review (no separate screen).

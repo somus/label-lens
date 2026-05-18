@@ -1,7 +1,8 @@
-import { labelName } from "../../../config/config.ts";
+import { labelKey, labelName } from "../../../config/config.ts";
 import { Box } from "../../../render/box.ts";
 import type { Segment } from "../../../render/chrome/status-bar.ts";
 import { segmentsToStyledText } from "../../../render/chrome/status-bar.ts";
+import { labelChipText } from "../../../render/label-chip.ts";
 import { foldNamespace } from "../../../render/label-fold.ts";
 import { SectionHeader } from "../../../render/section-header.ts";
 import { Text, TextAttributes } from "../../../render/text.ts";
@@ -74,7 +75,7 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
     });
     current.push({ text: " ", tone: "default" });
     current.push({
-      text: `[${i + 1}]`,
+      text: labelChipText({ index: i, key: labelKey(entry), mode: display.labelChip }),
       tone: isPredicted ? "accent" : "accentDeep",
     });
     current.push({ text: "  ", tone: "default" });

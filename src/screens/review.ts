@@ -24,6 +24,7 @@ import type { QueuePreviewRow } from "../render/chrome/queue-preview.ts";
 import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { splitContextLines } from "../render/context-strip.ts";
 import { renderFilterBuilder } from "../render/filter-view.ts";
+import { labelChipText } from "../render/label-chip.ts";
 import { foldNamespace } from "../render/label-fold.ts";
 import { Markdown } from "../render/markdown.ts";
 import { ModalHeader } from "../render/modal-frame.ts";
@@ -810,7 +811,7 @@ function pickerRow(
   display: ResolvedDisplay,
 ): ReturnType<typeof Text> {
   const rich = display.color === "truecolor" || display.color === "256";
-  const chip = `[${i + 1}]`;
+  const chip = labelChipText({ index: i, key: c.key ?? null, mode: display.labelChip });
   // `◆` marks the model's prediction; mono falls back to `*`. The
   // keyboard-highlighted row uses accent tone + bold rather than a
   // separate cursor glyph — same numbered chip pattern as the chip rail.

@@ -104,6 +104,7 @@ describe("resolveDisplay", () => {
       sidebar: "auto",
       queuePreview: "auto",
       richGradient: false,
+      labelChip: "configured",
     });
   });
 

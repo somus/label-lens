@@ -82,5 +82,27 @@ export function defaultRegistry(): CommandRegistry {
   return buildRegistry(ALL_COMMANDS);
 }
 
+/**
+ * Single-char keys + chord starters reserved by review-scope (and global)
+ * commands. Used to validate `config.labels[].key` so configured per-label
+ * accelerators can't shadow a real binding.
+ */
+export function reservedReviewKeys(commands: Command[]): Set<string> {
+  const out = new Set<string>();
+  for (const cmd of commands) {
+    if (cmd.scope !== "review" && cmd.scope !== "global") continue;
+    const bindings = Array.isArray(cmd.binding) ? cmd.binding : cmd.binding ? [cmd.binding] : [];
+    for (const b of bindings) {
+      if (b.length === 1) {
+        out.add(b);
+      } else if (b.includes(" ")) {
+        const starter = b.split(" ")[0];
+        if (starter && starter.length === 1) out.add(starter);
+      }
+    }
+  }
+  return out;
+}
+
 export type { Command, CommandRegistry } from "./command.ts";
 export { bindingsFor };
