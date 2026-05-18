@@ -33,7 +33,7 @@ jobs:
             runner: ubuntu-latest
             foreign_opentui: ""
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -83,14 +83,14 @@ jobs:
           files: dist/label-lens-${{ matrix.target }}.tar.gz
 
       - name: Stage for npm job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ matrix.target }}
           path: dist/label-lens-${{ matrix.target }}/
           retention-days: 1
 
       - name: Stage checksum for aggregate job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sha256-${{ matrix.target }}
           path: dist/label-lens-${{ matrix.target }}.tar.gz.sha256
@@ -104,7 +104,7 @@ jobs:
       contents: write
     steps:
       - name: Pull per-target checksums
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: sha
           pattern: sha256-*
@@ -157,13 +157,13 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           # 24+ required for npm OIDC trusted publishing handshake (npm/cli#9088).
           # Node 22's bundled npm rejects with misleading 404 'not in registry'.
@@ -173,7 +173,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - name: Pull build artifacts from matrix
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: dist
           pattern: build-*
