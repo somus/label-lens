@@ -30,20 +30,20 @@
     "prepare": "lefthook install"
   },
   "engines": {
-    "bun": ">=1.3.11"
+    "bun": ">=1.3.14"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.14",
+    "@biomejs/biome": "^2.4.15",
     "@libsql/client": "^0.17.3",
-    "@types/bun": "latest",
+    "@types/bun": "^1.3.14",
     "drizzle-kit": "^0.31.10",
     "lefthook": "^2.1.6",
-    "typescript": "^5"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "^0.75.1",
-    "@opentui/core": "^0.2.1",
-    "@sinclair/typebox": "^0.34.0",
+    "@earendil-works/pi-ai": "^0.75.3",
+    "@opentui/core": "^0.2.14",
+    "@sinclair/typebox": "^0.34.49",
     "drizzle-orm": "^0.45.2"
   }
 }
