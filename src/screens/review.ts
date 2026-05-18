@@ -41,7 +41,7 @@ import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { progressSegments } from "../render/progress-segments.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Scrollbar } from "../render/scrollbar.ts";
-import { clampContentWidth } from "../render/section-header.ts";
+import { clampContentWidth, SectionHeader } from "../render/section-header.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole, resolveTheme } from "../render/theme.ts";
 import { issuesForRecord } from "../store/issues.ts";
@@ -485,21 +485,25 @@ function renderOverlay(
 }
 
 /**
- * Inline assistant strip (PRD §14.4 superseded by ADR 0009). Slots into the
- * main column right after the chip rail. Collapsed: one-line summary.
- * Expanded (`Tab`): markdown reasoning stacked above the summary line.
+ * Inline assistant section (PRD §14.4 superseded by ADR 0009). Matches the
+ * chrome of `prediction` / `labels` — SectionHeader + indented body rows —
+ * so the strip reads as another section rather than a floating modal.
+ * Collapsed: one summary line. Expanded (`Tab`): markdown reasoning above
+ * the summary row.
  */
 function renderAssistantStrip(
   state: AssistantState,
   display: ResolvedDisplay,
   contentWidth: number,
 ): ReturnType<typeof Box> {
-  const t = resolveTheme(display);
-  const border = borderForRole(display, "overlay");
   const expanded = state.reasoningExpanded && state.reason !== null;
-  const summary = buildAssistantSummary(state);
+  const segs = buildAssistantSegments(state);
+  const trailing = buildAssistantStatusTrailing(state);
 
-  const children: ReturnType<typeof Box>[] = [];
+  const children: ReturnType<typeof Text | typeof Box>[] = [];
+  children.push(SectionHeader({ display, label: "assistant", width: contentWidth, trailing }));
+  children.push(Text({ content: " " }));
+
   if (expanded && state.reason) {
     children.push(
       Box(
@@ -508,39 +512,70 @@ function renderAssistantStrip(
       ),
     );
   }
+
   children.push(
-    Box(
-      { flexDirection: "row", flexShrink: 0 },
-      Text({ content: summary, attributes: TextAttributes.BOLD }),
-    ),
+    Text({
+      content: segmentsToStyledText(segs, display),
+      attributes: TextAttributes.BOLD,
+      wrapMode: "word",
+    }),
   );
 
-  return Box(
-    {
-      flexDirection: "column",
-      borderStyle: border,
-      borderColor: t.fg.accent,
-      paddingLeft: 1,
-      paddingRight: 1,
-      marginTop: 1,
-      flexShrink: 0,
-      width: contentWidth,
-      overflow: "hidden",
-    },
-    ...children,
-  );
+  return Box({ flexDirection: "column", marginTop: 1, flexShrink: 0 }, ...children);
 }
 
-function buildAssistantSummary(state: AssistantState): string {
-  if (state.status === "loading") return " LLM: loading…  [esc] cancel";
-  if (state.status === "streaming") return ` LLM: ${truncate(state.buffer, 40)}…`;
-  if (state.status === "error")
-    return ` LLM error: ${state.errorMessage ?? "unknown"}  [esc] dismiss`;
+function buildAssistantSegments(state: AssistantState): Segment[] {
+  if (state.status === "loading") {
+    return [
+      { text: " LLM ", tone: "accent" },
+      { text: "thinking…", tone: "muted" },
+      { text: "   ", tone: "default" },
+      { text: "[esc]", tone: "accent" },
+      { text: " cancel", tone: "muted" },
+    ];
+  }
+  if (state.status === "streaming") {
+    return [
+      { text: " LLM ", tone: "accent" },
+      { text: truncate(state.buffer, 60), tone: "muted" },
+    ];
+  }
+  if (state.status === "error") {
+    return [
+      { text: " ✗ ", tone: "danger" },
+      { text: state.errorMessage ?? "unknown error", tone: "muted" },
+      { text: "   ", tone: "default" },
+      { text: "[esc]", tone: "accent" },
+      { text: " dismiss", tone: "muted" },
+    ];
+  }
   // done
   const action = state.recommendedAction ?? "?";
   const label = state.suggestion ?? "?";
   const conf = state.confidence ?? "?";
-  return ` LLM: ${action} → ${label} (${conf})  [tab] reasoning · [enter] commit · [esc] dismiss`;
+  return [
+    { text: " ◆", tone: "accent" },
+    { text: " ", tone: "default" },
+    { text: action, tone: "default" },
+    { text: " → ", tone: "muted" },
+    { text: label, tone: "accent" },
+    { text: "  ", tone: "default" },
+    { text: conf, tone: "muted" },
+    { text: "   ", tone: "default" },
+    { text: "[tab]", tone: "accent" },
+    { text: " reasoning · ", tone: "muted" },
+    { text: "[enter]", tone: "accent" },
+    { text: " commit · ", tone: "muted" },
+    { text: "[esc]", tone: "accent" },
+    { text: " dismiss", tone: "muted" },
+  ];
+}
+
+function buildAssistantStatusTrailing(state: AssistantState): Segment[] | undefined {
+  if (state.status === "loading") return [{ text: "loading…", tone: "muted" }];
+  if (state.status === "streaming") return [{ text: "streaming", tone: "muted" }];
+  if (state.status === "error") return [{ text: "error", tone: "danger" }];
+  return [{ text: "ready", tone: "muted" }];
 }
 
 function truncate(s: string, max: number): string {
