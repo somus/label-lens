@@ -203,6 +203,22 @@ describe("privacy step", () => {
   });
 });
 
+describe("config drift", () => {
+  test("opens fresh on provider step even when caller previously configured an unknown provider", () => {
+    // Reviewer hand-edits config.assistant.provider to a slug not in
+    // CONFIGURE_PROVIDERS (e.g. a future custom integration). The configure
+    // overlay re-opens via the same `openConfigureAssistant()` factory and
+    // always starts at the provider step so they can pick from the supported
+    // list without seeing a half-broken auth screen.
+    const s = openConfigureAssistant();
+    expect(s.step).toBe("provider");
+    expect(s.selectedProvider).toBeUndefined();
+    // Reviewer picks a supported provider; subsequent digit press still works.
+    const r = press(s, "1");
+    expect(state(r).selectedProvider).toBe(CONFIGURE_PROVIDERS[0]!.slug);
+  });
+});
+
 describe("stream events ignored", () => {
   test("streamToken on any step keeps state", () => {
     const s = openConfigureAssistant();

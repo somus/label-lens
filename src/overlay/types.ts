@@ -48,6 +48,10 @@ export type NoteState = {
 
 export type AssistantState = {
   recordId: string;
+  /** Predicted label at the time the overlay was opened. Used as `prev_label`
+   * on the audit row when the reviewer commits a relabel or reject (mirrors
+   * the picker / decision-command pattern). Null when no prediction exists. */
+  predictedLabel: string | null;
   status: "loading" | "streaming" | "done" | "error";
   /** Reasoning text accumulated from streamToken events (PRD §14.4 footer). */
   buffer: string;
@@ -131,7 +135,12 @@ export type Effect =
     }
   | { kind: "runCommand"; commandName: string; argument?: string }
   | { kind: "pushPaletteHistory"; entry: string }
-  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number };
+  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number }
+  /** Flash an error and close the overlay — emitted when the assistant
+   * returns a `recommendedAction` outside the known set. Belt-and-suspenders
+   * (StringEnum constrains the field upstream); guarantees the reviewer
+   * isn't left staring at a `done` overlay where Enter does nothing. */
+  | { kind: "assistantInvalidAction"; recordId: string; action: string };
 
 export type ReduceResult = {
   overlay: Overlay | null;

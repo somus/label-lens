@@ -190,10 +190,12 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
     const tried = [assistant.apiKeyEnvVar, envVarFor(assistant.provider)]
       .filter((v): v is string => Boolean(v))
       .filter((v, i, a) => a.indexOf(v) === i);
-    throw new AssistantQueryError(
-      "no-provider",
-      `No API key found. Export one of: ${tried.join(" or ")}`,
-    );
+    // `envVarFor` always returns a non-empty fallback (`<PROVIDER>_API_KEY`),
+    // so `tried` is virtually guaranteed to be non-empty — but if a custom
+    // provider ever resolves to an empty string the reviewer would otherwise
+    // see "Export one of: ".
+    const hint = tried.length > 0 ? tried.join(" or ") : "set an env var (unknown provider)";
+    throw new AssistantQueryError("no-provider", `No API key found. Export ${hint}.`);
   }
   const s = stream(model, ctx, apiKey ? { signal, apiKey } : { signal });
 

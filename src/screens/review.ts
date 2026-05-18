@@ -1,4 +1,4 @@
-import type { CliRenderer } from "@opentui/core";
+import type { CliRenderer, PasteEvent } from "@opentui/core";
 import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, enterReview } from "../app/context.ts";
@@ -19,7 +19,7 @@ import type {
   PickerCandidate,
   PickerState,
 } from "../overlay/types.ts";
-import { pulse } from "../render/anim.ts";
+import { fadeIn, pulse } from "../render/anim.ts";
 import { Box } from "../render/box.ts";
 import {
   pickQueuePreview,
@@ -90,6 +90,9 @@ export function mountReviewScreen(args: {
   // Track chord pending key across renders so we only start the fade-out
   // motion on transition (calling play() per frame would reset progress).
   let lastChordKey: string | null = null;
+  // Track assistant strip visibility across renders so the fade-in plays once
+  // when it first appears (not on every keystroke while the overlay is open).
+  let lastAssistantVisible = false;
 
   const renderState = () => {
     if (!mounted) return;
@@ -255,10 +258,22 @@ export function mountReviewScreen(args: {
     // Inline assistant strip slots right below the chip rail (decision)
     // when the overlay is active — keeps suggestion + label set in the same
     // eye-line per the inline-footer design (ADR 0009).
-    const assistantStrip =
-      app.overlay?.kind === "assistant"
-        ? renderAssistantStrip(app.overlay.state, app.display, contentWidth)
-        : Box({});
+    const assistantVisible = app.overlay?.kind === "assistant";
+    if (assistantVisible !== lastAssistantVisible) {
+      // Fade-in plays once on appearance; the motion controller is a no-op at
+      // mono / 16-color (display.motion=false) so this respects the config
+      // override automatically.
+      if (assistantVisible) app.motion.play("assistant.strip.appear", fadeIn(220));
+      lastAssistantVisible = assistantVisible;
+    }
+    const assistantStrip = assistantVisible
+      ? renderAssistantStrip(
+          (app.overlay as { kind: "assistant"; state: AssistantState }).state,
+          app.display,
+          contentWidth,
+          app.motion.snapshot("assistant.strip.appear"),
+        )
+      : Box({});
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
       queueHeader,
@@ -333,9 +348,10 @@ export function mountReviewScreen(args: {
    * Bracketed paste from terminals arrives as one `paste` event with the
    * full clipboard payload. Without this handler the bytes vanish (or worse,
    * the leading ESC of the bracket marker triggers the overlay's escape
-   * branch and closes the configure / note prompt mid-paste).
+   * branch and closes the configure / note prompt mid-paste). Type matches
+   * OpenTUI's `PasteEvent` (KeyHandlerEventMap['paste']).
    */
-  const onPaste = (event: { bytes: Uint8Array }) => {
+  const onPaste = (event: PasteEvent) => {
     if (!app.overlay) return;
     const text = new TextDecoder().decode(event.bytes);
     const result = reduceOverlay(app.overlay, { kind: "paste", text });
@@ -495,10 +511,15 @@ function renderAssistantStrip(
   state: AssistantState,
   display: ResolvedDisplay,
   contentWidth: number,
+  fadeSnapshot?: import("../render/anim.ts").MotionSnapshot,
 ): ReturnType<typeof Box> {
   const expanded = state.reasoningExpanded && state.reason !== null;
   const segs = buildAssistantSegments(state);
   const trailing = buildAssistantStatusTrailing(state);
+  // During fade-in (motion progress < 1) drop BOLD on the summary line so the
+  // strip visibly settles in rather than snapping to full weight. At mono /
+  // 16-color the motion controller stays inactive so this is a no-op.
+  const fadingIn = (fadeSnapshot?.active ?? false) && (fadeSnapshot?.progress ?? 1) < 1;
 
   const children: ReturnType<typeof Text | typeof Box>[] = [];
   children.push(SectionHeader({ display, label: "assistant", width: contentWidth, trailing }));
@@ -521,7 +542,7 @@ function renderAssistantStrip(
       { flexDirection: "column", flexShrink: 0, width: contentWidth },
       Text({
         content: segmentsToStyledText(segs, display),
-        attributes: TextAttributes.BOLD,
+        attributes: fadingIn ? TextAttributes.DIM : TextAttributes.BOLD,
         wrapMode: "word",
       }),
     ),
@@ -559,7 +580,8 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
   const action = state.recommendedAction ?? "?";
   const label = state.suggestion ?? "?";
   const conf = state.confidence ?? "?";
-  return [
+  const hasReason = state.reason !== null && state.reason.trim().length > 0;
+  const segs: Segment[] = [
     { text: " ◆", tone: "accent" },
     { text: " ", tone: "default" },
     { text: action, tone: "default" },
@@ -568,13 +590,19 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
     { text: "  ", tone: "default" },
     { text: conf, tone: "muted" },
     { text: "   ", tone: "default" },
-    { text: "[tab]", tone: "accent" },
-    { text: " reasoning · ", tone: "muted" },
+  ];
+  // Suppress the Tab hint when the assistant returned empty reasoning —
+  // pressing Tab would otherwise toggle a blank panel.
+  if (hasReason) {
+    segs.push({ text: "[tab]", tone: "accent" }, { text: " reasoning · ", tone: "muted" });
+  }
+  segs.push(
     { text: "[enter]", tone: "accent" },
     { text: " commit · ", tone: "muted" },
     { text: "[esc]", tone: "accent" },
     { text: " dismiss", tone: "muted" },
-  ];
+  );
+  return segs;
 }
 
 function buildAssistantStatusTrailing(state: AssistantState): Segment[] | undefined {
@@ -626,10 +654,20 @@ function renderConfigureAssistant(
         Text({ content: ` > ${mask}_`, attributes: TextAttributes.BOLD }),
         Text({ content: "" }),
       ];
-      if (!local) {
+      if (local) {
+        // Reassure the reviewer up-front: Ollama runs locally and the next
+        // step skips the remote-call privacy notice entirely.
         body.push(
           Text({
-            content: ` Used this session. Export ${envVar} in your shell for next launch.`,
+            content: " This model runs locally; no data leaves your machine.",
+            attributes: TextAttributes.DIM,
+          }),
+          Text({ content: "" }),
+        );
+      } else {
+        body.push(
+          Text({
+            content: ` Key is session-only. Export ${envVar} in your shell for next launch.`,
             attributes: TextAttributes.DIM,
           }),
           Text({ content: "" }),

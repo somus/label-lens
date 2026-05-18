@@ -81,12 +81,12 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
       ];
     case "assistant":
       return [
-        { text: "[enter] ", tone: "accent" },
-        { text: "commit  ", tone: "muted" },
-        { text: "[tab] ", tone: "accent" },
-        { text: "reasoning  ", tone: "muted" },
         { text: "[esc] ", tone: "accent" },
-        { text: "dismiss", tone: "muted" },
+        { text: "dismiss  ", tone: "muted" },
+        { text: "[tab] ", tone: "accent" },
+        { text: "expand  ", tone: "muted" },
+        { text: "[enter] ", tone: "accent" },
+        { text: "commit", tone: "muted" },
       ];
     case "configure-assistant":
       return [

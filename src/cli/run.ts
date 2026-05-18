@@ -1,4 +1,4 @@
-import { existsSync, renameSync } from "node:fs";
+import { accessSync, existsSync, constants as fsConstants, renameSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { sql } from "drizzle-orm";
@@ -163,6 +163,19 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
 
   const r = await ensureRenderer();
   const display = await ensureDisplay();
+  // The `updateAssistantConfig` effect persists assistant settings back to the
+  // config file when the reviewer finishes the configure-assistant flow. If
+  // the file isn't writable (read-only volume, locked, wrong perms) the write
+  // would fail at the worst moment — mid-flow, after the reviewer typed their
+  // API key. Warn early so they can fix perms before that point. We don't
+  // crash: the in-memory session still works without persistence.
+  try {
+    accessSync(configPath, fsConstants.W_OK);
+  } catch {
+    console.error(
+      `labellens: warning — ${configPath} is not writable; assistant settings won't persist across launches.`,
+    );
+  }
   const app = createAppContext({
     db,
     config,

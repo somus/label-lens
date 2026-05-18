@@ -51,14 +51,28 @@ export const openAssistantCommand: Command = {
     }
 
     const assistant = ctx.config.assistant;
-    const state = openAssistant(record.id);
+    // Capture record + queue identity at fire time so closures below don't
+    // race against rapid j/k navigation (A → B → A would otherwise let stale
+    // tokens leak into a re-opened overlay for the same record).
+    const fireRecordId = record.id;
+    const queueId = ctx.queueId;
+    const predictedLabel = record.primaryPrediction?.label ?? null;
+
+    // Cancel any prior in-flight assistant request before we fire a new one.
+    // Otherwise rapid `i` presses across records (each with its own pi-ai
+    // stream) leave abandoned network calls burning quota.
+    ctx.cancelAssistantStream();
+    const controller = new AbortController();
+    ctx.assistantAbort = { recordId: fireRecordId, controller };
+
+    const state = openAssistant(fireRecordId, predictedLabel);
     ctx.openOverlay({ kind: "assistant", state });
 
     let model: import("@earendil-works/pi-ai").Model<string>;
     try {
       model = resolveAssistantModel(assistant);
     } catch (err) {
-      dispatchOverlayEvent(ctx, ctx.queueId, {
+      dispatchOverlayEvent(ctx, queueId, {
         kind: "streamError",
         error: err instanceof Error ? err : new Error(String(err)),
       });
@@ -69,7 +83,7 @@ export const openAssistantCommand: Command = {
 
     const promptInput = buildPromptInput({
       record: {
-        id: record.id,
+        id: fireRecordId,
         text: record.text,
         context_before: record.context_before,
         context_after: record.context_after,
@@ -82,7 +96,7 @@ export const openAssistantCommand: Command = {
         return def;
       }),
       guidelines: ctx.config.guidelines ?? "",
-      predictions: predictionsForRecord(ctx.db, record.id).map((p) => ({
+      predictions: predictionsForRecord(ctx.db, fireRecordId).map((p) => ({
         label: p.label,
         source: p.source,
         confidence: p.confidence ?? undefined,
@@ -93,22 +107,28 @@ export const openAssistantCommand: Command = {
       promptTemplateVersion: PROMPT_TEMPLATE_VERSION,
     });
 
-    const queueId = ctx.queueId;
+    const isStillFocused = (): boolean => {
+      const cur = ctx.overlay;
+      return cur?.kind === "assistant" && cur.state.recordId === fireRecordId;
+    };
+    const clearOwnAbort = () => {
+      if (ctx.assistantAbort?.controller === controller) ctx.assistantAbort = null;
+    };
 
     void queryFn({
       db: ctx.db,
-      recordId: record.id,
+      recordId: fireRecordId,
       assistant,
       localOnly: ctx.localOnly,
       model,
       promptInput,
       labelNames,
+      signal: controller.signal,
       onToken: (token) => {
         // Only forward tokens while this exact record's panel is still open;
-        // a quick `j` navigates away and we don't want stale tokens leaking
-        // into the next record's overlay.
-        const cur = ctx.overlay;
-        if (cur?.kind === "assistant" && cur.state.recordId === record.id) {
+        // navigating away cancels the stream above, but a token already in
+        // flight could still arrive before the abort propagates.
+        if (isStillFocused()) {
           dispatchOverlayEvent(ctx, queueId, { kind: "streamToken", token });
         }
       },
@@ -119,22 +139,23 @@ export const openAssistantCommand: Command = {
       },
     })
       .then(({ response }) => {
-        const cur = ctx.overlay;
-        if (cur?.kind === "assistant" && cur.state.recordId === record.id) {
+        clearOwnAbort();
+        if (isStillFocused()) {
           dispatchOverlayEvent(ctx, queueId, { kind: "streamEnd", response });
         }
       })
       .catch((err: unknown) => {
-        const cur = ctx.overlay;
-        if (cur?.kind === "assistant" && cur.state.recordId === record.id) {
-          const message =
-            err instanceof AssistantQueryError
-              ? `${err.code}: ${err.message}`
-              : err instanceof Error
-                ? err.message
-                : String(err);
-          dispatchOverlayEvent(ctx, queueId, { kind: "streamError", error: new Error(message) });
-        }
+        clearOwnAbort();
+        // Aborts are caused by us (nav / re-fire); don't surface them as errors.
+        if (controller.signal.aborted) return;
+        if (!isStillFocused()) return;
+        const message =
+          err instanceof AssistantQueryError
+            ? `${err.code}: ${err.message}`
+            : err instanceof Error
+              ? err.message
+              : String(err);
+        dispatchOverlayEvent(ctx, queueId, { kind: "streamError", error: new Error(message) });
       });
   },
 };

@@ -164,4 +164,76 @@ describe("key handling", () => {
     expect(r.overlay).toBeNull();
     expect(r.effects.some((e) => e.kind === "markAssistantViewed")).toBe(true);
   });
+
+  test("malformed recommendedAction emits invalidAction + close, doesn't get stuck", () => {
+    let s = openAssistant(RECORD_ID, "food");
+    s = state(
+      reduceAssistant(s, {
+        kind: "streamEnd",
+        response: {
+          ...validResponse,
+          // biome-ignore lint/suspicious/noExplicitAny: simulating a malformed response that bypasses StringEnum.
+          recommendedAction: "nonsense" as any,
+        },
+      }),
+    );
+    const r = press(s, "return");
+    expect(r.overlay).toBeNull();
+    const kinds = r.effects.map((e) => e.kind);
+    expect(kinds).toContain("assistantInvalidAction");
+    expect(kinds).toContain("close");
+    // No commitDecision — we don't want a half-formed audit row.
+    expect(kinds).not.toContain("commitDecision");
+    const invalid = r.effects.find((e) => e.kind === "assistantInvalidAction");
+    if (invalid?.kind === "assistantInvalidAction") {
+      expect(invalid.action).toBe("nonsense");
+    }
+  });
+
+  test("relabel decision threads predictedLabel into prev_label", () => {
+    let s = openAssistant(RECORD_ID, "travel");
+    s = state(
+      reduceAssistant(s, {
+        kind: "streamEnd",
+        response: { ...validResponse, recommendedAction: "relabel", suggestedLabel: "food" },
+      }),
+    );
+    const r = press(s, "return");
+    const decision = r.effects.find((e) => e.kind === "commitDecision");
+    if (decision?.kind === "commitDecision") {
+      expect(decision.status).toBe("relabeled");
+      expect(decision.prevLabel).toBe("travel");
+      expect(decision.finalLabel).toBe("food");
+    } else {
+      throw new Error("expected commitDecision");
+    }
+  });
+
+  test("accept decision keeps prev_label null even with predictedLabel set", () => {
+    let s = openAssistant(RECORD_ID, "food");
+    s = state(reduceAssistant(s, { kind: "streamEnd", response: validResponse }));
+    const r = press(s, "return");
+    const decision = r.effects.find((e) => e.kind === "commitDecision");
+    if (decision?.kind === "commitDecision") {
+      expect(decision.status).toBe("accepted");
+      expect(decision.prevLabel).toBeNull();
+    } else {
+      throw new Error("expected commitDecision");
+    }
+  });
+
+  test("empty reasoning still settles to done; reducer keeps Tab toggle for symmetry", () => {
+    let s = openAssistant(RECORD_ID);
+    s = state(
+      reduceAssistant(s, {
+        kind: "streamEnd",
+        response: { ...validResponse, reasoning: "" },
+      }),
+    );
+    expect(s.status).toBe("done");
+    expect(s.reason).toBe("");
+    // Tab toggle stays cheap — render layer decides whether to surface the hint.
+    s = state(press(s, "tab"));
+    expect(s.reasoningExpanded).toBe(true);
+  });
 });

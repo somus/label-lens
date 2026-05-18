@@ -17,6 +17,10 @@ export function resolveAssistantModel(assistant: AssistantConfig): Model<string>
     throw new Error("assistant.model not configured");
   }
   if (assistant.provider === "ollama") {
+    // Fixed MVP assumptions: 128K context + 8K max tokens cover llama3.1 / 3.2
+    // and most modern Ollama models out of the box. Configurable per-deployment
+    // (or live-probed via `/api/show`) is a follow-up — track in a new issue
+    // when a reviewer hits a model with a smaller window.
     const model: Model<"openai-completions"> = {
       id: assistant.model,
       name: `${assistant.model} (Ollama)`,

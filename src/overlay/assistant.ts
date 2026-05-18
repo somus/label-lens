@@ -5,9 +5,13 @@ import type { AssistantState, Effect, Overlay, OverlayEvent, ReduceResult } from
  * `loading` until the first streamToken flips it to `streaming`, then to
  * `done` on streamEnd (PRD §14.4 inline footer).
  */
-export function openAssistant(recordId: string): AssistantState {
+export function openAssistant(
+  recordId: string,
+  predictedLabel: string | null = null,
+): AssistantState {
   return {
     recordId,
+    predictedLabel,
     status: "loading",
     buffer: "",
     suggestion: null,
@@ -46,8 +50,26 @@ function commit(state: AssistantState): ReduceResult {
   }
   const status = actionToStatus(state.recommendedAction);
   if (!status || !state.suggestion) {
-    return { overlay: packed(state), effects: [] };
+    // recommendedAction outside the known set is theoretical (StringEnum
+    // constrains it) but the reviewer is otherwise stuck on a "done" overlay
+    // where Enter is a silent no-op. Flash + dismiss so they get feedback and
+    // can retry.
+    return {
+      overlay: null,
+      effects: [
+        { kind: "markAssistantViewed", recordId: state.recordId },
+        {
+          kind: "assistantInvalidAction",
+          recordId: state.recordId,
+          action: state.recommendedAction ?? "(none)",
+        },
+        { kind: "close" },
+      ],
+    };
   }
+  // prev_label follows the same convention as picker / decision commands:
+  // record the predicted label on relabel + reject, null on accept + skip.
+  const prevLabel = status === "relabeled" || status === "rejected" ? state.predictedLabel : null;
   const effects: Effect[] = [
     { kind: "markAssistantViewed", recordId: state.recordId },
     {
@@ -55,11 +77,7 @@ function commit(state: AssistantState): ReduceResult {
       recordId: state.recordId,
       status,
       finalLabel: status === "rejected" || status === "skipped" ? null : state.suggestion,
-      // Decision commands set prev_label per their own conventions; the
-      // overlay can't know the prior label without re-reading the record, so
-      // leave it null and let the audit log carry the suggestion via the
-      // assistant_queries row instead.
-      prevLabel: null,
+      prevLabel,
       sourceOfTruth: "human+assistant",
     },
     { kind: "close" },

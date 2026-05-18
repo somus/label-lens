@@ -147,6 +147,33 @@ describe("assistant flow e2e", () => {
     expect(cur?.source_of_truth).toBe("human+assistant");
   });
 
+  test("empty reasoning suppresses [tab] hint in collapsed strip", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ctx = await mount(store, {
+      enabled: true,
+      provider: "ollama",
+      model: "llama3",
+      privacyAcknowledged: true,
+    });
+    __setAssistantQueryFn(async () => ({
+      response: { ...validResponse, reasoning: "" },
+      wasCached: false,
+    }));
+
+    ctx.mockInput.pressKey("i");
+    await ctx.renderOnce();
+    await new Promise((r) => setTimeout(r, 5));
+    await ctx.renderOnce();
+
+    const frame = ctx.captureCharFrame();
+    // Suggestion summary still rendered.
+    expect(frame).toContain("accept");
+    expect(frame).toContain("food");
+    // Tab hint hidden because there's no reasoning to expand. (Enter / Esc
+    // hints remain so the reviewer can still commit / dismiss.)
+    expect(frame).not.toContain("[tab] reasoning");
+  });
+
   test("Esc dismisses but next `record.accept` still tagged human+assistant (ADR 0004)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ctx = await mount(store, {

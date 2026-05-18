@@ -1,4 +1,5 @@
 import { filterLabels } from "../picker/filter.ts";
+import { keepPrintableInputChars } from "./input-filter.ts";
 import type {
   Effect,
   Overlay,
@@ -98,9 +99,15 @@ export function reducePicker(state: PickerState, event: OverlayEvent): ReduceRes
     case "paste":
       // Append printable chars from the paste into the filter. Newlines /
       // control chars dropped so a stray multiline clipboard doesn't break
-      // the filter row.
+      // the filter row. Shares the auth-step's filter so label names with
+      // colons / slashes (e.g. "policy:spam") survive pasting.
       return {
-        overlay: packed(withFilter(state, state.filter + event.text.replace(/[^\w \-_]/g, ""))),
+        overlay: packed(
+          withFilter(
+            state,
+            state.filter + keepPrintableInputChars(event.text.replace(/[\r\n]+/g, " ")),
+          ),
+        ),
         effects: [],
       };
   }
