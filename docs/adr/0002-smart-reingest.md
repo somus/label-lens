@@ -1,5 +1,8 @@
 # Re-ingest distinguishes text changes from prediction-only changes
 
+- **Status:** Accepted
+- **Date:** 2026-05-09
+
 When the source file changes, LabelLens diffs the new ingest against the existing `state.db` keyed on the content-hash IDs from ADR 0001 and offers three paths:
 
 1. **All IDs match, only `predictions[]` changed** → refresh predictions in place; reviews and annotations are kept untouched.
@@ -12,4 +15,4 @@ The PRD as originally drafted (§13) treated every source change as a fresh re-i
 
 - Re-ingest UI must show counts per bucket ("482 records: predictions changed only · 18 records: text changed → orphan · 6 new records") before committing.
 - Pure-orphan operations (bucket 2 with no bucket 1 changes) still offer the legacy "fresh + backup" path as an escape hatch.
-- The smart-merge path described in PRD §18 V1 ("preserve reviews across edits") remains V1 work — that path tries to *rebind* orphans, while this ADR only *avoids creating them when text didn't change*.
+- The smart-merge path ("preserve reviews across edits", listed under V1 — other features in [ROADMAP.md](../../ROADMAP.md)) remains V1 work — that path tries to *rebind* orphans, while this ADR only *avoids creating them when text didn't change*.

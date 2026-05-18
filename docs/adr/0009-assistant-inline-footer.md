@@ -1,5 +1,8 @@
 # Assistant renders as an inline footer overlay, not a right-side panel
 
+- **Status:** Accepted
+- **Date:** 2026-05-18
+
 PRD v2.9 §14.4 specified that the LLM assistant slides in from the right of the review screen, streams reasoning into a `MarkdownRenderable` mounted inside a `ScrollbackSurface`, and exposes `_stableBlockCount` per OpenTUI's streaming-markdown pattern. Slice 11 reverses that decision. The assistant renders as a short overlay strip pinned to the bottom of the review screen; one line in collapsed form (`LLM: <action> → <label> (<conf>)`) and an inline markdown expansion above the summary when the reviewer presses `Tab`.
 
 The original design carried real cost. A 20-30% right panel collapses the candidate column on the 80-120 column terminals our wedge users have. `ScrollbackSurface` needs renderer-level mode changes (`screenMode: 'split-footer'`, `externalOutputMode: 'capture-stdout'`) and depends on the OpenTUI tree-sitter parser worker shipping alongside the binary at runtime. The footer surface uses the existing non-streaming `MarkdownRenderable` (already wired for guidelines) and reuses the same `modalBox` chrome as every other overlay — no special renderer plumbing.

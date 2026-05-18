@@ -1,5 +1,8 @@
 # Drizzle ORM + bun:sqlite, with migrations bundled into the compiled binary
 
+- **Status:** Accepted
+- **Date:** 2026-05-09
+
 The storage layer uses `drizzle-orm/bun-sqlite` for schema definitions, query building, and a generated migration system (drizzle-kit). The schema in `src/store/schema.ts` is the source of truth; `drizzle-kit generate` emits SQL files under `migration/`. At runtime, `openDb()` runs the migration journal automatically — reading from disk in dev, from the `LABELLENS_MIGRATIONS` global injected via Bun's `--define` in the compiled binary.
 
 The window-function view `records_with_primary` (PRD §11.4 primary-prediction selection) lives in a hand-authored `--custom` migration because drizzle-kit doesn't emit window functions; the schema declares it via `sqliteView(...).existing()` so query builder calls remain type-safe. Pragmas applied at every db open match OpenCode's full set: `WAL`, `synchronous=NORMAL`, `busy_timeout=5000`, `cache_size=-64000`, `foreign_keys=ON`, `wal_checkpoint(PASSIVE)`.
