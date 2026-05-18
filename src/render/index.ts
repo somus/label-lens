@@ -7,6 +7,7 @@
 // behaviour. See LANGUAGE-of-architecture: "one adapter = hypothetical seam".
 
 export * from "./box.ts";
+export * from "./events.ts";
 export * from "./input.ts";
 export * from "./markdown.ts";
 export * from "./scrollbox.ts";
