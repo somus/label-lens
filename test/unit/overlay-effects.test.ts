@@ -63,7 +63,7 @@ describe("applyEffects", () => {
   test("close clears AppContext.overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = ctx(store.db);
-    app.overlay = { kind: "note", state: { recordId: "x", value: "y" } };
+    app.overlay = { kind: "note", state: { recordId: "x", value: "y", presets: [] } };
     applyEffects(app, "pending", [{ kind: "close" }]);
     expect(app.overlay).toBeNull();
   });

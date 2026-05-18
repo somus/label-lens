@@ -4,10 +4,21 @@ import type { NoteState, Overlay, OverlayEvent, ReduceResult } from "./types.ts"
 export type OpenNoteArgs = {
   recordId: string;
   initial: string;
+  presets?: readonly string[];
 };
 
 export function openNote(args: OpenNoteArgs): NoteState {
-  return { recordId: args.recordId, value: args.initial };
+  return {
+    recordId: args.recordId,
+    value: args.initial,
+    // Trim blanks first so a stray whitespace entry doesn't steal a slot, then
+    // cap at 9 — only digits 1-9 are bound. Over-eager configs lose tail entries
+    // silently rather than erroring.
+    presets: (args.presets ?? [])
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0)
+      .slice(0, 9),
+  };
 }
 
 function packed(state: NoteState): Overlay {
@@ -69,6 +80,20 @@ function reduceKey(state: NoteState, event: KeyEvent): ReduceResult {
   }
   if (name === "backspace") {
     return { overlay: packed({ ...state, value: state.value.slice(0, -1) }), effects: [] };
+  }
+  // Alt+digit attaches the matching preset. We branch on `meta` because OpenTUI
+  // emits Alt as meta; plain digits stay free for the reviewer to type counts.
+  // Always swallow the chord (even when the preset slot is empty) so the
+  // digit doesn't leak into the value.
+  if (event.meta && name.length === 1 && name >= "1" && name <= "9") {
+    const idx = Number(name) - 1;
+    const preset = state.presets[idx];
+    if (!preset) return { overlay: packed(state), effects: [] };
+    const sep = state.value.length === 0 || state.value.endsWith("\n") ? "" : " ";
+    return {
+      overlay: packed({ ...state, value: `${state.value}${sep}${preset}` }),
+      effects: [],
+    };
   }
   // OpenTUI emits "space" for the spacebar; treat as a printable char.
   const ch = name === "space" ? " " : name;

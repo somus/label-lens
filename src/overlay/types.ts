@@ -44,6 +44,12 @@ export type PickerState = {
 export type NoteState = {
   recordId: string;
   value: string;
+  /**
+   * Quick-attach phrases from `config.notes.presets`. Digit keys 1..9 append the
+   * corresponding preset (plus a separator) into `value`. Empty array disables
+   * the affordance entirely.
+   */
+  presets: string[];
 };
 
 export type AssistantState = {

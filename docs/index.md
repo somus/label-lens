@@ -12,6 +12,7 @@ Documentation is organised by [Diátaxis](https://diataxis.fr): pick a quadrant 
 
 | How-to | When |
 |---|---|
+| [Edit `labellens.config.json`](./how-to/edit-config.md) | Set up editor autocomplete + inline docs via the `$schema` field. |
 | [Configure the assistant](./how-to/configure-assistant.md) | Turn on LLM suggestions; pick a provider; switch to local Ollama. |
 | [Work with queues](./how-to/work-with-queues.md) | Triage by source, confidence, disagreement, custom `where:` filters. |
 | [Bulk-relabel a class](./how-to/bulk-relabel.md) | Many records of one label need flipping to another. |

@@ -105,6 +105,7 @@ export const openAssistantCommand: Command = {
       provider: assistant.provider ?? "",
       model: assistant.model ?? "",
       promptTemplateVersion: PROMPT_TEMPLATE_VERSION,
+      systemPromptAppend: assistant.systemPromptAppend,
     });
 
     const isStillFocused = (): boolean => {

@@ -17,6 +17,12 @@ export type CanonicalPromptInput = {
   provider: string;
   model: string;
   prompt_template_version: string;
+  /**
+   * Project-supplied addendum appended to the system prompt. Hashed alongside
+   * the template version so editing `assistant.systemPromptAppend` invalidates
+   * the cache automatically (PRD §10.5).
+   */
+  system_prompt_append?: string;
 };
 
 /**
@@ -41,7 +47,7 @@ export function canonicalizePrompt(input: CanonicalPromptInput): string {
       if (p.reason !== undefined) out.reason = p.reason;
       return out;
     });
-  const ordered = {
+  const ordered: Record<string, unknown> = {
     task: input.task,
     labels,
     guidelines: input.guidelines,
@@ -53,6 +59,9 @@ export function canonicalizePrompt(input: CanonicalPromptInput): string {
     model: input.model,
     prompt_template_version: input.prompt_template_version,
   };
+  if (input.system_prompt_append !== undefined && input.system_prompt_append.length > 0) {
+    ordered.system_prompt_append = input.system_prompt_append;
+  }
   return JSON.stringify(ordered);
 }
 
@@ -76,6 +85,7 @@ export function buildPromptInput(args: {
   provider: string;
   model: string;
   promptTemplateVersion: string;
+  systemPromptAppend?: string;
 }): CanonicalPromptInput {
   return {
     task: args.task,
@@ -98,5 +108,8 @@ export function buildPromptInput(args: {
     provider: args.provider,
     model: args.model,
     prompt_template_version: args.promptTemplateVersion,
+    ...(args.systemPromptAppend !== undefined && args.systemPromptAppend.length > 0
+      ? { system_prompt_append: args.systemPromptAppend }
+      : {}),
   };
 }

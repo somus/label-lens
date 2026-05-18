@@ -18,6 +18,7 @@ export type ExportFormat = "jsonl" | "csv" | "review-log" | "stats";
 export type RunExportOptions = {
   format: ExportFormat;
   includeRejected?: boolean;
+  includeSkipped?: boolean;
   includeOrphans?: boolean;
   queueId?: QueueId | null;
   outputPath?: string;
@@ -41,22 +42,30 @@ export function performExport(
   // `orphan = 0` filter into it would zero out every row, so scoping to that
   // queue implies the equivalent of `--include-orphans`.
   const includeOrphans = opts.includeOrphans || queueId === "orphans";
+  const includeRejected = opts.includeRejected ?? config.output.includeRejected ?? false;
+  const includeSkipped = opts.includeSkipped ?? config.output.includeSkipped ?? false;
+  const fieldOverrides = config.output.fieldOverrides;
   let body: string;
   let path: string;
   switch (opts.format) {
     case "jsonl":
       body = exportJsonlString(db, {
         query: queryForScope,
-        includeRejected: opts.includeRejected,
+        includeRejected,
+        includeSkipped,
         includeOrphans,
+        fieldOverrides,
       });
       path = paths.jsonl;
       break;
     case "csv":
       body = exportCsvString(db, {
         query: queryForScope,
-        includeRejected: opts.includeRejected,
+        includeRejected,
+        includeSkipped,
         includeOrphans,
+        multiLabelSeparator: config.output.csvMultiLabelSeparator,
+        fieldOverrides,
       });
       path = paths.csv;
       break;
@@ -96,7 +105,8 @@ function scopeQuery(queueId: QueueId | null | undefined): QueueQuery | undefined
  */
 export function parseExportArgument(argument: string | string[] | undefined): {
   format?: ExportFormat;
-  includeRejected: boolean;
+  includeRejected?: boolean;
+  includeSkipped?: boolean;
   includeOrphans: boolean;
   outputPath?: string;
   error?: string;
@@ -105,27 +115,29 @@ export function parseExportArgument(argument: string | string[] | undefined): {
     ? argument.filter(Boolean)
     : (argument ?? "").trim().split(/\s+/).filter(Boolean);
   let format: ExportFormat | undefined;
-  let includeRejected = false;
+  let includeRejected: boolean | undefined;
+  let includeSkipped: boolean | undefined;
   let includeOrphans = false;
   let outputPath: string | undefined;
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i]!;
     if (t === "--include-rejected") includeRejected = true;
+    else if (t === "--include-skipped") includeSkipped = true;
     else if (t === "--include-orphans") includeOrphans = true;
     else if (t === "-o" || t === "--output") {
       const next = tokens[++i];
       if (next === undefined) {
-        return { includeRejected, includeOrphans, error: `${t} requires a path argument` };
+        return { includeOrphans, error: `${t} requires a path argument` };
       }
       outputPath = next;
     } else if (!t.startsWith("--") && format === undefined) {
-      if (!isFormat(t)) return { includeRejected, includeOrphans, error: `unknown format: ${t}` };
+      if (!isFormat(t)) return { includeOrphans, error: `unknown format: ${t}` };
       format = t;
     } else {
-      return { includeRejected, includeOrphans, error: `unknown argument: ${t}` };
+      return { includeOrphans, error: `unknown argument: ${t}` };
     }
   }
-  return { format, includeRejected, includeOrphans, outputPath };
+  return { format, includeRejected, includeSkipped, includeOrphans, outputPath };
 }
 
 function isFormat(s: string): s is ExportFormat {
@@ -173,6 +185,7 @@ export const paletteExportCommand: Command = {
       const result = runExport(ctx, {
         format,
         includeRejected: parsed.includeRejected,
+        includeSkipped: parsed.includeSkipped,
         includeOrphans: parsed.includeOrphans,
         outputPath: parsed.outputPath,
       });

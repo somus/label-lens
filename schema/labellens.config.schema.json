@@ -1,0 +1,492 @@
+{
+  "type": "object",
+  "required": [
+    "task",
+    "labels",
+    "input",
+    "output"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URI of this config's JSON Schema."
+    },
+    "task": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "classification"
+        },
+        {
+          "type": "string",
+          "const": "boundary"
+        }
+      ],
+      "description": "Task kind."
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "description": "Label value. Sugar for { name: <string> }."
+          },
+          {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Label value stored on reviews.final_label."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1,
+                "description": "Per-label keyboard accelerator. Must not collide with built-in bindings."
+              },
+              "color": {
+                "type": "string",
+                "description": "Reserved for label tinting in the chip rail."
+              },
+              "glyph": {
+                "type": "string",
+                "description": "Reserved for boundary-task per-label glyphs."
+              }
+            }
+          }
+        ],
+        "description": "A configured label."
+      },
+      "minItems": 1,
+      "description": "Configured label set. Used for review, queues, and exports."
+    },
+    "guidelines": {
+      "type": "string",
+      "description": "Inline markdown or path to a markdown file. Rendered in the guidelines view."
+    },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "documentField",
+        "contextLines"
+      ],
+      "properties": {
+        "documentField": {
+          "type": "string",
+          "description": "JSONL field name that groups records into documents."
+        },
+        "contextLines": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Neighbour lines shown above and below the focused row."
+        }
+      },
+      "description": "Boundary-task specific config."
+    },
+    "classification": {
+      "type": "object",
+      "required": [
+        "previewLines"
+      ],
+      "properties": {
+        "previewLines": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Queue-sibling rows shown above/below the focused record."
+        }
+      },
+      "description": "Classification-task specific config."
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "path",
+        "format",
+        "fields"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Source JSONL. Resolved relative to the config file."
+        },
+        "format": {
+          "type": "string",
+          "const": "jsonl",
+          "description": "Only `jsonl` is supported in MVP."
+        },
+        "fields": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "JSONL key holding the candidate text (required)."
+            },
+            "prediction": {
+              "type": "string",
+              "description": "JSONL key for the model's prediction."
+            },
+            "confidence": {
+              "type": "string",
+              "description": "JSONL key for prediction confidence (0..1)."
+            },
+            "source": {
+              "type": "string",
+              "description": "JSONL key tagging the prediction source."
+            },
+            "context_before": {
+              "type": "string",
+              "description": "JSONL key for line above the candidate."
+            },
+            "context_after": {
+              "type": "string",
+              "description": "JSONL key for line below the candidate."
+            },
+            "id": {
+              "type": "string",
+              "description": "JSONL key for a stable record id."
+            }
+          },
+          "description": "Maps logical fields onto the actual JSONL keys."
+        }
+      },
+      "description": "Source dataset + field mapping."
+    },
+    "output": {
+      "type": "object",
+      "required": [
+        "path",
+        "format"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Destination for `labellens export`."
+        },
+        "format": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "jsonl"
+            },
+            {
+              "type": "string",
+              "const": "csv"
+            }
+          ],
+          "description": "Default format when `labellens export` runs without a positional argument."
+        },
+        "includeRejected": {
+          "type": "boolean",
+          "description": "Include rejected records (label:null) in default exports."
+        },
+        "includeSkipped": {
+          "type": "boolean",
+          "description": "Include skipped records (label:null) in default exports."
+        },
+        "csvMultiLabelSeparator": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Separator used when joining multi-label arrays in CSV exports. Default ';'."
+        },
+        "fieldOverrides": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Rename the `id` column on export."
+            },
+            "text": {
+              "type": "string",
+              "description": "Rename the `text` column on export."
+            },
+            "label": {
+              "type": "string",
+              "description": "Rename the `label` column on export."
+            },
+            "reviewed_at": {
+              "type": "string",
+              "description": "Rename the `reviewed_at` column on export."
+            },
+            "document_id": {
+              "type": "string",
+              "description": "Rename the `document_id` column on boundary exports."
+            }
+          },
+          "description": "Per-column renames applied during export."
+        }
+      },
+      "description": "Default export behaviour. CLI flags still override these."
+    },
+    "display": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "truecolor"
+            },
+            {
+              "type": "string",
+              "const": "256"
+            },
+            {
+              "type": "string",
+              "const": "16"
+            },
+            {
+              "type": "string",
+              "const": "mono"
+            }
+          ],
+          "description": "Force a capability level. Auto reads $COLORTERM / $TERM / $NO_COLOR."
+        },
+        "banding": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "on"
+            },
+            {
+              "type": "string",
+              "const": "off"
+            }
+          ],
+          "description": "Banded background per record group. Forced off at 16 / mono."
+        },
+        "theme": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "light"
+            },
+            {
+              "type": "string",
+              "const": "dark"
+            },
+            {
+              "type": "string",
+              "const": "auto"
+            }
+          ],
+          "description": "Light / dark palette. Auto probes the terminal via OSC 11."
+        },
+        "candidatePin": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.95,
+          "description": "Viewport pin position (fraction of subject height)."
+        },
+        "layout": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "stack"
+            },
+            {
+              "type": "string",
+              "const": "split"
+            }
+          ],
+          "description": "Stack or split layout. Auto picks split at ≥ 160 cols."
+        },
+        "motion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "on"
+            },
+            {
+              "type": "string",
+              "const": "off"
+            }
+          ],
+          "description": "Fades, flashes, progress tweens. Forced off at 16 / mono."
+        },
+        "sidebar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "on"
+            },
+            {
+              "type": "string",
+              "const": "off"
+            }
+          ],
+          "description": "Right-column chrome. Auto shows at ≥ 120 cols on truecolor / 256."
+        },
+        "queuePreview": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "on"
+            },
+            {
+              "type": "string",
+              "const": "off"
+            }
+          ],
+          "description": "Left-column upcoming-record rail. Auto shows at ≥ 200 cols."
+        },
+        "labelChip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "configured"
+            },
+            {
+              "type": "string",
+              "const": "both"
+            }
+          ],
+          "description": "Chip rail format. `configured` shows [k] or [N]; `both` shows [N/k]."
+        }
+      },
+      "description": "Display + terminal-capability overrides."
+    },
+    "navigation": {
+      "type": "object",
+      "properties": {
+        "smartNext": {
+          "type": "boolean",
+          "description": "When true, j/k walks a signal-weighted smart-pending cursor on the pending queue."
+        }
+      },
+      "description": "Navigation-mode toggles."
+    },
+    "assistant": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch. When false, pressing `i` opens the configure overlay."
+        },
+        "provider": {
+          "type": "string",
+          "description": "pi-ai provider id. Known: anthropic, openai, google, groq, ollama."
+        },
+        "model": {
+          "type": "string",
+          "description": "Provider-specific model id (e.g. claude-sonnet-4-5)."
+        },
+        "apiKeyEnvVar": {
+          "type": "string",
+          "description": "Env var name to read the API key from at runtime. Never persisted in config."
+        },
+        "ollamaUrl": {
+          "type": "string",
+          "description": "Base URL for the Ollama provider (e.g. http://localhost:11434/v1)."
+        },
+        "privacyAcknowledged": {
+          "type": "boolean",
+          "description": "First remote call is blocked until this is true."
+        },
+        "systemPromptAppend": {
+          "type": "string",
+          "description": "Extra instructions appended to the system prompt for every assistant query (e.g. domain rules). Cache is invalidated when this changes."
+        }
+      },
+      "description": "Optional LLM assistant (PRD §10.5). Off by default."
+    },
+    "signals": {
+      "type": "object",
+      "properties": {
+        "lowConfidenceThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence under which the `low_confidence` signal fires. Default 0.5."
+        },
+        "enable": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "lowConfidence"
+              },
+              {
+                "type": "string",
+                "const": "disagreement"
+              },
+              {
+                "type": "string",
+                "const": "duplicate"
+              },
+              {
+                "type": "string",
+                "const": "flagged"
+              }
+            ],
+            "description": "Identifier for a prioritization signal."
+          },
+          "description": "Subset of signals to compute. Omit to compute all four."
+        }
+      },
+      "description": "Prioritization signal tuning."
+    },
+    "notes": {
+      "type": "object",
+      "properties": {
+        "presets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Quick-attach phrases offered in the note overlay (digit accelerators). Cuts repetitive typing."
+        }
+      },
+      "description": "Note-overlay config."
+    },
+    "keys": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1,
+          "description": "Single-character key. Modifiers and chords are not supported here."
+        }
+      },
+      "description": "Per-command keybinding overrides. Keys are command names (e.g. `record.accept`); values are single-character key strings (e.g. `y`). Reserved keys (digits, chord starters, label keys) are still off-limits. Chord overrides (`g d`) and modifier overrides (`ctrl+x`) are intentionally out of scope."
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
+  "title": "LabelLens project config",
+  "description": "Configuration for labellens, written next to your dataset by `labellens init`."
+}

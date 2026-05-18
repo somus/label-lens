@@ -10,7 +10,11 @@ export const openNoteCommand: Command = {
   run: (ctx) => {
     const record = ctx.cursor?.current();
     if (!record) return;
-    const state = openNote({ recordId: record.id, initial: record.note ?? "" });
+    const state = openNote({
+      recordId: record.id,
+      initial: record.note ?? "",
+      presets: ctx.config.notes?.presets,
+    });
     ctx.openOverlay({ kind: "note", state });
   },
 };

@@ -1201,11 +1201,30 @@ function renderNote(
             : resolveTheme(display).fg.dim
           : undefined,
     }),
+    ...renderNotePresets(state, display),
     Text({
-      content: " [enter] save · [shift+enter] newline · [esc] cancel",
+      content:
+        state.presets.length > 0
+          ? " [enter] save · [shift+enter] newline · [alt+1-9] preset · [esc] cancel"
+          : " [enter] save · [shift+enter] newline · [esc] cancel",
       attributes: TextAttributes.DIM,
     }),
   );
+}
+
+function renderNotePresets(state: NoteState, display: ResolvedDisplay): ReturnType<typeof Text>[] {
+  if (state.presets.length === 0) return [];
+  const lines = state.presets.map((preset, idx) =>
+    Text({
+      content: ` [${idx + 1}] ${preset}`,
+      attributes: TextAttributes.DIM,
+      fg:
+        display.color === "truecolor" || display.color === "256"
+          ? resolveTheme(display).fg.dim
+          : undefined,
+    }),
+  );
+  return [Text({ content: "" }), ...lines];
 }
 
 function basename(p: string): string {

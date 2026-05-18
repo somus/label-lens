@@ -20,13 +20,17 @@ export type AssistantPromptParts = {
  * keep the hash stable.
  */
 export function buildAssistantPrompt(input: CanonicalPromptInput): AssistantPromptParts {
-  const systemPrompt = [
+  const baseLines = [
     "You are an expert annotator helping a reviewer classify text records.",
     "Always call the `submit_label_suggestion` tool exactly once with your analysis.",
     "Pick `suggestedLabel` from the configured label set; never invent new labels.",
     "Keep `reasoning` to 2-3 sentences. Bullet phrases in `evidenceFor` / `evidenceAgainst` should be short (one phrase per item).",
     `Task: ${input.task}`,
-  ].join("\n");
+  ];
+  if (input.system_prompt_append !== undefined && input.system_prompt_append.length > 0) {
+    baseLines.push("", "## Project rules", input.system_prompt_append);
+  }
+  const systemPrompt = baseLines.join("\n");
 
   const labelLines = input.labels.map((l) =>
     l.definition ? `- ${l.name}: ${l.definition}` : `- ${l.name}`,
