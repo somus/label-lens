@@ -95,6 +95,14 @@ export function reducePicker(state: PickerState, event: OverlayEvent): ReduceRes
     case "streamEnd":
     case "streamError":
       return { overlay: packed(state), effects: [] };
+    case "paste":
+      // Append printable chars from the paste into the filter. Newlines /
+      // control chars dropped so a stray multiline clipboard doesn't break
+      // the filter row.
+      return {
+        overlay: packed(withFilter(state, state.filter + event.text.replace(/[^\w \-_]/g, ""))),
+        effects: [],
+      };
   }
 }
 

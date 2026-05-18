@@ -98,6 +98,7 @@ export type OverlayKind = Overlay["kind"];
 /** Uniform event union — keystrokes, async stream tokens, lifecycle. */
 export type OverlayEvent =
   | { kind: "key"; event: KeyEvent }
+  | { kind: "paste"; text: string }
   | { kind: "streamToken"; token: string }
   | { kind: "streamEnd"; response?: AssistantResponse }
   | { kind: "streamError"; error: unknown }

@@ -184,3 +184,48 @@ describe("stream events ignored", () => {
     expect(state(r)).toEqual(s);
   });
 });
+
+describe("paste handling (auth step)", () => {
+  function authStart(provider = "1"): ConfigureAssistantState {
+    let s = openConfigureAssistant();
+    s = state(press(s, provider));
+    s = state(press(s, "return"));
+    return s;
+  }
+
+  test("pasted text appends to apiKey for remote provider", () => {
+    const s = authStart("1");
+    const r = reduceConfigureAssistant(s, { kind: "paste", text: "sk-ant-api03-abc123" });
+    expect(state(r).apiKey).toBe("sk-ant-api03-abc123");
+  });
+
+  test("pasted text appends to ollamaUrl for ollama provider", () => {
+    const ollamaIdx = CONFIGURE_PROVIDERS.findIndex((p) => p.slug === "ollama");
+    const s = authStart(String(ollamaIdx + 1));
+    const r = reduceConfigureAssistant(s, { kind: "paste", text: "http://localhost:11434" });
+    expect(state(r).ollamaUrl).toBe("http://localhost:11434");
+  });
+
+  test("control chars stripped from paste payload (bracketed-paste residue)", () => {
+    const s = authStart("1");
+    const r = reduceConfigureAssistant(s, { kind: "paste", text: "abc\x1b[200~def\x07ghi" });
+    // ESC, the trailing control chars, and the bell are gone; alphanumerics survive.
+    expect(state(r).apiKey).toContain("abc");
+    expect(state(r).apiKey).toContain("def");
+    expect(state(r).apiKey).toContain("ghi");
+    expect(state(r).apiKey).not.toContain("\x1b");
+    expect(state(r).apiKey).not.toContain("\x07");
+  });
+
+  test("newlines collapse to spaces (multi-line clipboard)", () => {
+    const s = authStart("1");
+    const r = reduceConfigureAssistant(s, { kind: "paste", text: "line1\nline2\r\nline3" });
+    expect(state(r).apiKey).toBe("line1 line2 line3");
+  });
+
+  test("paste in provider step is a no-op", () => {
+    const s = openConfigureAssistant();
+    const r = reduceConfigureAssistant(s, { kind: "paste", text: "ignored" });
+    expect(state(r)).toEqual(s);
+  });
+});

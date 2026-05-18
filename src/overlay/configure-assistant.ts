@@ -28,6 +28,18 @@ function isLocalProvider(slug: string): boolean {
   return slug === "ollama";
 }
 
+/**
+ * Strip C0 control chars (NUL through 0x1f) and DEL (0x7f) from pasted text.
+ * Tab (0x09) is kept; the auth field accepts whitespace. Anything ≥ 0x20 is
+ * considered printable for our purposes (API keys, URLs, alphanumerics +
+ * punctuation).
+ */
+function isPrintableInputChar(ch: string): boolean {
+  const code = ch.charCodeAt(0);
+  if (code === 0x09) return true;
+  return code >= 0x20 && code !== 0x7f;
+}
+
 function packed(state: ConfigureAssistantState): Overlay {
   return { kind: "configure-assistant", state };
 }
@@ -88,7 +100,31 @@ export function reduceConfigureAssistant(
       return { overlay: packed(state), effects: [] };
     case "key":
       return reduceKey(state, event.event.name);
+    case "paste":
+      return reducePaste(state, event.text);
   }
+}
+
+function reducePaste(state: ConfigureAssistantState, text: string): ReduceResult {
+  if (state.step !== "auth") {
+    // Only the auth step accepts text input today.
+    return { overlay: packed(state), effects: [] };
+  }
+  const local = isLocalProvider(state.selectedProvider!);
+  const field = local ? "ollamaUrl" : "apiKey";
+  const current = local ? (state.ollamaUrl ?? "") : (state.apiKey ?? "");
+  // Strip control chars (including stray ESC from a malformed bracketed-paste
+  // sequence) but keep spaces, tabs, and printable text. Newlines collapse to
+  // a single space so multi-line clipboard contents don't blow up the field.
+  const cleaned = text
+    .replace(/[\r\n]+/g, " ")
+    .split("")
+    .filter(isPrintableInputChar)
+    .join("");
+  return {
+    overlay: packed({ ...state, [field]: current + cleaned, error: undefined }),
+    effects: [],
+  };
 }
 
 function reduceKey(state: ConfigureAssistantState, name: string): ReduceResult {

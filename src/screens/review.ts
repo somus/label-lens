@@ -321,9 +321,26 @@ export function mountReviewScreen(args: {
     void dispatch(registry, scope, app, action);
   };
 
+  /**
+   * Bracketed paste from terminals arrives as one `paste` event with the
+   * full clipboard payload. Without this handler the bytes vanish (or worse,
+   * the leading ESC of the bracket marker triggers the overlay's escape
+   * branch and closes the configure / note prompt mid-paste).
+   */
+  const onPaste = (event: { bytes: Uint8Array }) => {
+    if (!app.overlay) return;
+    const text = new TextDecoder().decode(event.bytes);
+    const result = reduceOverlay(app.overlay, { kind: "paste", text });
+    app.overlay = result.overlay;
+    const queueId = app.queueId ?? initialQueueId;
+    applyEffects(app, queueId, result.effects, dispatchCommand);
+    if (mounted) renderState();
+  };
+
   const onResize = () => renderState();
 
   renderer.keyInput.on("keypress", onKey);
+  renderer.keyInput.on("paste", onPaste);
   renderer.on("resize", onResize);
   renderState();
 
@@ -331,6 +348,7 @@ export function mountReviewScreen(args: {
     destroy: () => {
       mounted = false;
       renderer.keyInput.off("keypress", onKey);
+      renderer.keyInput.off("paste", onPaste);
       renderer.off("resize", onResize);
     },
   };

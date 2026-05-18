@@ -125,6 +125,9 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
       };
     case "key":
       return reduceKey(state, event.event.name);
+    case "paste":
+      // Assistant overlay doesn't accept user text — ignore paste.
+      return { overlay: packed(state), effects: [] };
   }
 }
 
