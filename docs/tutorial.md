@@ -24,6 +24,8 @@ labellens init transactions.jsonl
 
 This infers the field map (`text`, `prediction`, `confidence`, `source`), writes `labellens.config.json`, and exits. Open the file — you'll see the configured label set under `labels`. Edit it now if `shopping`, `salary`, `utility` etc. don't cover your domain.
 
+The generated file ships a `$schema` URL — VS Code / Cursor / Helix / JetBrains pick it up for inline autocomplete + hover docs as you edit. See [how-to: edit the config](./how-to/edit-config.md) for editor-specific setup.
+
 ## 3. Review
 
 ```sh
