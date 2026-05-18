@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { type ExportFormat, parseExportArgument, performExport } from "../actions/export/run.ts";
 import type { LabellensConfig } from "../config/config.ts";
+import { ConfigLoadError, loadConfig } from "../config/load.ts";
 import { openDb } from "../store/db.ts";
 
 export type RunExportCliArgs = {
@@ -37,7 +38,15 @@ export async function runExportCli({ args, cwd }: RunExportCliArgs): Promise<voi
     );
   }
 
-  const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
+  let config: LabellensConfig;
+  try {
+    config = await loadConfig(configPath);
+  } catch (err) {
+    if (err instanceof ConfigLoadError) {
+      throw new ExportCliError([err.message, ...err.errors.map((e) => `  ${e}`)].join("\n"));
+    }
+    throw err;
+  }
   const parsed = parseExportArgument(args);
   if (parsed.error) {
     throw new ExportCliError(`${parsed.error}\n\n${usageText()}`);
@@ -49,6 +58,7 @@ export async function runExportCli({ args, cwd }: RunExportCliArgs): Promise<voi
     const result = performExport(db, config, {
       format,
       includeRejected: parsed.includeRejected,
+      includeSkipped: parsed.includeSkipped,
       includeOrphans: parsed.includeOrphans,
       outputPath: parsed.outputPath,
     });
@@ -66,6 +76,7 @@ Default output base is config.output.path (siblings derived: .csv, .review-log.j
 
 options:
   --include-rejected     include records with status='rejected' (emitted with label:null)
+  --include-skipped      include records with status='skipped'  (emitted with label:null)
   --include-orphans      include records marked orphan by re-ingest (PRD §13)
   -o, --output <path>    override the output base path
 

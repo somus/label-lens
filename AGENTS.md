@@ -53,6 +53,7 @@ These are the ones agents get wrong most often. The full set with examples lives
 | Display capability detection | [`src/render/capability.ts`](./src/render/capability.ts) — `bootstrapDisplay` is the production seam; `defaultDisplay()` is the test fixture. |
 | Queue registration pattern | [`src/store/queues/`](./src/store/queues/) — one file per queue, register in `registry.ts`. |
 | Assistant call shape | [`src/assistant/provider.ts`](./src/assistant/provider.ts) — `queryAssistant` is the single entry. ADR 0009 superseded PRD §14.4's right-side panel with an inline footer. |
+| Config schema source of truth | [`src/config/config.ts`](./src/config/config.ts) — TypeBox `LabellensConfigSchema`. Run `bun run schema` after edits to refresh [`schema/labellens.config.schema.json`](./schema/labellens.config.schema.json). A unit test fails on drift. |
 
 ## Quick rules for PRs
 

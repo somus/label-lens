@@ -2,12 +2,13 @@ import { accessSync, existsSync, constants as fsConstants, renameSync } from "no
 import { dirname, join, resolve } from "node:path";
 import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { sql } from "drizzle-orm";
-import { buildRegistry, type Command } from "../actions/command.ts";
+import { applyKeyOverrides, buildRegistry, type Command } from "../actions/command.ts";
 import { switchQueue } from "../actions/queue/switch.ts";
 import { relabelByKeyCommand } from "../actions/record/decisions.ts";
 import { ALL_COMMANDS, reservedReviewKeys } from "../actions/registry.ts";
 import { createAppContext } from "../app/context.ts";
 import { type LabellensConfig, validateLabelKeys, validateLocalOnly } from "../config/config.ts";
+import { ConfigLoadError, loadConfig } from "../config/load.ts";
 import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
 import { ingestFile } from "../ingest/ingest.ts";
 import { applyDiff, type DiffResult, diffIngest } from "../ingest/reingest.ts";
@@ -49,14 +50,42 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     return;
   }
 
-  const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
+  let config: LabellensConfig;
+  try {
+    config = await loadConfig(configPath);
+  } catch (err) {
+    if (err instanceof ConfigLoadError) {
+      console.error(err.message);
+      for (const line of err.errors) console.error(`  ${line}`);
+      process.exit(2);
+    }
+    throw err;
+  }
 
-  const keyError = validateLabelKeys(config, reservedReviewKeys(ALL_COMMANDS));
+  const overrideTargets = new Set(Object.keys(config.keys ?? {}));
+  const reservedForLabels = reservedReviewKeys(ALL_COMMANDS, overrideTargets);
+  // Label keys join `reservedForLabels` so they participate in override
+  // validation: an override key that collides with a configured label key is
+  // rejected the same way a built-in collision is.
+  const reservedForOverrides = new Set(reservedForLabels);
+  for (const entry of config.labels) {
+    const k = typeof entry === "string" ? null : (entry.key ?? null);
+    if (k) reservedForOverrides.add(k);
+  }
+  const keyError = validateLabelKeys(config, reservedForLabels);
   if (keyError) {
     console.error("labellens: invalid config.labels[].key");
     for (const line of keyError.split("\n")) console.error(`  ${line}`);
     process.exit(2);
   }
+
+  const overrideResult = applyKeyOverrides(ALL_COMMANDS, config.keys, reservedForOverrides);
+  if (overrideResult.errors.length > 0) {
+    console.error("labellens: invalid config.keys");
+    for (const line of overrideResult.errors) console.error(`  ${line}`);
+    process.exit(2);
+  }
+  const allCommands = overrideResult.commands;
 
   const localOnlyError = validateLocalOnly(config, localOnly);
   if (localOnlyError) {
@@ -110,7 +139,7 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     const result = await ingestFile(db, inputPath, config.input.fields);
     console.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
     console.error("Computing prioritization signals...");
-    const signals = runSignals(db);
+    const signals = runSignals(db, signalsOptions(config));
     console.error(`  wrote ${signals.written} issue rows`);
     writeFingerprint(db, inputPath, current);
   } else if (!stored) {
@@ -139,7 +168,7 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
         writeFingerprint(db, inputPath, current);
       } else {
         applyDiff(db, diff);
-        runSignals(db);
+        runSignals(db, signalsOptions(config));
         writeFingerprint(db, inputPath, current);
       }
     }
@@ -199,7 +228,7 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
   const perLabelKeyCommands = config.labels
     .map(relabelByKeyCommand)
     .filter((cmd): cmd is Command => cmd !== null);
-  const registry = buildRegistry([...ALL_COMMANDS, ...perLabelKeyCommands]);
+  const registry = buildRegistry([...allCommands, ...perLabelKeyCommands]);
 
   const mountReview = (queueId: string) => {
     reviewHandle = mountReviewScreen({ renderer: r, app, registry, initialQueueId: queueId });
@@ -319,7 +348,14 @@ async function freshReingest(
   const result = await ingestFile(fresh, inputPath, config.input.fields);
   console.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
   console.error("Computing prioritization signals...");
-  const signals = runSignals(fresh);
+  const signals = runSignals(fresh, signalsOptions(config));
   console.error(`  wrote ${signals.written} issue rows`);
   return fresh;
+}
+
+function signalsOptions(config: LabellensConfig): import("../signals/run.ts").RunSignalsOptions {
+  return {
+    lowConfidenceThreshold: config.signals?.lowConfidenceThreshold,
+    enabled: config.signals?.enable,
+  };
 }

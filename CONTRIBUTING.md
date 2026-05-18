@@ -81,6 +81,16 @@ Quick reference:
 - **Performance** — shared fixtures (#14), envelope harness (#15), >20% regression fails CI.
 - **SSH path** — manually verify rendering over real SSH before declaring a slice done; the test renderer doesn't simulate transport loss.
 
+## Config schema
+
+`src/config/config.ts` is the source of truth for `labellens.config.json`. TypeBox `Type.Object(...)` produces both the TS type (`Static<>`) and the JSON Schema we publish at `schema/labellens.config.schema.json`.
+
+```sh
+bun run schema           # regenerates schema/ from src/config/config.ts
+```
+
+A unit test (`test/unit/schema-fresh.test.ts`) fails if the committed schema drifts from the TypeBox source — run `bun run schema` after touching `LabellensConfigSchema`. Editors pick up the published URL via the `$schema` field every `labellens init` writes into the project config.
+
 ## Worktrees (paseo)
 
 `paseo.json` configures auto-setup for worktrees of this repo (`bun install --frozen-lockfile` + `bunx lefthook install`). Use a paseo worktree when:

@@ -5,7 +5,8 @@ describe("parseExportArgument", () => {
   test("parses just a format", () => {
     const r = parseExportArgument("jsonl");
     expect(r.format).toBe("jsonl");
-    expect(r.includeRejected).toBe(false);
+    expect(r.includeRejected).toBeUndefined();
+    expect(r.includeSkipped).toBeUndefined();
     expect(r.includeOrphans).toBe(false);
     expect(r.error).toBeUndefined();
   });

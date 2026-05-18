@@ -24,8 +24,17 @@ import {
 import { predictions, records } from "../store/schema.ts";
 import { disagreementScore, duplicateScore, lowConfidenceScore } from "./compute.ts";
 
+export type SignalKindName = "lowConfidence" | "disagreement" | "duplicate" | "flagged";
+
 export type RunSignalsOptions = {
   lowConfidenceThreshold?: number;
+  /**
+   * Subset of signals to compute. Disabled signals never produce `issues` rows,
+   * so their queues + signal-strip chips disappear and `smart-pending` scoring
+   * stops weighting them. Omit to compute every signal (the default). `flagged`
+   * lives outside this run path but is included so the gate is uniform.
+   */
+  enabled?: Iterable<SignalKindName>;
   /**
    * Returns true once cancellation has been requested. Checked between
    * record-batch boundaries (every 500 records). When true, the run discards
@@ -51,6 +60,10 @@ const DEFAULT_LOW_CONFIDENCE = 0.5;
 
 export function runSignals(db: Db, options: RunSignalsOptions = {}): RunSignalsResult {
   const threshold = options.lowConfidenceThreshold ?? DEFAULT_LOW_CONFIDENCE;
+  const enabled = options.enabled ? new Set(options.enabled) : null;
+  const lowConfEnabled = enabled === null || enabled.has("lowConfidence");
+  const disagreementEnabled = enabled === null || enabled.has("disagreement");
+  const duplicateEnabled = enabled === null || enabled.has("duplicate");
   const isCancelled = options.isCancelled ?? (() => false);
 
   const recordRows = db
@@ -97,34 +110,40 @@ export function runSignals(db: Db, options: RunSignalsOptions = {}): RunSignalsR
 
     const preds = predsByRecord.get(r.id) ?? [];
 
-    let recordHasLowConfidence = false;
-    let bestScore = 0;
-    for (const p of preds) {
-      const score = lowConfidenceScore(p.confidence, threshold);
-      if (score !== null && score > bestScore) {
-        bestScore = score;
-        recordHasLowConfidence = true;
+    if (lowConfEnabled) {
+      let recordHasLowConfidence = false;
+      let bestScore = 0;
+      for (const p of preds) {
+        const score = lowConfidenceScore(p.confidence, threshold);
+        if (score !== null && score > bestScore) {
+          bestScore = score;
+          recordHasLowConfidence = true;
+        }
+      }
+      if (recordHasLowConfidence) {
+        pending.push({ recordId: r.id, type: "low_confidence", score: bestScore });
       }
     }
-    if (recordHasLowConfidence) {
-      pending.push({ recordId: r.id, type: "low_confidence", score: bestScore });
-    }
 
-    const labels = preds.map((p) => p.label);
-    const dScore = disagreementScore(labels);
-    if (dScore !== null && dScore > 0) {
-      pending.push({ recordId: r.id, type: "source_disagreement", score: dScore });
+    if (disagreementEnabled) {
+      const labels = preds.map((p) => p.label);
+      const dScore = disagreementScore(labels);
+      if (dScore !== null && dScore > 0) {
+        pending.push({ recordId: r.id, type: "source_disagreement", score: dScore });
+      }
     }
 
     processed++;
     options.onProgress?.(processed, total);
   }
 
-  for (const group of dupGroups.values()) {
-    if (group.length < 2) continue;
-    const score = duplicateScore(group.length, total);
-    for (const id of group) {
-      pending.push({ recordId: id, type: "exact_duplicate", score });
+  if (duplicateEnabled) {
+    for (const group of dupGroups.values()) {
+      if (group.length < 2) continue;
+      const score = duplicateScore(group.length, total);
+      for (const id of group) {
+        pending.push({ recordId: id, type: "exact_duplicate", score });
+      }
     }
   }
 

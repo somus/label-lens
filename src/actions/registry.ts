@@ -88,11 +88,19 @@ export function defaultRegistry(): CommandRegistry {
  * Single-char keys + chord starters reserved by review-scope (and global)
  * commands. Used to validate `config.labels[].key` so configured per-label
  * accelerators can't shadow a real binding.
+ *
+ * `excludeCommands` lets the caller drop the bindings of commands that will
+ * be remapped via `config.keys` — the soon-to-be-vacated keys become free
+ * to reassign in the same config (e.g. `record.accept: y` and `record.openNote: a`).
  */
-export function reservedReviewKeys(commands: Command[]): Set<string> {
+export function reservedReviewKeys(
+  commands: Command[],
+  excludeCommands: ReadonlySet<string> = new Set(),
+): Set<string> {
   const out = new Set<string>();
   for (const cmd of commands) {
     if (cmd.scope !== "review" && cmd.scope !== "global") continue;
+    if (excludeCommands.has(cmd.name)) continue;
     const bindings = Array.isArray(cmd.binding) ? cmd.binding : cmd.binding ? [cmd.binding] : [];
     for (const b of bindings) {
       if (b.length === 1) {
