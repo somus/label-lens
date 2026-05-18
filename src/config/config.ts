@@ -24,6 +24,13 @@ export type DisplayConfig = {
    * what's next without opening the modal queue overlay.
    */
   queuePreview?: "auto" | "on" | "off";
+  /**
+   * Chip rail / picker accelerator display. `configured` (default) shows the
+   * per-label `key` chip when set, else the positional digit. `both` shows
+   * `[N/k]` when both apply (positions 1-9 with a configured key), trading
+   * width for discoverability.
+   */
+  labelChip?: "configured" | "both";
 };
 
 /**
@@ -108,6 +115,7 @@ export function defaultConfig(args: {
       motion: "auto",
       sidebar: "auto",
       queuePreview: "auto",
+      labelChip: "configured",
     },
     navigation: {
       smartNext: false,
@@ -117,4 +125,40 @@ export function defaultConfig(args: {
 
 export function labelName(entry: LabelConfigEntry): string {
   return typeof entry === "string" ? entry : entry.name;
+}
+
+export function labelKey(entry: LabelConfigEntry): string | null {
+  if (typeof entry === "string") return null;
+  return entry.key ?? null;
+}
+
+/**
+ * Validate `config.labels[].key` against the reserved review-scope key set
+ * and against itself (duplicates across labels). Aggregates all violations
+ * so the reviewer fixes them in one pass. Returns `null` when clean.
+ */
+export function validateLabelKeys(
+  config: LabellensConfig,
+  reservedKeys: Set<string>,
+): string | null {
+  const errors: string[] = [];
+  const byKey = new Map<string, string[]>();
+  for (const entry of config.labels) {
+    const key = labelKey(entry);
+    if (key === null) continue;
+    const name = labelName(entry);
+    if (reservedKeys.has(key)) {
+      errors.push(`label '${name}' uses key '${key}' which is reserved by a built-in command`);
+    }
+    const seen = byKey.get(key) ?? [];
+    seen.push(name);
+    byKey.set(key, seen);
+  }
+  for (const [key, names] of byKey) {
+    if (names.length > 1) {
+      errors.push(`key '${key}' is configured by multiple labels: ${names.join(", ")}`);
+    }
+  }
+  if (errors.length === 0) return null;
+  return errors.join("\n");
 }

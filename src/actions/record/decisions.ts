@@ -1,5 +1,5 @@
 import type { AppContext } from "../../app/context.ts";
-import { labelName } from "../../config/config.ts";
+import { type LabelConfigEntry, labelKey, labelName } from "../../config/config.ts";
 import { applyEffects } from "../../overlay/effects.ts";
 import type { Effect } from "../../overlay/types.ts";
 import type { RecordWithPrimaryPrediction } from "../../types.ts";
@@ -126,3 +126,37 @@ export function relabelByIndexCommand(n: number): Command {
 export const relabelByIndexCommands: Command[] = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) =>
   relabelByIndexCommand(n),
 );
+
+/**
+ * Per-label key accelerator: `config.labels[].key` binds a single char to the
+ * relabel decision for that label. Returns `null` for string-form labels or
+ * object entries without a `key` — the caller filters those out before
+ * registering. Command name is keyed by the label name (stable identity);
+ * the binding is the configured key.
+ */
+export function relabelByKeyCommand(entry: LabelConfigEntry): Command | null {
+  const key = labelKey(entry);
+  if (key === null) return null;
+  const label = labelName(entry);
+  return {
+    name: `record.relabelByKey.${label}`,
+    scope: "review",
+    binding: key,
+    enabled: (ctx) => ctx.cursor?.current() != null,
+    run: (ctx: AppContext) => {
+      const record = ctx.cursor?.current();
+      if (!record || !ctx.queueId) return;
+      const predicted = record.primaryPrediction?.label ?? null;
+      const status = predicted === label ? "accepted" : "relabeled";
+      const effect: Effect = {
+        kind: "commitDecision",
+        recordId: record.id,
+        status,
+        finalLabel: label,
+        prevLabel: status === "relabeled" ? predicted : null,
+        sourceOfTruth: "human",
+      };
+      applyEffects(ctx, ctx.queueId, [effect]);
+    },
+  };
+}

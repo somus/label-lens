@@ -31,6 +31,8 @@ export type SidebarMode = "auto" | "on" | "off";
 
 export type QueuePreviewMode = "auto" | "on" | "off";
 
+export type LabelChipMode = "configured" | "both";
+
 export type ResolvedDisplay = {
   color: CapabilityColor;
   banding: boolean;
@@ -46,6 +48,12 @@ export type ResolvedDisplay = {
    * Always false at 16 / mono regardless of detection.
    */
   richGradient: boolean;
+  /**
+   * Chip display mode for per-label key accelerators. `configured` shows
+   * `[k]` when a label binds a key, else `[N]` (positional digit). `both`
+   * shows `[N/k]` when both apply, trading width for discoverability.
+   */
+  labelChip: LabelChipMode;
 };
 
 const SPLIT_MIN_WIDTH = 160;
@@ -201,6 +209,7 @@ export function resolveDisplay(args: {
   const motion = motionMode === "off" ? false : supportsMotion;
   const sidebar: SidebarMode = args.config?.sidebar ?? "auto";
   const queuePreview: QueuePreviewMode = args.config?.queuePreview ?? "auto";
+  const labelChip: LabelChipMode = args.config?.labelChip ?? "configured";
   // Gradient detection only meaningful at truecolor. If the user forces
   // a lower color level via config, gradient is off regardless.
   const richGradient = color === "truecolor" && args.detectedColor.richGradient;
@@ -214,6 +223,7 @@ export function resolveDisplay(args: {
     sidebar,
     queuePreview,
     richGradient,
+    labelChip,
   };
 }
 
@@ -233,6 +243,7 @@ export function defaultDisplay(): ResolvedDisplay {
     sidebar: "auto",
     queuePreview: "auto",
     richGradient: false,
+    labelChip: "configured",
   };
 }
 

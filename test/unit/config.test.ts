@@ -40,6 +40,7 @@ describe("defaultConfig", () => {
       motion: "auto",
       sidebar: "auto",
       queuePreview: "auto",
+      labelChip: "configured",
     });
   });
 });

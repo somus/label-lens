@@ -8,7 +8,19 @@ const RECORD = "rec-1";
 function init(predicted: string | null = "food"): PickerState {
   return openPicker({
     recordId: RECORD,
-    allLabels: LABELS,
+    allLabels: LABELS.map((name) => ({ name })),
+    predicted,
+    predictedConfidence: predicted ? 0.83 : null,
+  });
+}
+
+function initWithKeys(
+  labels: Array<{ name: string; key?: string }>,
+  predicted: string | null = labels[0]?.name ?? null,
+): PickerState {
+  return openPicker({
+    recordId: RECORD,
+    allLabels: labels,
     predicted,
     predictedConfidence: predicted ? 0.83 : null,
   });
@@ -151,5 +163,47 @@ describe("reducePicker", () => {
     const r = reducePicker(s, { kind: "key", event: { name: "return" } });
     expect(r.effects).toEqual([]);
     expect((r.overlay!.state as PickerState).filter).toBe("z");
+  });
+
+  test("configured key commits the matching candidate (relabel path)", () => {
+    const s = initWithKeys(
+      [
+        { name: "food", key: "f" },
+        { name: "travel", key: "t" },
+      ],
+      "food",
+    );
+    const r = reducePicker(s, { kind: "key", event: { name: "t" } });
+    expect(r.overlay).toBeNull();
+    expect(r.effects).toEqual([
+      {
+        kind: "commitDecision",
+        recordId: RECORD,
+        status: "relabeled",
+        finalLabel: "travel",
+        prevLabel: "food",
+        sourceOfTruth: "human",
+      },
+      { kind: "close" },
+    ]);
+  });
+
+  test("configured key on predicted commits with status='accepted'", () => {
+    const s = initWithKeys(
+      [
+        { name: "food", key: "f" },
+        { name: "travel", key: "t" },
+      ],
+      "food",
+    );
+    const r = reducePicker(s, { kind: "key", event: { name: "f" } });
+    expect(r.effects[0]).toMatchObject({ status: "accepted", finalLabel: "food", prevLabel: null });
+  });
+
+  test("non-configured single char still types into filter", () => {
+    const s = initWithKeys([{ name: "food", key: "f" }, { name: "travel" }], "food");
+    const r = reducePicker(s, { kind: "key", event: { name: "t" } });
+    expect(r.effects).toEqual([]);
+    expect((r.overlay!.state as PickerState).filter).toBe("t");
   });
 });

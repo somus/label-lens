@@ -1,7 +1,8 @@
-import { labelName } from "../../../config/config.ts";
+import { labelKey, labelName } from "../../../config/config.ts";
 import { Box } from "../../../render/box.ts";
 import type { Segment } from "../../../render/chrome/status-bar.ts";
 import { segmentsToStyledText } from "../../../render/chrome/status-bar.ts";
+import { labelChipText } from "../../../render/label-chip.ts";
 import { foldNamespace } from "../../../render/label-fold.ts";
 import { SectionHeader } from "../../../render/section-header.ts";
 import { Text, TextAttributes } from "../../../render/text.ts";
@@ -74,7 +75,7 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
     });
     current.push({ text: " ", tone: "default" });
     current.push({
-      text: `[${i + 1}]`,
+      text: labelChipText({ index: i, key: labelKey(entry), mode: display.labelChip }),
       tone: isPredicted ? "accent" : "accentDeep",
     });
     current.push({ text: "  ", tone: "default" });
@@ -91,15 +92,23 @@ function renderDecisionChipRail(args: DecisionRenderArgs): ReturnType<typeof Box
 
   // Trailing `+N more (r)` hint when the dataset has labels beyond the
   // 9-digit accelerator range. Without it the chip rail silently caps
-  // and reviewers don't know the picker reaches the rest.
+  // and reviewers don't know the picker reaches the rest. When any
+  // hidden label has a configured key, append " (shortcuts)" so the
+  // reviewer knows the accelerator works even though the chip is hidden.
   const hiddenCount = labels.length - visible.length;
   if (hiddenCount > 0) {
+    const hiddenHasKey = labels.slice(visible.length).some((e) => labelKey(e) !== null);
     const hint: Segment[] = [
       { text: "   ", tone: "default" },
       { text: `+${hiddenCount} more`, tone: "muted" },
       { text: "  ", tone: "dim" },
       { text: "[r]", tone: "accent" },
-      { text: " to filter all labels", tone: "muted" },
+      {
+        text: hiddenHasKey
+          ? " to filter all labels (some bind shortcuts)"
+          : " to filter all labels",
+        tone: "muted",
+      },
     ];
     const lastRow = rows[rows.length - 1];
     if (lastRow) lastRow.push(...hint);

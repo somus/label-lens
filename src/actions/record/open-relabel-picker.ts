@@ -1,4 +1,4 @@
-import { labelName } from "../../config/config.ts";
+import { labelKey, labelName } from "../../config/config.ts";
 import { openPicker } from "../../overlay/picker.ts";
 import type { Command } from "../command.ts";
 
@@ -11,7 +11,10 @@ export const openRelabelPicker: Command = {
   run: (ctx) => {
     const record = ctx.cursor?.current();
     if (!record) return;
-    const allLabels = ctx.config.labels.map((entry) => labelName(entry));
+    const allLabels = ctx.config.labels.map((entry) => {
+      const key = labelKey(entry);
+      return key === null ? { name: labelName(entry) } : { name: labelName(entry), key };
+    });
     const state = openPicker({
       recordId: record.id,
       allLabels,

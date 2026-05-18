@@ -1,19 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { ResolvedDisplay } from "../../src/render/capability.ts";
+import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
 import { progressBar } from "../../src/render/progress-bar.ts";
 
 function display(color: ResolvedDisplay["color"]): ResolvedDisplay {
-  return {
-    color,
-    banding: false,
-    theme: "light",
-    candidatePin: 0.4,
-    layout: "auto",
-    motion: false,
-    sidebar: "auto",
-    queuePreview: "auto",
-    richGradient: false,
-  };
+  return { ...defaultDisplay(), color };
 }
 
 describe("progressBar", () => {

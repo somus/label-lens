@@ -14,17 +14,7 @@ const config: LabellensConfig = {
 };
 
 function displayFor(color: ResolvedDisplay["color"]): ResolvedDisplay {
-  return {
-    color,
-    banding: false,
-    theme: "light",
-    candidatePin: 0.4,
-    layout: "auto",
-    motion: false,
-    sidebar: "auto",
-    queuePreview: "auto",
-    richGradient: false,
-  };
+  return { ...defaultDisplay(), color };
 }
 
 async function setup(store: TmpStore, opts: { width?: number; display?: ResolvedDisplay } = {}) {
