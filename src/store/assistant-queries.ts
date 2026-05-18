@@ -46,18 +46,20 @@ export function cacheAssistantResponse(
 ): void {
   const now = new Date().toISOString();
   const payload = JSON.stringify(response);
-  // Drizzle's onConflictDoUpdate needs a target; the composite index isn't a
-  // unique constraint so we delete-then-insert for simplicity. At MVP scale
-  // (hot records re-asked rarely) the two-statement cost is negligible.
-  db.run(
-    sql`DELETE FROM assistant_queries WHERE record_id = ${recordId} AND prompt_hash = ${promptHash}`,
-  );
-  db.insert(assistantQueries)
-    .values({
-      recordId,
-      promptHash,
-      responseJson: payload,
-      createdAt: now,
-    })
-    .run();
+  // The composite index on (record_id, prompt_hash) isn't a unique constraint,
+  // so we can't use onConflictDoUpdate — DELETE+INSERT inside a transaction
+  // keeps the two statements atomic against concurrent writers.
+  db.transaction((tx) => {
+    tx.run(
+      sql`DELETE FROM assistant_queries WHERE record_id = ${recordId} AND prompt_hash = ${promptHash}`,
+    );
+    tx.insert(assistantQueries)
+      .values({
+        recordId,
+        promptHash,
+        responseJson: payload,
+        createdAt: now,
+      })
+      .run();
+  });
 }

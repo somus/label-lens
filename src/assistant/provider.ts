@@ -26,6 +26,8 @@ export type QueryAssistantArgs = {
   model: Model<string>;
   /** Canonical prompt input; we hash + assemble the model prompt from this. */
   promptInput: CanonicalPromptInput;
+  /** Names from `config.labels[].name`; used to reject hallucinated `suggestedLabel` values before caching. */
+  labelNames: readonly string[];
   /** Receives each text-delta token as the model streams. Caller renders into footer / reasoning buffer. */
   onToken?: (token: string) => void;
   /** Notified once when the privacy gate forces a halt — UI prompts the reviewer to acknowledge. */
@@ -46,6 +48,7 @@ export class AssistantQueryError extends Error {
     | "local-only-violation"
     | "privacy-gate"
     | "schema-mismatch"
+    | "invalid-label"
     | "no-tool-call"
     | "provider-error";
   constructor(code: AssistantQueryError["code"], message: string) {
@@ -67,15 +70,35 @@ function isRemoteProvider(provider: string): boolean {
  * resolves. Errors throw `AssistantQueryError` with a machine-readable
  * `code` so the UI can branch (open the configure overlay, surface a
  * privacy-gate banner, etc.).
+ *
+ * ADR 0004: callers must tag the associated review entry's `source_of_truth`
+ * as `human+assistant` whenever this function is invoked for a record — the
+ * act of viewing the assistant panel (accepted, dismissed, or relabel) is
+ * what triggers the tag. This function returns the response only; slice 11C
+ * applies the audit tag at the overlay seam.
  */
 export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAssistantResult> {
-  const { db, recordId, assistant, localOnly, model, promptInput, onToken, onPrivacyGate, signal } =
-    args;
+  const {
+    db,
+    recordId,
+    assistant,
+    localOnly,
+    model,
+    promptInput,
+    labelNames,
+    onToken,
+    onPrivacyGate,
+    signal,
+  } = args;
 
   const promptHash = hashPrompt(canonicalizePrompt(promptInput));
 
-  // Cache hit short-circuits — no config check, no network. Reviewer toggles
-  // (enable/disable) leave cached rows intact; a fresh enable reuses them.
+  // Cache hit short-circuits — no config check, no network. Three deliberate
+  // consequences: (1) disabling the assistant leaves cached rows readable on
+  // re-enable; (2) switching provider local↔remote does not invalidate prior
+  // rows; (3) revoking privacyAcknowledged does not purge cached remote rows.
+  // All three are acceptable per PRD §10.5 — cache is content-addressed by
+  // prompt_hash, not by current config state.
   const cached = getCachedAssistantResponse(db, recordId, promptHash);
   if (cached) return { response: cached, wasCached: true };
 
@@ -162,6 +185,15 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   }
 
   const response = finalToolCall.arguments as AssistantResponse;
+  if (!labelNames.includes(response.suggestedLabel)) {
+    // Hallucinated label — do NOT cache. Re-query has a chance of getting a
+    // valid response; caching here would poison the (record_id, prompt_hash)
+    // slot until the prompt template version bumps.
+    throw new AssistantQueryError(
+      "invalid-label",
+      `Model suggested label '${response.suggestedLabel}' is not in config.labels.`,
+    );
+  }
   cacheAssistantResponse(db, recordId, promptHash, response);
   return { response, wasCached: false };
 }

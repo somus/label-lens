@@ -1,4 +1,5 @@
 import { type Static, Type } from "@earendil-works/pi-ai";
+import { Value } from "typebox/value";
 
 /**
  * Structured response shape per PRD §10.5. Surfaced to the reviewer in the
@@ -34,27 +35,12 @@ export const AssistantResponseSchema = Type.Object({
 
 export type AssistantResponse = Static<typeof AssistantResponseSchema>;
 
-const VALID_CONFIDENCES = new Set(["low", "medium", "high"]);
-const VALID_ACTIONS = new Set(["accept", "relabel", "reject", "skip"]);
-
 /**
  * Runtime guard: a cached row passed `JSON.parse` but the producer (the LLM
- * or a stale cache) could still emit the wrong shape. Reject anything that
- * doesn't match — caller treats the row as a cache miss and re-queries.
+ * or a stale cache) could still emit the wrong shape. Derived from
+ * `AssistantResponseSchema` via TypeBox so the validator can never drift
+ * from the declared schema.
  */
 export function isAssistantResponse(value: unknown): value is AssistantResponse {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.suggestedLabel === "string" &&
-    typeof v.confidence === "string" &&
-    VALID_CONFIDENCES.has(v.confidence) &&
-    typeof v.reasoning === "string" &&
-    Array.isArray(v.evidenceFor) &&
-    v.evidenceFor.every((x) => typeof x === "string") &&
-    Array.isArray(v.evidenceAgainst) &&
-    v.evidenceAgainst.every((x) => typeof x === "string") &&
-    typeof v.recommendedAction === "string" &&
-    VALID_ACTIONS.has(v.recommendedAction)
-  );
+  return Value.Check(AssistantResponseSchema, value);
 }

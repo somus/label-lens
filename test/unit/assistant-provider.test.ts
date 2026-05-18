@@ -25,6 +25,7 @@ import { openTmpStore } from "../util/tmp.ts";
 
 const REMOTE_PROVIDER_NAME = "anthropic";
 const OLLAMA_PROVIDER_NAME = "ollama";
+const LABEL_NAMES = ["food", "travel"];
 
 let registration: FauxProviderRegistration;
 
@@ -95,6 +96,7 @@ describe("queryAssistant cache hit", () => {
       localOnly: false,
       model: registration.getModel(),
       promptInput,
+      labelNames: LABEL_NAMES,
     });
     expect(result.wasCached).toBe(true);
     expect(result.response).toEqual(validResponse);
@@ -116,6 +118,7 @@ describe("queryAssistant cache miss path", () => {
       localOnly: false,
       model: registration.getModel(),
       promptInput,
+      labelNames: LABEL_NAMES,
     });
 
     expect(result.wasCached).toBe(false);
@@ -142,6 +145,7 @@ describe("queryAssistant cache miss path", () => {
       localOnly: false,
       model: registration.getModel(),
       promptInput: makePromptInput(),
+      labelNames: LABEL_NAMES,
       onToken: (t) => tokens.push(t),
     });
     expect(tokens.join("")).toContain("Thinking");
@@ -161,12 +165,39 @@ describe("queryAssistant cache miss path", () => {
         localOnly: false,
         model: registration.getModel(),
         promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
       });
       expect.unreachable();
     } catch (err) {
       expect(err).toBeInstanceOf(AssistantQueryError);
       expect((err as AssistantQueryError).code).toBe("no-tool-call");
     }
+  });
+
+  test("suggestedLabel not in config.labels throws invalid-label and is not cached", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const hallucinated: AssistantResponse = { ...validResponse, suggestedLabel: "totallyMadeUp" };
+    queueSubmit(hallucinated);
+
+    const promptInput = makePromptInput();
+    try {
+      await queryAssistant({
+        db: store.db,
+        recordId,
+        assistant: ACK_REMOTE,
+        localOnly: false,
+        model: registration.getModel(),
+        promptInput,
+        labelNames: LABEL_NAMES,
+      });
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(AssistantQueryError);
+      expect((err as AssistantQueryError).code).toBe("invalid-label");
+    }
+    const promptHash = hashPrompt(canonicalizePrompt(promptInput));
+    expect(getCachedAssistantResponse(store.db, recordId, promptHash)).toBeNull();
   });
 
   test("malformed tool args throws schema-mismatch", async () => {
@@ -186,6 +217,7 @@ describe("queryAssistant cache miss path", () => {
         localOnly: false,
         model: registration.getModel(),
         promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
       });
       expect.unreachable();
     } catch (err) {
@@ -209,6 +241,7 @@ describe("queryAssistant privacy + --local-only gates", () => {
         localOnly: false,
         model: registration.getModel(),
         promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
         onPrivacyGate: () => {
           gateFired = true;
         },
@@ -235,6 +268,7 @@ describe("queryAssistant privacy + --local-only gates", () => {
         localOnly: true,
         model: registration.getModel(),
         promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
       });
       expect.unreachable();
     } catch (err) {
@@ -259,6 +293,7 @@ describe("queryAssistant privacy + --local-only gates", () => {
       localOnly: true,
       model: registration.getModel(),
       promptInput: makePromptInput({ provider: OLLAMA_PROVIDER_NAME }),
+      labelNames: LABEL_NAMES,
     });
     expect(result.response).toEqual(validResponse);
   });
@@ -269,8 +304,10 @@ describe("PROMPT_TEMPLATE_VERSION cache-bust", () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
 
-    const oldInput = makePromptInput({ prompt_template_version: "1.0.0" });
-    const newInput = makePromptInput({ prompt_template_version: "1.1.0" });
+    const oldInput = makePromptInput({ prompt_template_version: PROMPT_TEMPLATE_VERSION });
+    const newInput = makePromptInput({
+      prompt_template_version: `${PROMPT_TEMPLATE_VERSION}-bumped`,
+    });
     const oldHash = hashPrompt(canonicalizePrompt(oldInput));
     const newHash = hashPrompt(canonicalizePrompt(newInput));
     expect(oldHash).not.toBe(newHash);
