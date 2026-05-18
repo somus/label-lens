@@ -37,9 +37,9 @@ export const openAssistantCommand: Command = {
   name: "record.openAssistant",
   scope: "review",
   binding: "i",
-  // No `footer` field — `i` is a non-essential discoverability path (PRD
-  // §10.5 calls assistant "optional"), so we keep the action footer
-  // scannable. Reviewers learn the binding from `?` help or AGENTS.md.
+  // Short footer label keeps the row scannable on 120-col terminals; `?`
+  // help spells it out as "inquire (LLM assistant)".
+  footer: { label: "ask", order: 25 },
   enabled: (ctx) => ctx.cursor?.current() != null,
   run: (ctx) => {
     const record = ctx.cursor?.current();
