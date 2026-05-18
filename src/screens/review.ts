@@ -4,7 +4,7 @@ import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/r
 import { type AppContext, enterReview } from "../app/context.ts";
 import { ASSISTANT_PRIVACY_NOTICE } from "../assistant/privacy_notice.ts";
 import { createChordResolver } from "../keymap/chord.ts";
-import { CONFIGURE_PROVIDERS } from "../overlay/configure-assistant.ts";
+import { CONFIGURE_PROVIDERS, envVarFor } from "../overlay/configure-assistant.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
@@ -578,19 +578,31 @@ function renderConfigureAssistant(
       const value = local ? (state.ollamaUrl ?? "") : (state.apiKey ?? "");
       const fieldLabel = local ? "Ollama URL" : "API key";
       const mask = local ? value : "*".repeat(value.length);
+      const envVar = state.selectedProvider ? envVarFor(state.selectedProvider) : "";
       const body: ReturnType<typeof Text>[] = [
         Text({ content: `Provider: ${state.selectedProvider}` }),
         Text({ content: "" }),
         Text({ content: `${fieldLabel}:` }),
         Text({ content: ` > ${mask}_`, attributes: TextAttributes.BOLD }),
         Text({ content: "" }),
+      ];
+      if (!local) {
+        body.push(
+          Text({
+            content: ` Used this session. Export ${envVar} in your shell for next launch.`,
+            attributes: TextAttributes.DIM,
+          }),
+          Text({ content: "" }),
+        );
+      }
+      body.push(
         Text({
           content: state.error
             ? ` ! ${state.error}`
-            : ` Type ${local ? "URL" : "key"}, [enter] continue, [esc] cancel`,
+            : ` Type ${local ? "URL" : "key"} (paste OK), [enter] continue, [esc] cancel`,
           attributes: state.error ? TextAttributes.BOLD : TextAttributes.DIM,
         }),
-      ];
+      );
       return modalBox(display, termWidth, termHeight, 0.5, "Configure Assistant", ...body);
     }
     case "privacy": {

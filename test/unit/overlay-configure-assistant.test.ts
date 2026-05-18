@@ -161,6 +161,32 @@ describe("privacy step", () => {
     }
   });
 
+  test("env var name matches pi-ai convention per provider", () => {
+    const cases: { providerSlug: string; expected: string }[] = [
+      { providerSlug: "anthropic", expected: "ANTHROPIC_API_KEY" },
+      { providerSlug: "openai", expected: "OPENAI_API_KEY" },
+      // Google's pi-ai env var is GEMINI_API_KEY, not GOOGLE_API_KEY.
+      { providerSlug: "google", expected: "GEMINI_API_KEY" },
+      { providerSlug: "groq", expected: "GROQ_API_KEY" },
+    ];
+    for (const c of cases) {
+      const idx = CONFIGURE_PROVIDERS.findIndex((p) => p.slug === c.providerSlug);
+      expect(idx).toBeGreaterThanOrEqual(0);
+      let s = openConfigureAssistant();
+      s = state(press(s, String(idx + 1)));
+      s = state(press(s, "return"));
+      s = state(press(s, "k"));
+      s = state(press(s, "return"));
+      const r = press(s, "y");
+      const cfg = r.effects.find((e) => e.kind === "updateAssistantConfig");
+      if (cfg?.kind === "updateAssistantConfig") {
+        expect(cfg.assistant.apiKeyEnvVar).toBe(c.expected);
+      } else {
+        throw new Error(`no updateAssistantConfig for ${c.providerSlug}`);
+      }
+    }
+  });
+
   test("return also commits", () => {
     const s = privacyStart();
     const r = press(s, "return");

@@ -61,6 +61,28 @@ function defaultModelFor(provider: string): string | undefined {
   }
 }
 
+/**
+ * Env var names match pi-ai's per-provider conventions (see its env-api-keys
+ * table). Using the same names means a reviewer who already followed the
+ * provider's own docs (e.g. `export GEMINI_API_KEY=…` for Google's Gemini)
+ * doesn't have to re-export under a different label-lens-specific name on
+ * the next launch.
+ */
+export function envVarFor(provider: string): string {
+  switch (provider) {
+    case "google":
+      return "GEMINI_API_KEY";
+    case "anthropic":
+      return "ANTHROPIC_API_KEY";
+    case "openai":
+      return "OPENAI_API_KEY";
+    case "groq":
+      return "GROQ_API_KEY";
+    default:
+      return `${provider.toUpperCase()}_API_KEY`;
+  }
+}
+
 function commitConfig(state: ConfigureAssistantState): ReduceResult {
   const provider = state.selectedProvider!;
   const local = isLocalProvider(provider);
@@ -74,11 +96,12 @@ function commitConfig(state: ConfigureAssistantState): ReduceResult {
   if (local) {
     if (state.ollamaUrl) assistant.ollamaUrl = state.ollamaUrl;
   } else {
-    // Convention: env var named after the provider slug. The typed key is
-    // exported into the active process via the effect handler (session
-    // only; never persisted to disk). Reviewer is told to export the same
-    // env var in their shell for the next launch.
-    assistant.apiKeyEnvVar = `${provider.toUpperCase()}_API_KEY`;
+    // Env var name matches pi-ai's own convention per provider (see
+    // envVarFor). The typed key is exported into the active process via
+    // the effect handler (session only; never persisted to disk).
+    // Reviewer is told to export the same env var in their shell for the
+    // next launch.
+    assistant.apiKeyEnvVar = envVarFor(provider);
   }
   const effect: Effect = local
     ? { kind: "updateAssistantConfig", assistant }
