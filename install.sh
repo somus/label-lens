@@ -34,9 +34,6 @@ detect_target() {
     *) err "unsupported arch: $(uname -m). Supported: arm64, x86_64." ;;
   esac
   target="${os}-${arch}"
-  if [ "$target" = "darwin-x64" ]; then
-    err "darwin-x64 (Intel Mac) is not shipped as a prebuilt. Build from source: clone the repo and run 'bun run build:bin'."
-  fi
   echo "$target"
 }
 

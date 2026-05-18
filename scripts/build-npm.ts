@@ -5,9 +5,11 @@ import { join, resolve } from "node:path";
 const ROOT = resolve(import.meta.dir, "..");
 const NPM_DIR = resolve(ROOT, "dist", "npm");
 
-// darwin-x64 omitted — see release.yml comment + ADR (no Intel Mac runner).
+// All four targets ship. darwin-x64 unblocked once Bun ≥ 1.3.11 made the
+// foreign-arch optional-dep install reliable (supersedes ADR 0006).
 const PLATFORMS = [
   { name: "darwin-arm64", os: "darwin", cpu: "arm64" },
+  { name: "darwin-x64", os: "darwin", cpu: "x64" },
   { name: "linux-arm64", os: "linux", cpu: "arm64" },
   { name: "linux-x64", os: "linux", cpu: "x64" },
 ] as const;

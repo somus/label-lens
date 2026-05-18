@@ -1,4 +1,12 @@
-# Don't ship a darwin-x64 prebuilt
+# Don't ship a darwin-x64 prebuilt (SUPERSEDED 2026-05-18)
+
+**Status: SUPERSEDED.** darwin-x64 ships as a prebuilt binary as of the next release. Bun ≥ 1.3.11 installs foreign-arch optional deps reliably via `bun add --no-save --force --cpu=x64 --os=darwin @opentui/core-darwin-x64@<v>`, which unblocks the cross-compile from a macos-14 (arm64) host. Verified locally: `bun build --compile --target=bun-darwin-x64` produces a valid Mach-O x86_64 binary. `release.yml` now runs the darwin-x64 build on `macos-14` alongside darwin-arm64 — no macos-13 queueing.
+
+`scripts/build-npm.ts`, `scripts/npm-launcher.mjs`, and `install.sh` all include darwin-x64 in their platform maps. Intel Mac users can install via curl or npm like every other supported target.
+
+Original ADR preserved below for historical context.
+
+---
 
 LabelLens publishes prebuilt binaries for macOS arm64, Linux arm64, and Linux x64. **darwin-x64 (Intel Mac) is intentionally omitted** from `release.yml`, `optionalDependencies`, the curl-installer, and the npm launcher's platform map.
 
