@@ -40,6 +40,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@earendil-works/pi-ai": "^0.75.1",
     "@opentui/core": "^0.2.1",
     "@sinclair/typebox": "^0.34.0",
     "drizzle-orm": "^0.45.2"
