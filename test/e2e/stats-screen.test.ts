@@ -17,10 +17,13 @@ function makeConfig(): LabellensConfig {
   };
 }
 
-async function setup(store: TmpStore) {
+async function setup(
+  store: TmpStore,
+  size: { width: number; height: number } = { width: 100, height: 40 },
+) {
   const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
-    width: 100,
-    height: 40,
+    width: size.width,
+    height: size.height,
   });
   const app = createAppContext({
     db: store.db,
@@ -49,13 +52,54 @@ function seedCorrection(store: TmpStore): void {
   });
 }
 
+function seedDecisionBuckets(store: TmpStore): void {
+  const ids = store.db.all<{ id: string }>(sql`SELECT id FROM records ORDER BY row_index`);
+  insertReview(store.db, {
+    record_id: ids[0]!.id,
+    status: "accepted",
+    final_label: "food",
+    prev_label: "food",
+    source_of_truth: "human",
+  });
+  insertReview(store.db, {
+    record_id: ids[1]!.id,
+    status: "relabeled",
+    final_label: "travel",
+    prev_label: "food",
+    source_of_truth: "human",
+  });
+  insertReview(store.db, {
+    record_id: ids[2]!.id,
+    status: "rejected",
+    final_label: null,
+    prev_label: "shopping",
+    source_of_truth: "human",
+  });
+  insertReview(store.db, {
+    record_id: ids[3]!.id,
+    status: "skipped",
+    final_label: null,
+    prev_label: null,
+    source_of_truth: "human",
+  });
+}
+
 describe("stats overlay e2e", () => {
   test("renders core sections + first-drillable highlight + footer", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    seedCorrection(store);
+    seedDecisionBuckets(store);
     const { captureCharFrame } = await setup(store);
     const frame = captureCharFrame();
     expect(frame).toContain("Stats");
+    expect(frame).toContain("Progress:");
+    expect(frame).toContain("Total 10");
+    expect(frame).toContain("Reviewed 3");
+    expect(frame).toContain("Pending 6");
+    expect(frame).toContain("Decisions:");
+    expect(frame).toContain("Accepted 1");
+    expect(frame).toContain("Relabeled 1");
+    expect(frame).toContain("Rejected 1");
+    expect(frame).toContain("Skipped 1");
     expect(frame).toContain("Top corrections");
     expect(frame).toContain("food → travel");
     expect(frame).toContain("Suggested next queue");
@@ -129,5 +173,24 @@ describe("stats overlay e2e", () => {
     mockInput.pressKey("k");
     await renderOnce();
     expect(app.overlay.state.highlight).toBe(head);
+  });
+
+  test("small terminals keep the highlighted stat row visible while scrolling", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    seedCorrection(store);
+    const { app, mockInput, renderOnce, captureCharFrame } = await setup(store, {
+      width: 80,
+      height: 16,
+    });
+
+    for (let i = 0; i < 8; i++) {
+      mockInput.pressKey("j");
+      await renderOnce();
+      if (app.overlay?.kind !== "stats") throw new Error("expected stats overlay");
+      const highlighted = app.overlay.state.lines[app.overlay.state.highlight];
+      if (highlighted?.kind !== "row") throw new Error("expected highlighted row");
+      const frame = captureCharFrame();
+      expect(frame).toContain(highlighted.display.trim().split(/\s{2,}/)[0]!);
+    }
   });
 });

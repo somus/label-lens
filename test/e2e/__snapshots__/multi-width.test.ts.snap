@@ -42,13 +42,13 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 80x30 1`] = `
            │                                                      │             
            │  ══ Stats ══════════════════════════════════════════ │             
            │                                                      │             
- ╭─────────│                                                      │───────────╮ 
- │ Lunch at│  Imported issues ──────────────────────────────────  │           │ 
- ╰─────────│ >   label_issue                  1 record         →  │───────────╯ 
-  █ Uber ri│                                                      │             
-  ▆ Amazon │  Suggested next queue ─────────────────────────────  │             
-           │     low-confidence   (score 5.00)                 →  │             
-  predictio│                                                      │──────────── 
+ ╭─────────│  Progress: Total 10  Reviewed 0  Pending 10  Skipped │───────────╮ 
+ │ Lunch at│  Decisions: Accepted 0  Relabeled 0  Rejected 0  Ski │           │ 
+ ╰─────────│                                                      │───────────╯ 
+  █ Uber ri│  Imported issues ──────────────────────────────────  │             
+  ▆ Amazon │ >   label_issue                  1 record         →  │             
+           │  Suggested next queue ─────────────────────────────  │             
+  predictio│     low-confidence   (score 5.00)                 →  │──────────── 
            │                                                      │             
   label    │                                                      │             
   confidenc│                                                      │             
@@ -144,13 +144,13 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 120x30 1`] = `
                    │                                                                              │                     
  ╭─────────────────│  ══ Stats ══════════════════════════════════════════════════════════════════ │                     
  │ Lunch at Zomato │                                                                              │                     
- ╰─────────────────│                                                                              │                     
-  █ Uber ride to ai│  Imported issues ──────────────────────────────────────────────────────────  │                     
-  ▆ Amazon order #1│ >   label_issue                  1 record                                 →  │                     
-                   │                                                                              │                     
-  prediction ──────│  Suggested next queue ─────────────────────────────────────────────────────  │                     
-                   │     low-confidence   (score 5.00)                                         →  │                     
-  label      ◇ food│                                                                              │                     
+ ╰─────────────────│  Progress: Total 10  Reviewed 0  Pending 10  Skipped 0                       │                     
+  █ Uber ride to ai│  Decisions: Accepted 0  Relabeled 0  Rejected 0  Skipped 0                   │                     
+  ▆ Amazon order #1│                                                                              │                     
+                   │  Imported issues ──────────────────────────────────────────────────────────  │                     
+  prediction ──────│ >   label_issue                  1 record                                 →  │                     
+                   │  Suggested next queue ─────────────────────────────────────────────────────  │                     
+  label      ◇ food│     low-confidence   (score 5.00)                                         →  │                     
   confidence ██████│                                                                              │                     
   source     [llm:g│                                                                              │                     
                    │                                                                              │iny.jsonl            
@@ -246,13 +246,13 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 160x30 1`] = `
                                        │                                                                              │                                         
  ╭─────────────────────────────────────│  ══ Stats ══════════════════════════════════════════════════════════════════ │                                         
  │ Lunch at Zomato Bangalore           │                                                                              │                                         
- ╰─────────────────────────────────────│                                                                              │                                         
-  █ Uber ride to airport               │  Imported issues ──────────────────────────────────────────────────────────  │                                         
-  ▆ Amazon order #12345                │ >   label_issue                  1 record                                 →  │                                         
-                                       │                                                                              │                                         
-  prediction ──────────────────────────│  Suggested next queue ─────────────────────────────────────────────────────  │                                         
-                                       │     low-confidence   (score 5.00)                                         →  │                                         
-  label      ◇ food                    │                                                                              │                                         
+ ╰─────────────────────────────────────│  Progress: Total 10  Reviewed 0  Pending 10  Skipped 0                       │                                         
+  █ Uber ride to airport               │  Decisions: Accepted 0  Relabeled 0  Rejected 0  Skipped 0                   │                                         
+  ▆ Amazon order #12345                │                                                                              │                                         
+                                       │  Imported issues ──────────────────────────────────────────────────────────  │                                         
+  prediction ──────────────────────────│ >   label_issue                  1 record                                 →  │                                         
+                                       │  Suggested next queue ─────────────────────────────────────────────────────  │                                         
+  label      ◇ food                    │     low-confidence   (score 5.00)                                         →  │                                         
   confidence ████████░  92%            │                                                                              │                                         
   source     [llm:gpt-4]               │                                                                              │                                         
                                        │                                                                              │xtures/tiny.jsonl                        

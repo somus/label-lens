@@ -17,7 +17,7 @@ function makeConfig(): LabellensConfig {
 
 async function setup() {
   const store = await openTmpStore({ ingest: "tiny.jsonl" });
-  const { renderer, mockInput, renderOnce } = await createTestRenderer({
+  const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
     width: 120,
     height: 40,
   });
@@ -30,7 +30,7 @@ async function setup() {
   });
   mountReviewScreen({ renderer, app });
   await renderOnce();
-  return { store, app, mockInput, renderOnce };
+  return { store, app, mockInput, renderOnce, captureCharFrame };
 }
 
 describe("overlay propagation e2e", () => {
@@ -60,6 +60,12 @@ describe("overlay propagation e2e", () => {
     await ctx.renderOnce();
 
     expect(ctx.app.overlay?.kind).toBe("help");
+    const frame = ctx.captureCharFrame();
+    expect(frame).toContain("Help · stats");
+    expect(frame).toContain("j/k");
+    expect(frame).toContain("enter");
+    expect(frame).toContain("esc");
+    expect(frame).toContain("stats.controls");
   });
 
   test("guidelines overlay propagates '?' to contextual help", async () => {

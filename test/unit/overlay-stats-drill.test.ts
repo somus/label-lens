@@ -42,6 +42,7 @@ describe("stats overlay drill reducer", () => {
     const state = openStatsOverlay(sections);
     const highlighted = state.lines[state.highlight];
 
+    expect(state.summary).toEqual([{ label: "Progress", items: [{ label: "total", count: 10 }] }]);
     expect(highlighted?.kind).toBe("row");
     if (highlighted?.kind === "row") {
       expect(highlighted.drillTo).toBe("by-source:rule.a");

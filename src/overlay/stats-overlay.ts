@@ -6,14 +6,21 @@ export type StatsLine =
   | { kind: "section-header"; label: string }
   | { kind: "row"; display: string; row: StatRow; drillTo: QueueId | null };
 
+export type StatsSummaryGroup = {
+  label: string;
+  items: { label: string; count: number }[];
+};
+
 export type StatsOverlayState = {
+  summary: StatsSummaryGroup[];
   lines: StatsLine[];
   highlight: number;
   scroll: number;
+  pageSize: number;
 };
 
-const STATS_PAGE = 20;
-const SECTIONS_IN_SIDEBAR = new Set(["Progress", "Decisions"]);
+export const DEFAULT_STATS_PAGE_SIZE = 20;
+const SUMMARY_SECTIONS = new Set(["Progress", "Decisions"]);
 
 function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
@@ -49,15 +56,46 @@ function formatRow(row: StatRow): string {
 }
 
 export function openStatsOverlay(sections: Section[]): StatsOverlayState {
+  const summary: StatsSummaryGroup[] = [];
   const lines: StatsLine[] = [];
   for (const s of sections) {
-    if (SECTIONS_IN_SIDEBAR.has(s.label)) continue;
+    if (SUMMARY_SECTIONS.has(s.label)) {
+      const items: StatsSummaryGroup["items"] = [];
+      for (const row of s.rows) {
+        if (row.kind === "progress") {
+          items.push({ label: row.bucket, count: row.count });
+        } else if (row.kind === "decision") {
+          items.push({ label: row.status, count: row.count });
+        }
+      }
+      summary.push({
+        label: s.label,
+        items,
+      });
+      continue;
+    }
     lines.push({ kind: "section-header", label: s.label });
     for (const row of s.rows) {
       lines.push({ kind: "row", display: formatRow(row), row, drillTo: drillToQueue(row) });
     }
   }
-  return { lines, highlight: firstDrillable(lines), scroll: 0 };
+  return {
+    summary,
+    lines,
+    highlight: firstDrillable(lines),
+    scroll: 0,
+    pageSize: DEFAULT_STATS_PAGE_SIZE,
+  };
+}
+
+export function withStatsPageSize(state: StatsOverlayState, pageSize: number): StatsOverlayState {
+  const nextPageSize = Math.max(1, Math.floor(pageSize));
+  if (state.pageSize === nextPageSize) return state;
+  return {
+    ...state,
+    pageSize: nextPageSize,
+    scroll: scrollForHighlight(state.scroll, state.highlight, nextPageSize),
+  };
 }
 
 function packed(state: StatsOverlayState): { kind: "stats"; state: StatsOverlayState } {
@@ -78,7 +116,7 @@ export function reduceStatsOverlay(state: StatsOverlayState, event: OverlayEvent
       overlay: packed({
         ...state,
         highlight,
-        scroll: scrollForHighlight(state.scroll, highlight),
+        scroll: scrollForHighlight(state.scroll, highlight, state.pageSize),
       }),
       effects: [],
     };
@@ -87,7 +125,11 @@ export function reduceStatsOverlay(state: StatsOverlayState, event: OverlayEvent
     const highlight =
       state.highlight >= 0 ? clampedDrillable(state.lines, state.highlight, -1) : state.highlight;
     return {
-      overlay: packed({ ...state, highlight, scroll: scrollForHighlight(state.scroll, highlight) }),
+      overlay: packed({
+        ...state,
+        highlight,
+        scroll: scrollForHighlight(state.scroll, highlight, state.pageSize),
+      }),
       effects: [],
     };
   }
@@ -119,9 +161,9 @@ function clampedDrillable(lines: StatsLine[], from: number, dir: 1 | -1): number
   return from;
 }
 
-function scrollForHighlight(scroll: number, highlight: number): number {
+function scrollForHighlight(scroll: number, highlight: number, pageSize: number): number {
   if (highlight < 0) return scroll;
   if (highlight < scroll) return highlight;
-  if (highlight >= scroll + STATS_PAGE) return highlight - STATS_PAGE + 1;
+  if (highlight >= scroll + pageSize) return highlight - pageSize + 1;
   return scroll;
 }

@@ -26,7 +26,7 @@ Concretely:
 
 - `pending` queue selects records with no row in `effective_reviews`. (Skipped records have a row in `effective_reviews` with `status = 'skipped'`, so they're excluded — see [skipped-state](./skipped-state.md).)
 - `labellens export jsonl` reads `effective_reviews`, joins to the record, writes one row per reviewed record.
-- The stats screen's totals are counts over `effective_reviews`.
+- The stats surface's totals are counts over `effective_reviews`.
 
 ## Two surfaces that read raw `reviews`
 

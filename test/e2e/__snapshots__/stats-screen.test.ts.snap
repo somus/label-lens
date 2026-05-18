@@ -2,34 +2,34 @@
 
 exports[`stats overlay e2e renders core sections + first-drillable highlight + footer 1`] = `
 "                                                                                                    
-  LabelLens  tiny.jsonl  Pending  1 / 9             Reviewed: 1 / 10  ·  Skipped: 0  ·  Pending: 9  
+  LabelLens  tiny.jsonl  Pending  1 / 6             Reviewed: 3 / 10  ·  Skipped: 1  ·  Pending: 6  
                                                                                                     
-  Pending ──────────────────────────────────────────────────────────────────────────────────  1 / 9 
+  Pending ──────────────────────────────────────────────────────────────────────────────────  1 / 6 
               ┌────────────────────────────────────────────────────────────────────┐                
               │                                                                    │                
               │  == Stats ======================================================== │                
  ┌────────────│                                                                    │──────────────┐ 
- │ ▶ Uber ride│                                                                    │              │ 
- └────────────│  Acceptance by source ───────────────────────────────────────────  │──────────────┘ 
-  ▆ Amazon ord│ >   llm:gpt-4                  0%  (1 reviewed)                 →  │                
-  ▄ Netflix mo│                                                                    │                
-              │  Relabel by source ──────────────────────────────────────────────  │                
-  prediction ─│     llm:gpt-4                100%  (1 reviewed)                 →  │─────────────── 
-              │                                                                    │                
+ │ ▶ Salary cr│  Progress: Total 10  Reviewed 3  Pending 6  Skipped 1              │              │ 
+ └────────────│  Decisions: Accepted 1  Relabeled 1  Rejected 1  Skipped 1         │──────────────┘ 
+  █ Rent trans│                                                                    │                
+  ▇ Coffee at │  Acceptance by source ───────────────────────────────────────────  │                
+              │ >   llm:gpt-4                 33%  (3 reviewed)                 →  │                
+  prediction ─│  Relabel by source ──────────────────────────────────────────────  │─────────────── 
+              │     llm:gpt-4                 33%  (3 reviewed)                 →  │                
   label      ◇│  Top corrections ────────────────────────────────────────────────  │                
   confidence #│     food → travel                     1                         →  │                
-  source     [│                                                                    │                
-              │  Labels with highest correction rate ────────────────────────────  │                
-  labels ─────│     food                     100%  (1 reviewed)                 →  │─────────────── 
-              │                                                                    │                
-    [1]  food │  Weakest sources ────────────────────────────────────────────────  │                
-              │     llm:gpt-4                100%  (1 reviewed)                 →  │                
-              │                                                                    │                
-              │  Imported issues ────────────────────────────────────────────────  │                
+  source     [│  Labels with highest correction rate ────────────────────────────  │                
+              │     food                      50%  (2 reviewed)                 →  │                
+  labels ─────│  Weakest sources ────────────────────────────────────────────────  │─────────────── 
+              │     llm:gpt-4                 33%  (3 reviewed)                 →  │                
+    [1]  food │  Imported issues ────────────────────────────────────────────────  │                
               │     label_issue                  1 record                       →  │                
-              │                                                                    │                
               │  Suggested next queue ───────────────────────────────────────────  │                
-              │     by-source:llm:gpt-4   (score 7.00)                          →  │                
+              │     low-confidence   (score 3.00)                               →  │                
+              │                                                                    │                
+              │                                                                    │                
+              │                                                                    │                
+              │                                                                    │                
               │                                                                    │                
               │                                                                    │                
               │  [j/k] navigate · [enter] drill · [esc] close                      │                
@@ -38,7 +38,7 @@ exports[`stats overlay e2e renders core sections + first-drillable highlight + f
                                                                                                     
                                                                                                     
                                                                                                     
-  history  ~ travel      [u] undo                                                                   
+  history  > —   ·   - shopping   ·   ~ travel   ·   + food      [u] undo                           
   [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] … 
                                                                                                     
 "

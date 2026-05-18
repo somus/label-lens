@@ -1,7 +1,11 @@
 import { bg as bgFn, fg as fgFn, StyledText, type TextChunk } from "@opentui/core";
-import type { StatsOverlayState } from "../overlay/stats-overlay.ts";
+import {
+  DEFAULT_STATS_PAGE_SIZE,
+  type StatsOverlayState,
+  withStatsPageSize,
+} from "../overlay/stats-overlay.ts";
 import { Box } from "./box.ts";
-import { pickSidebar, type ResolvedDisplay, sidebarWidth } from "./capability.ts";
+import type { ResolvedDisplay } from "./capability.ts";
 import type { Segment } from "./chrome/index.ts";
 import { segmentsToStyledText } from "./chrome/status-bar.ts";
 import { ModalHeader } from "./modal-frame.ts";
@@ -9,17 +13,15 @@ import { Scrollbar } from "./scrollbar.ts";
 import { Text, TextAttributes } from "./text.ts";
 import { borderForRole, resolveTheme } from "./theme.ts";
 
-const STATS_PANE_MIN_WIDTH = 40;
-const STATS_PAGE = 20;
+function statsModalHeight(termHeight: number): number {
+  const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
+  return Math.max(12, termHeight - topOffset * 2 - 2);
+}
 
-export function computeStatsPaneWidth(display: ResolvedDisplay, terminalWidth: number): number {
-  const sidebarOn = pickSidebar(display, terminalWidth);
-  const sidebarOverhead = sidebarWidth(terminalWidth) + 1 + 2 + 1;
-  const baseOverhead = 2 + 2;
-  return Math.max(
-    STATS_PANE_MIN_WIDTH,
-    terminalWidth - (sidebarOn ? sidebarOverhead : baseOverhead),
-  );
+export function statsVisibleRows(summaryGroups: number, termHeight: number): number {
+  const modalHeight = statsModalHeight(termHeight);
+  const summaryRows = summaryGroups > 0 ? summaryGroups + 1 : 0;
+  return Math.max(1, Math.min(DEFAULT_STATS_PAGE_SIZE, modalHeight - summaryRows - 8));
 }
 
 export function renderStatsOverlay(
@@ -30,8 +32,10 @@ export function renderStatsOverlay(
 ): ReturnType<typeof Box> {
   const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * 0.7)));
   const innerWidth = Math.max(40, modalWidth - 4);
-  const visible = state.lines.slice(state.scroll, state.scroll + STATS_PAGE);
-  const more = state.lines.length - state.scroll - visible.length;
+  const visibleRows = statsVisibleRows(state.summary.length, termHeight);
+  const viewState = withStatsPageSize(state, visibleRows);
+  const visible = viewState.lines.slice(viewState.scroll, viewState.scroll + visibleRows);
+  const more = viewState.lines.length - viewState.scroll - visible.length;
 
   return modalBox(
     display,
@@ -39,20 +43,21 @@ export function renderStatsOverlay(
     termHeight,
     modalWidth,
     `Stats${more > 0 ? `   (+${more} more)` : ""}`,
+    statsSummary(viewState, innerWidth, display),
     Box(
       { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
       Box(
         { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
         ...visible.flatMap((line, offset) => {
-          const index = state.scroll + offset;
+          const index = viewState.scroll + offset;
           if (line.kind === "section-header") {
-            return [Text({ content: "" }), sectionHeaderRow(line.label, innerWidth, display)];
+            return [sectionHeaderRow(line.label, innerWidth, display)];
           }
           return [
             statRow(
               line.display,
               line.drillTo !== null,
-              index === state.highlight,
+              index === viewState.highlight,
               innerWidth,
               display,
             ),
@@ -61,9 +66,9 @@ export function renderStatsOverlay(
       ),
       Scrollbar({
         display,
-        total: state.lines.length,
-        visible: STATS_PAGE,
-        scrollTop: state.scroll,
+        total: viewState.lines.length,
+        visible: visibleRows,
+        scrollTop: viewState.scroll,
         caps: true,
       }),
     ),
@@ -88,7 +93,7 @@ function modalBox(
   const overlayBg = t.bg.overlay !== "transparent" ? t.bg.overlay : "black";
   const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
   const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
-  const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
+  const modalHeight = statsModalHeight(termHeight);
   return Box(
     {
       flexDirection: "column",
@@ -108,6 +113,38 @@ function modalBox(
     ModalHeader({ display, title, innerWidth: modalWidth - 4 }),
     ...children,
   );
+}
+
+function statsSummary(
+  state: StatsOverlayState,
+  innerWidth: number,
+  display: ResolvedDisplay,
+): ReturnType<typeof Box> {
+  if (state.summary.length === 0) return Box({});
+  return Box(
+    { flexDirection: "column", flexShrink: 0, width: innerWidth, marginBottom: 1 },
+    ...state.summary.map((group) => {
+      const chunks: Segment[] = [{ text: ` ${group.label}: `, tone: "muted" }];
+      group.items.forEach((item, index) => {
+        if (index > 0) chunks.push({ text: "  ", tone: "dim" });
+        chunks.push(
+          { text: titleCase(item.label), tone: "dim" },
+          { text: ` ${item.count}`, tone: "default" },
+        );
+      });
+      return Box(
+        { flexDirection: "row", width: innerWidth, height: 1, overflow: "hidden" },
+        Text({
+          content: segmentsToStyledText(chunks, display),
+          wrapMode: "char",
+        }),
+      );
+    }),
+  );
+}
+
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function sectionHeaderRow(
