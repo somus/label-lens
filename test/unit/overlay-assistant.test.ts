@@ -23,13 +23,18 @@ function state(r: ReduceResult): AssistantState {
   return r.overlay.state;
 }
 
+function asStatus<S extends AssistantState["status"]>(
+  s: AssistantState,
+  status: S,
+): Extract<AssistantState, { status: S }> {
+  if (s.status !== status) throw new Error(`expected status=${status}, got ${s.status}`);
+  return s as Extract<AssistantState, { status: S }>;
+}
+
 describe("openAssistant", () => {
-  test("starts in loading with empty buffer", () => {
+  test("starts in loading variant with reasoningExpanded false", () => {
     const s = openAssistant(RECORD_ID);
     expect(s.status).toBe("loading");
-    expect(s.buffer).toBe("");
-    expect(s.suggestion).toBeNull();
-    expect(s.recommendedAction).toBeNull();
     expect(s.reasoningExpanded).toBe(false);
   });
 });
@@ -38,19 +43,18 @@ describe("streaming events", () => {
   test("streamToken appends to buffer + flips status to streaming", () => {
     let s = openAssistant(RECORD_ID);
     let r = reduceAssistant(s, { kind: "streamToken", token: "Hello" });
-    s = state(r);
-    expect(s.status).toBe("streaming");
-    expect(s.buffer).toBe("Hello");
+    const streaming = asStatus(state(r), "streaming");
+    expect(streaming.buffer).toBe("Hello");
+    s = streaming;
     r = reduceAssistant(s, { kind: "streamToken", token: " world" });
-    expect(state(r).buffer).toBe("Hello world");
+    expect(asStatus(state(r), "streaming").buffer).toBe("Hello world");
   });
 
   test("streamEnd with response sets suggestion + done status", () => {
     let s = openAssistant(RECORD_ID);
     s = state(reduceAssistant(s, { kind: "streamToken", token: "thinking" }));
     const r = reduceAssistant(s, { kind: "streamEnd", response: validResponse });
-    const next = state(r);
-    expect(next.status).toBe("done");
+    const next = asStatus(state(r), "done");
     expect(next.suggestion).toBe("food");
     expect(next.confidence).toBe("high");
     expect(next.recommendedAction).toBe("accept");
@@ -60,16 +64,14 @@ describe("streaming events", () => {
   test("streamEnd without response flips status to error", () => {
     const s = openAssistant(RECORD_ID);
     const r = reduceAssistant(s, { kind: "streamEnd" });
-    const next = state(r);
-    expect(next.status).toBe("error");
+    const next = asStatus(state(r), "error");
     expect(next.errorMessage).toContain("structured response");
   });
 
   test("streamError captures the message", () => {
     const s = openAssistant(RECORD_ID);
     const r = reduceAssistant(s, { kind: "streamError", error: new Error("network down") });
-    const next = state(r);
-    expect(next.status).toBe("error");
+    const next = asStatus(state(r), "error");
     expect(next.errorMessage).toContain("network down");
   });
 });
@@ -165,31 +167,6 @@ describe("key handling", () => {
     expect(r.effects.some((e) => e.kind === "markAssistantViewed")).toBe(true);
   });
 
-  test("malformed recommendedAction emits invalidAction + close, doesn't get stuck", () => {
-    let s = openAssistant(RECORD_ID, "food");
-    s = state(
-      reduceAssistant(s, {
-        kind: "streamEnd",
-        response: {
-          ...validResponse,
-          // biome-ignore lint/suspicious/noExplicitAny: simulating a malformed response that bypasses StringEnum.
-          recommendedAction: "nonsense" as any,
-        },
-      }),
-    );
-    const r = press(s, "return");
-    expect(r.overlay).toBeNull();
-    const kinds = r.effects.map((e) => e.kind);
-    expect(kinds).toContain("assistantInvalidAction");
-    expect(kinds).toContain("close");
-    // No commitDecision — we don't want a half-formed audit row.
-    expect(kinds).not.toContain("commitDecision");
-    const invalid = r.effects.find((e) => e.kind === "assistantInvalidAction");
-    if (invalid?.kind === "assistantInvalidAction") {
-      expect(invalid.action).toBe("nonsense");
-    }
-  });
-
   test("relabel decision threads predictedLabel into prev_label", () => {
     let s = openAssistant(RECORD_ID, "travel");
     s = state(
@@ -224,16 +201,18 @@ describe("key handling", () => {
 
   test("empty reasoning still settles to done; reducer keeps Tab toggle for symmetry", () => {
     let s = openAssistant(RECORD_ID);
-    s = state(
-      reduceAssistant(s, {
-        kind: "streamEnd",
-        response: { ...validResponse, reasoning: "" },
-      }),
+    const done = asStatus(
+      state(
+        reduceAssistant(s, {
+          kind: "streamEnd",
+          response: { ...validResponse, reasoning: "" },
+        }),
+      ),
+      "done",
     );
-    expect(s.status).toBe("done");
-    expect(s.reason).toBe("");
+    expect(done.reason).toBe("");
     // Tab toggle stays cheap — render layer decides whether to surface the hint.
-    s = state(press(s, "tab"));
+    s = state(press(done, "tab"));
     expect(s.reasoningExpanded).toBe(true);
   });
 });

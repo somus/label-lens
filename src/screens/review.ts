@@ -515,7 +515,8 @@ function renderAssistantStrip(
   contentWidth: number,
   fadeSnapshot?: import("../render/anim.ts").MotionSnapshot,
 ): ReturnType<typeof Box> {
-  const expanded = state.reasoningExpanded && state.reason !== null;
+  const reason = state.status === "done" ? state.reason : null;
+  const expanded = state.reasoningExpanded && reason !== null;
   const segs = buildAssistantSegments(state);
   const trailing = buildAssistantStatusTrailing(state);
   // During fade-in (motion progress < 1) drop BOLD on the summary line so the
@@ -527,14 +528,14 @@ function renderAssistantStrip(
   children.push(SectionHeader({ display, label: "assistant", width: contentWidth, trailing }));
   children.push(Text({ content: " " }));
 
-  if (expanded && state.reason) {
+  if (expanded && reason) {
     // Constrain reasoning to the same content width as the section header
     // — otherwise the markdown wraps to the full terminal width on wide
     // displays and looks unmoored from the `assistant ─────` rule above.
     children.push(
       Box(
         { flexDirection: "column", flexShrink: 0, marginBottom: 1, width: contentWidth },
-        Markdown({ content: state.reason }),
+        Markdown({ content: reason }),
       ),
     );
   }
@@ -578,19 +579,16 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
       { text: " dismiss", tone: "muted" },
     ];
   }
-  // done
-  const action = state.recommendedAction ?? "?";
-  const label = state.suggestion ?? "?";
-  const conf = state.confidence ?? "?";
-  const hasReason = state.reason !== null && state.reason.trim().length > 0;
+  // done — narrowed by the early returns above
+  const hasReason = state.reason.trim().length > 0;
   const segs: Segment[] = [
     { text: " ◆", tone: "accent" },
     { text: " ", tone: "default" },
-    { text: action, tone: "default" },
+    { text: state.recommendedAction, tone: "default" },
     { text: " → ", tone: "muted" },
-    { text: label, tone: "accent" },
+    { text: state.suggestion, tone: "accent" },
     { text: "  ", tone: "default" },
-    { text: conf, tone: "muted" },
+    { text: state.confidence, tone: "muted" },
     { text: "   ", tone: "default" },
   ];
   // Suppress the Tab hint when the assistant returned empty reasoning —
