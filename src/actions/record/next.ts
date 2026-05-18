@@ -6,10 +6,14 @@ export const next: Command = {
   binding: "j",
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => {
+    const before = ctx.cursor?.current()?.id;
     ctx.cursor?.next();
-    // ADR 0004: assistant exposure is per-focus-session. Moving to a new
-    // record discards prior viewing. cursor.next() is synchronous today;
-    // any future async navigation must clear the Set before yielding.
-    ctx.clearViewedAssistant();
+    const after = ctx.cursor?.current()?.id;
+    // ADR 0004: assistant exposure is per-focus-session. Only clear when the
+    // cursor actually moved — pressing `j` at the end clamps to the same
+    // record and must preserve the assistant tag. cursor.next() is
+    // synchronous today; any future async navigation must clear the Set
+    // before yielding.
+    if (before !== after) ctx.clearViewedAssistant();
   },
 };

@@ -87,6 +87,37 @@ describe("source_of_truth audit tag (ADR 0004)", () => {
     expect(app.viewedAssistant.size).toBe(0);
   });
 
+  test("record.next at queue end preserves viewedAssistant (boundary keypress)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    // Walk to the last record in the queue.
+    const total = app.cursor!.total;
+    for (let i = 0; i < total - 1; i++) {
+      await dispatch(defaultRegistry(), "review", app, "record.next");
+    }
+    const lastId = app.cursor!.current()!.id;
+    applyEffects(app, app.queueId!, [{ kind: "markAssistantViewed", recordId: lastId }]);
+    // Press j again — cursor clamps, no move, tag must survive.
+    await dispatch(defaultRegistry(), "review", app, "record.next");
+    expect(app.cursor!.current()!.id).toBe(lastId);
+    expect(app.viewedAssistant.has(lastId)).toBe(true);
+    await dispatch(defaultRegistry(), "review", app, "record.accept");
+    expect(currentReview(store.db, lastId)?.source_of_truth).toBe("human+assistant");
+  });
+
+  test("record.prev at queue start preserves viewedAssistant (boundary keypress)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const firstId = app.cursor!.current()!.id;
+    applyEffects(app, app.queueId!, [{ kind: "markAssistantViewed", recordId: firstId }]);
+    // Press k at top — cursor clamps, no move, tag must survive.
+    await dispatch(defaultRegistry(), "review", app, "record.prev");
+    expect(app.cursor!.current()!.id).toBe(firstId);
+    expect(app.viewedAssistant.has(firstId)).toBe(true);
+    await dispatch(defaultRegistry(), "review", app, "record.accept");
+    expect(currentReview(store.db, firstId)?.source_of_truth).toBe("human+assistant");
+  });
+
   test("queue.next ([/]) clears viewedAssistant (no cross-queue leak)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = makeApp(store.db);
