@@ -9,11 +9,13 @@ import { dirname, join } from "node:path";
 
 const require = createRequire(import.meta.url);
 
-// darwin-x64 not shipped — Apple Intel Mac users need to build from source
-// (`bun run build:bin darwin-x64`) until we move off OpenTUI's native libs
-// or a cross-compile path lands.
+// All four targets ship as prebuilt binaries. darwin-x64 used to be omitted
+// (see superseded ADR 0006) — current Bun (≥1.3.11) handles foreign-arch
+// optional-dep installs cleanly so the cross-compile from arm64 → x64 now
+// works in CI.
 const PLATFORM_MAP = {
   "darwin-arm64": "label-lens-darwin-arm64",
+  "darwin-x64": "label-lens-darwin-x64",
   "linux-arm64": "label-lens-linux-arm64",
   "linux-x64": "label-lens-linux-x64",
 };

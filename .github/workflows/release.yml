@@ -16,14 +16,21 @@ jobs:
         include:
           - target: darwin-arm64
             runner: macos-14
+            # Host arch matches target — no foreign optional-dep install needed.
+            foreign_opentui: ""
+          - target: darwin-x64
+            runner: macos-14
+            # Cross-compile from arm64 host. Bun ≥ 1.3.11 installs foreign-arch
+            # optional deps cleanly (supersedes ADR 0006); we still need to ask
+            # for the darwin-x64 OpenTUI native lib explicitly because the
+            # default `bun install` only pulls the host-matching one.
+            foreign_opentui: "@opentui/core-darwin-x64"
           - target: linux-arm64
             runner: ubuntu-24.04-arm
+            foreign_opentui: ""
           - target: linux-x64
             runner: ubuntu-latest
-          # darwin-x64 dropped: GitHub's only x64 macOS runner pool (macos-13)
-          # queues 30+ min, and OpenTUI's native libs (optionalDependencies)
-          # don't cross-compile from arm64 hosts. Apple stopped selling Intel
-          # Macs in 2023; matches resume-extract's matrix.
+            foreign_opentui: ""
     steps:
       - uses: actions/checkout@v5
 
@@ -32,6 +39,19 @@ jobs:
           bun-version: 1.3.11
 
       - run: bun install --frozen-lockfile
+
+      - name: Install foreign-arch OpenTUI native lib
+        if: matrix.foreign_opentui != ''
+        # `--no-save --force` so package.json / bun.lock stay clean. Version
+        # pinned to the resolved `@opentui/core` version so the native lib
+        # always matches the JS layer.
+        run: |
+          version=$(bun pm ls @opentui/core --depth 0 2>/dev/null | awk '/@opentui\/core@/ { sub(/.*@opentui\/core@/, ""); print; exit }')
+          if [ -z "$version" ]; then
+            version=$(node -p "require('./node_modules/@opentui/core/package.json').version")
+          fi
+          echo "installing ${{ matrix.foreign_opentui }}@${version}"
+          bun add --no-save --force "${{ matrix.foreign_opentui }}@${version}"
 
       - name: Build binary + bundle worker
         env:
