@@ -1,0 +1,41 @@
+name: Release smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/release.yml"
+      - ".github/workflows/release-smoke.yml"
+      - "scripts/build-bin.ts"
+      - "scripts/build-man.ts"
+      - "src/**"
+      - "migration/**"
+      - "package.json"
+      - "bun.lock"
+
+jobs:
+  darwin-x64:
+    name: darwin-x64 release build
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build release binary
+        env:
+          LL_RELEASE_VERSION: v0.1.0-smoke.0
+        run: bun run build:bin darwin-x64
+
+      - name: Smoke release package layout
+        run: |
+          set -eu
+          test -x dist/label-lens-darwin-x64/labellens
+          test -x dist/label-lens-darwin-x64/labellens.bin
+          test -f dist/label-lens-darwin-x64/parser.worker.js
+          test -f dist/label-lens-darwin-x64/labellens.1
+          dist/label-lens-darwin-x64/labellens --version
