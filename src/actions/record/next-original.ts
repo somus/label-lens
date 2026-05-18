@@ -21,6 +21,9 @@ function stepOriginal(ctx: import("../../app/context.ts").AppContext, direction:
   const target = pending.current();
   if (target) {
     ctx.cursor.seek(target.id);
+    // ADR 0004: assistant exposure is per-focus-session. Moving to a new
+    // record discards prior viewing. cursor.seek() is synchronous today;
+    // any future async navigation must clear the Set before yielding.
     ctx.clearViewedAssistant();
   }
 }

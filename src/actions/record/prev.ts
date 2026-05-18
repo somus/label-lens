@@ -7,6 +7,9 @@ export const prev: Command = {
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => {
     ctx.cursor?.prev();
+    // ADR 0004: assistant exposure is per-focus-session. Moving to a new
+    // record discards prior viewing. cursor.prev() is synchronous today;
+    // any future async navigation must clear the Set before yielding.
     ctx.clearViewedAssistant();
   },
 };

@@ -19,6 +19,7 @@ function step(ctx: AppContext, delta: 1 | -1): void {
   if (cached) cursor.refresh();
   ctx.cursor = cursor;
   ctx.queueId = next;
+  ctx.clearViewedAssistant();
   ctx.motion.play("status.queue", flash(120, "info"));
   ctx.setFlash(`Queue: ${resolveQueue(next).label}`, "info", 1500);
   ctx.requestRender();

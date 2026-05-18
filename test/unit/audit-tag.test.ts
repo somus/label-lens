@@ -76,4 +76,24 @@ describe("source_of_truth audit tag (ADR 0004)", () => {
     app.clearViewedAssistant();
     expect(app.viewedAssistant.size).toBe(0);
   });
+
+  test("queue.switch clears viewedAssistant (no cross-queue leak)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const id = app.cursor!.current()!.id;
+    applyEffects(app, app.queueId!, [{ kind: "markAssistantViewed", recordId: id }]);
+    expect(app.viewedAssistant.has(id)).toBe(true);
+    await dispatch(defaultRegistry(), "review", app, "queue.switch.skipped");
+    expect(app.viewedAssistant.size).toBe(0);
+  });
+
+  test("queue.next ([/]) clears viewedAssistant (no cross-queue leak)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    const id = app.cursor!.current()!.id;
+    applyEffects(app, app.queueId!, [{ kind: "markAssistantViewed", recordId: id }]);
+    expect(app.viewedAssistant.has(id)).toBe(true);
+    await dispatch(defaultRegistry(), "review", app, "queue.next");
+    expect(app.viewedAssistant.size).toBe(0);
+  });
 });
