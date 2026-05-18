@@ -141,7 +141,18 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
     tools: [submitTool],
   };
 
-  const s = stream(model, ctx, { signal });
+  // Explicitly pass apiKey from the configured env var so we don't depend on
+  // pi-ai's per-provider env-var lookup conventions (Google reads
+  // GEMINI_API_KEY, not GOOGLE_API_KEY; mismatching gave a 403 with
+  // "method doesn't allow unregistered callers"). Ollama doesn't need a key.
+  const apiKey = assistant.apiKeyEnvVar && remote ? process.env[assistant.apiKeyEnvVar] : undefined;
+  if (remote && assistant.apiKeyEnvVar && !apiKey) {
+    throw new AssistantQueryError(
+      "no-provider",
+      `Env var ${assistant.apiKeyEnvVar} is empty. Export your API key first.`,
+    );
+  }
+  const s = stream(model, ctx, apiKey ? { signal, apiKey } : { signal });
 
   let finalToolCall: { name: string; arguments: Record<string, unknown> } | null = null;
 

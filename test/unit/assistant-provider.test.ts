@@ -278,6 +278,64 @@ describe("queryAssistant privacy + --local-only gates", () => {
     expect(registration.state.callCount).toBe(0);
   });
 
+  test("apiKeyEnvVar set but env var empty throws no-provider", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const fakeVar = "LABELLENS_TEST_MISSING_KEY";
+    delete process.env[fakeVar];
+    queueSubmit(validResponse);
+    try {
+      await queryAssistant({
+        db: store.db,
+        recordId,
+        assistant: {
+          enabled: true,
+          provider: REMOTE_PROVIDER_NAME,
+          privacyAcknowledged: true,
+          apiKeyEnvVar: fakeVar,
+        },
+        localOnly: false,
+        model: registration.getModel(),
+        promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
+      });
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(AssistantQueryError);
+      expect((err as AssistantQueryError).code).toBe("no-provider");
+      expect((err as AssistantQueryError).message).toContain(fakeVar);
+    }
+    // Provider must not have been invoked when env var is empty.
+    expect(registration.state.callCount).toBe(0);
+  });
+
+  test("apiKeyEnvVar populated → key passed to pi-ai (no 403 fallback path)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const fakeVar = "LABELLENS_TEST_API_KEY";
+    process.env[fakeVar] = "sk-fake";
+    queueSubmit(validResponse);
+    try {
+      const result = await queryAssistant({
+        db: store.db,
+        recordId,
+        assistant: {
+          enabled: true,
+          provider: REMOTE_PROVIDER_NAME,
+          privacyAcknowledged: true,
+          apiKeyEnvVar: fakeVar,
+        },
+        localOnly: false,
+        model: registration.getModel(),
+        promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
+      });
+      expect(result.response).toEqual(validResponse);
+    } finally {
+      delete process.env[fakeVar];
+    }
+  });
+
   test("--local-only + ollama provider passes through to model call", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;

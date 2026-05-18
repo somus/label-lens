@@ -116,6 +116,16 @@ export function applyEffects(
         // proceed and fix the file later. `configPath` is unset in unit
         // tests; the persistence branch is then a no-op.
         app.config.assistant = effect.assistant;
+        // sessionApiKey is exported into process.env for the active session
+        // only — never persisted to disk. Subsequent runs need the reviewer
+        // to export the same env var in their shell (PRD §10.5).
+        if (effect.sessionApiKey && effect.assistant.apiKeyEnvVar) {
+          process.env[effect.assistant.apiKeyEnvVar] = effect.sessionApiKey;
+          app.setFlash(
+            `assistant: ready. Export ${effect.assistant.apiKeyEnvVar} in your shell for the next launch.`,
+            "info",
+          );
+        }
         if (app.configPath) {
           try {
             writeFileSync(app.configPath, `${JSON.stringify(app.config, null, 2)}\n`);

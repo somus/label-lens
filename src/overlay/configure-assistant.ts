@@ -74,12 +74,16 @@ function commitConfig(state: ConfigureAssistantState): ReduceResult {
   if (local) {
     if (state.ollamaUrl) assistant.ollamaUrl = state.ollamaUrl;
   } else {
-    // Convention: env var named after the provider slug. Reviewer sets the
-    // real key in their shell; the typed value is verified once and
-    // discarded — we never persist API keys to disk.
+    // Convention: env var named after the provider slug. The typed key is
+    // exported into the active process via the effect handler (session
+    // only; never persisted to disk). Reviewer is told to export the same
+    // env var in their shell for the next launch.
     assistant.apiKeyEnvVar = `${provider.toUpperCase()}_API_KEY`;
   }
-  const effects: Effect[] = [{ kind: "updateAssistantConfig", assistant }, { kind: "close" }];
+  const effect: Effect = local
+    ? { kind: "updateAssistantConfig", assistant }
+    : { kind: "updateAssistantConfig", assistant, sessionApiKey: state.apiKey };
+  const effects: Effect[] = [effect, { kind: "close" }];
   return { overlay: null, effects };
 }
 

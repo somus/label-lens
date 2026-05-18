@@ -118,7 +118,17 @@ export type Effect =
     }
   | { kind: "updateNote"; recordId: string; value: string }
   | { kind: "markAssistantViewed"; recordId: string }
-  | { kind: "updateAssistantConfig"; assistant: AssistantConfig }
+  | {
+      kind: "updateAssistantConfig";
+      assistant: AssistantConfig;
+      /**
+       * API key typed during the configure flow. Set into `process.env` for
+       * the active session via `assistant.apiKeyEnvVar` and never persisted
+       * to disk. Reviewer is told to export the var in their shell for the
+       * next launch (PRD §10.5 privacy notice).
+       */
+      sessionApiKey?: string;
+    }
   | { kind: "runCommand"; commandName: string; argument?: string }
   | { kind: "pushPaletteHistory"; entry: string }
   | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number };
