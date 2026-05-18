@@ -85,16 +85,32 @@ verify_checksum() {
   local tarball_name="label-lens-${target}.tar.gz"
   local manifest_url="${GH}/releases/download/${version}/SHA256SUMS.txt"
   local manifest="${tarball}.sums"
+
+  # Three outcomes:
+  #   1. manifest 404 / curl fails  → warn + skip (legacy release predating
+  #                                   SHA256SUMS.txt; backward compat).
+  #   2. manifest empty (zero bytes) → warn + skip (likely network truncation
+  #                                   or proxy interference; not necessarily
+  #                                   malicious).
+  #   3. manifest non-empty but no entry for our target → fatal. Release was
+  #                                   published incomplete or tampered with;
+  #                                   never silently extract.
   if ! curl -fsSL -o "$manifest" "$manifest_url" 2>/dev/null; then
     log "warning: SHA256SUMS.txt not found at ${manifest_url}"
+    log "warning: continuing without integrity verification (legacy release?)"
+    return
+  fi
+  if [ ! -s "$manifest" ]; then
+    log "warning: SHA256SUMS.txt is empty (network truncation?)"
     log "warning: continuing without integrity verification"
     return
   fi
   local expected
   expected="$(awk -v name="$tarball_name" '$2 == name { print $1 }' "$manifest")"
   if [ -z "$expected" ]; then
-    log "warning: no entry for ${tarball_name} in SHA256SUMS.txt; skipping"
-    return
+    err "no checksum entry for ${tarball_name} in SHA256SUMS.txt
+This release looks incomplete or tampered with. Verify manually at:
+  ${GH}/releases/tag/${version}"
   fi
   local actual
   if command -v sha256sum >/dev/null 2>&1; then

@@ -109,20 +109,39 @@ jobs:
           pattern: sha256-*
 
       - name: Concatenate into SHA256SUMS.txt
-        # `find` keeps the order deterministic across matrix interleaving;
-        # `awk` strips any extra path prefix the per-target steps added so
-        # entries look like `<hash>  label-lens-<target>.tar.gz`.
+        # Per-target steps already emit canonical `<hash>  <filename>`
+        # output; `find … | sort` keeps the order deterministic across
+        # matrix interleaving, plain `cat` keeps the concatenation honest
+        # (no awk gymnastics that could silently rewrite a line).
         run: |
           set -eu
           out="SHA256SUMS.txt"
           : > "$out"
           for f in $(find sha -name "*.sha256" | sort); do
-            awk '{print $1 "  " $NF}' "$f" | awk '{
-              n = split($2, parts, "/");
-              print $1 "  " parts[n];
-            }' >> "$out"
+            cat "$f" >> "$out"
           done
           cat "$out"
+
+      - name: Assert all four targets present
+        # publish-checksums runs even when one matrix row fails
+        # (fail-fast: false on build-binaries). Refuse to publish a
+        # SHA256SUMS.txt that's missing any target — install.sh now
+        # fatal-errors on a non-empty manifest that omits the user's
+        # target, and a half-baked manifest would break the curl path
+        # for every user on the missing platform.
+        run: |
+          set -eu
+          missing=0
+          for target in darwin-arm64 darwin-x64 linux-arm64 linux-x64; do
+            if ! grep -q "  label-lens-${target}.tar.gz\$" SHA256SUMS.txt; then
+              echo "::error::SHA256SUMS.txt is missing entry for label-lens-${target}.tar.gz"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Refusing to publish incomplete SHA256SUMS.txt — check matrix builds."
+            exit 1
+          fi
 
       - name: Upload SHA256SUMS.txt to release
         uses: softprops/action-gh-release@v3

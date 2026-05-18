@@ -18,7 +18,14 @@ Pin a specific release:
 curl -fsSL https://raw.githubusercontent.com/somus/label-lens/main/install.sh | LL_VERSION=v0.1.2 sh
 ```
 
-By default the installer drops the binary in `~/.local/share/label-lens/` and symlinks `~/.local/bin/labellens`. Override via `LL_PREFIX` and `LL_BIN_DIR`. The release ships `SHA256SUMS.txt` next to the tarballs; the installer verifies before extracting.
+By default the installer drops the binary in `~/.local/share/label-lens/` and symlinks `~/.local/bin/labellens`. Override via `LL_PREFIX` and `LL_BIN_DIR`.
+
+**Integrity verification.** Each release ships `SHA256SUMS.txt` alongside the tarballs. The installer downloads the manifest before extracting:
+
+- Manifest missing (404) → warn + continue. Backward-compat for pre-`v0.0.3` releases that didn't ship checksums.
+- Manifest empty (network truncation, broken proxy) → warn + continue. Rare; manual verification recommended.
+- Manifest present but missing your target → **fatal**. Release was published incomplete or tampered with; the installer refuses to extract.
+- Hash mismatch → fatal.
 
 **npm fallback** (Intel Mac / containers / non-shell environments):
 

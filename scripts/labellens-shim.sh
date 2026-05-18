@@ -12,7 +12,12 @@ set -e
 
 resolve_self() {
   local src="$1"
-  while [ -L "$src" ]; do
+  local count=0
+  # Cap at 10 hops — same defensive limit GNU `readlink -f` uses internally.
+  # A self-referencing or cyclical symlink would otherwise hang the shim
+  # forever; bail loudly so the failure is actionable.
+  while [ -L "$src" ] && [ "$count" -lt 10 ]; do
+    count=$((count + 1))
     local dir
     dir="$(cd "$(dirname "$src")" && pwd -P)"
     src="$(readlink "$src")"
@@ -21,6 +26,10 @@ resolve_self() {
       *) src="$dir/$src" ;;
     esac
   done
+  if [ -L "$src" ]; then
+    echo "labellens shim: symlink loop detected at $src" >&2
+    exit 1
+  fi
   echo "$src"
 }
 
