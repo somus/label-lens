@@ -139,6 +139,11 @@ export type AppContext = {
    */
   localOnly: boolean;
   /**
+   * Absolute path to `labellens.config.json`. Set by `runReview`; unset in
+   * unit tests so the `updateAssistantConfig` effect skips the disk write.
+   */
+  configPath?: string;
+  /**
    * Set by the screen at mount so palette/help commands can read the active
    * registry without each command importing the global one. Unset in unit
    * tests that drive a single Command directly.
@@ -158,6 +163,7 @@ export function createAppContext(args: {
   onQuit: () => void;
   motionOptions?: Pick<MotionSchedulerOptions, "now" | "setInterval" | "clearInterval">;
   localOnly?: boolean;
+  configPath?: string;
 }): AppContext {
   const cursors = new Map<QueueId, Cursor>();
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -300,6 +306,7 @@ export function createAppContext(args: {
       ctx.viewedAssistant.clear();
     },
     localOnly: args.localOnly ?? false,
+    configPath: args.configPath,
     pushPaletteHistory(entry) {
       const trimmed = entry.trim();
       if (trimmed.length === 0) return;

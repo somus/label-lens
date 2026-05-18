@@ -168,6 +168,7 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     config,
     display,
     localOnly,
+    configPath,
     requestRender: () => {},
     onQuit: () => {
       r.destroy();

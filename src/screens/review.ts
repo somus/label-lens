@@ -2,14 +2,23 @@ import type { CliRenderer } from "@opentui/core";
 import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, enterReview } from "../app/context.ts";
+import { ASSISTANT_PRIVACY_NOTICE } from "../assistant/privacy_notice.ts";
 import { createChordResolver } from "../keymap/chord.ts";
+import { CONFIGURE_PROVIDERS } from "../overlay/configure-assistant.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint } from "../overlay/hints.ts";
 import type { QueueState } from "../overlay/queue.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
-import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
+import type {
+  AssistantState,
+  ConfigureAssistantState,
+  NoteState,
+  Overlay,
+  PickerCandidate,
+  PickerState,
+} from "../overlay/types.ts";
 import { pulse } from "../render/anim.ts";
 import { Box } from "../render/box.ts";
 import {
@@ -422,14 +431,9 @@ function renderOverlay(
     case "note":
       return renderNote(overlay.state, display, termWidth, termHeight);
     case "assistant":
-      return modalBox(
-        display,
-        termWidth,
-        termHeight,
-        0.5,
-        "Assistant",
-        Text({ content: " assistant overlay (slice 11)" }),
-      );
+      return renderAssistant(overlay.state, display, termWidth, termHeight);
+    case "configure-assistant":
+      return renderConfigureAssistant(overlay.state, display, termWidth, termHeight);
     case "palette":
       return renderPaletteV2(
         overlay.state,
@@ -448,6 +452,151 @@ function renderOverlay(
       return renderStatsOverlay(overlay.state, display, termWidth, termHeight);
     case "queue":
       return renderQueueOverlay(overlay.state, display, termWidth, termHeight);
+  }
+}
+
+/**
+ * Inline assistant footer (PRD §14.4 superseded by ADR 0009). Renders as a
+ * thin absolute-positioned strip pinned to the bottom of the review screen.
+ * Collapsed: one-line summary. Expanded (`Tab`): markdown reasoning
+ * stacked above the summary line.
+ */
+function renderAssistant(
+  state: AssistantState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  const t = resolveTheme(display);
+  const overlayBg = t.bg.overlay !== "transparent" ? t.bg.overlay : "black";
+  const border = borderForRole(display, "overlay");
+  const expanded = state.reasoningExpanded && state.reason !== null;
+  const stripHeight = expanded ? Math.min(Math.floor(termHeight * 0.4), 16) : 3;
+  const stripWidth = Math.max(40, termWidth - 4);
+  const leftOffset = Math.floor((termWidth - stripWidth) / 2);
+  const topOffset = Math.max(1, termHeight - stripHeight - 2);
+
+  const summary = buildAssistantSummary(state);
+
+  const children: ReturnType<typeof Box>[] = [];
+  if (expanded && state.reason) {
+    children.push(
+      Box(
+        { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+        Markdown({ content: state.reason }),
+      ),
+    );
+  }
+  children.push(
+    Box(
+      { flexDirection: "row", flexShrink: 0, marginTop: expanded ? 1 : 0 },
+      Text({ content: summary, attributes: TextAttributes.BOLD }),
+    ),
+  );
+
+  return Box(
+    {
+      flexDirection: "column",
+      borderStyle: border,
+      borderColor: t.fg.accent,
+      padding: 1,
+      position: "absolute",
+      top: topOffset,
+      left: leftOffset,
+      width: stripWidth,
+      height: stripHeight,
+      zIndex: 100,
+      shouldFill: true,
+      overflow: "hidden",
+      backgroundColor: overlayBg,
+    },
+    ...children,
+  );
+}
+
+function buildAssistantSummary(state: AssistantState): string {
+  if (state.status === "loading") return " LLM: loading…  [esc] cancel";
+  if (state.status === "streaming") return ` LLM: ${truncate(state.buffer, 40)}…`;
+  if (state.status === "error")
+    return ` LLM error: ${state.errorMessage ?? "unknown"}  [esc] dismiss`;
+  // done
+  const action = state.recommendedAction ?? "?";
+  const label = state.suggestion ?? "?";
+  const conf = state.confidence ?? "?";
+  return ` LLM: ${action} → ${label} (${conf})  [tab] reasoning · [enter] commit · [esc] dismiss`;
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
+function renderConfigureAssistant(
+  state: ConfigureAssistantState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  switch (state.step) {
+    case "provider": {
+      const lines = CONFIGURE_PROVIDERS.map(
+        (p, i) => `  [${i + 1}] ${p.slug === state.selectedProvider ? "▸ " : "  "}${p.label}`,
+      );
+      const body: ReturnType<typeof Text>[] = [
+        Text({ content: "Pick an assistant provider:" }),
+        Text({ content: "" }),
+        ...lines.map((l) => Text({ content: l })),
+        Text({ content: "" }),
+        Text({
+          content: state.error
+            ? ` ! ${state.error}`
+            : " Press 1-9 to select, [enter] continue, [esc] cancel",
+          attributes: state.error ? TextAttributes.BOLD : TextAttributes.DIM,
+        }),
+      ];
+      return modalBox(display, termWidth, termHeight, 0.5, "Configure Assistant", ...body);
+    }
+    case "auth": {
+      const local = state.selectedProvider === "ollama";
+      const value = local ? (state.ollamaUrl ?? "") : (state.apiKey ?? "");
+      const fieldLabel = local ? "Ollama URL" : "API key";
+      const mask = local ? value : "*".repeat(value.length);
+      const body: ReturnType<typeof Text>[] = [
+        Text({ content: `Provider: ${state.selectedProvider}` }),
+        Text({ content: "" }),
+        Text({ content: `${fieldLabel}:` }),
+        Text({ content: ` > ${mask}_`, attributes: TextAttributes.BOLD }),
+        Text({ content: "" }),
+        Text({
+          content: state.error
+            ? ` ! ${state.error}`
+            : ` Type ${local ? "URL" : "key"}, [enter] continue, [esc] cancel`,
+          attributes: state.error ? TextAttributes.BOLD : TextAttributes.DIM,
+        }),
+      ];
+      return modalBox(display, termWidth, termHeight, 0.5, "Configure Assistant", ...body);
+    }
+    case "privacy": {
+      const body: ReturnType<typeof Text>[] = [
+        Text({ content: "Privacy notice (please read):", attributes: TextAttributes.BOLD }),
+        Text({ content: "" }),
+        Text({ content: ASSISTANT_PRIVACY_NOTICE, wrapMode: "word" }),
+        Text({ content: "" }),
+        Text({
+          content: " [y] accept and finish · [n] cancel",
+          attributes: TextAttributes.DIM,
+        }),
+      ];
+      return modalBox(display, termWidth, termHeight, 0.6, "Configure Assistant", ...body);
+    }
+    case "commit":
+      return modalBox(
+        display,
+        termWidth,
+        termHeight,
+        0.4,
+        "Configure Assistant",
+        Text({ content: " Saving config…" }),
+      );
   }
 }
 
