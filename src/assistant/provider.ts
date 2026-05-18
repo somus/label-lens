@@ -2,6 +2,7 @@ import { type Model, stream, type Tool, Type } from "@earendil-works/pi-ai";
 import type { AssistantConfig } from "../config/config.ts";
 import { cacheAssistantResponse, getCachedAssistantResponse } from "../store/assistant-queries.ts";
 import type { Db } from "../store/db.ts";
+import { envVarFor, resolveApiKey } from "./env.ts";
 import { type CanonicalPromptInput, canonicalizePrompt, hashPrompt } from "./prompt.ts";
 import { buildAssistantPrompt } from "./prompt-template.ts";
 import { type AssistantResponse, AssistantResponseSchema, isAssistantResponse } from "./schema.ts";
@@ -141,15 +142,19 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
     tools: [submitTool],
   };
 
-  // Explicitly pass apiKey from the configured env var so we don't depend on
-  // pi-ai's per-provider env-var lookup conventions (Google reads
-  // GEMINI_API_KEY, not GOOGLE_API_KEY; mismatching gave a 403 with
-  // "method doesn't allow unregistered callers"). Ollama doesn't need a key.
-  const apiKey = assistant.apiKeyEnvVar && remote ? process.env[assistant.apiKeyEnvVar] : undefined;
-  if (remote && assistant.apiKeyEnvVar && !apiKey) {
+  // Resolve apiKey from the configured env var first, then pi-ai's canonical
+  // per-provider name as a fallback. Without this, configs saved by an older
+  // wizard run (which set apiKeyEnvVar=GOOGLE_API_KEY for Google) would never
+  // pick up the user's actual GEMINI_API_KEY exported per Google's own docs
+  // and pi-ai's table.
+  const apiKey = remote ? resolveApiKey(assistant.provider, assistant.apiKeyEnvVar) : undefined;
+  if (remote && !apiKey) {
+    const tried = [assistant.apiKeyEnvVar, envVarFor(assistant.provider)]
+      .filter((v): v is string => Boolean(v))
+      .filter((v, i, a) => a.indexOf(v) === i);
     throw new AssistantQueryError(
       "no-provider",
-      `Env var ${assistant.apiKeyEnvVar} is empty. Export your API key first.`,
+      `No API key found. Export one of: ${tried.join(" or ")}`,
     );
   }
   const s = stream(model, ctx, apiKey ? { signal, apiKey } : { signal });

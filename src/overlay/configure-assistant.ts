@@ -1,3 +1,4 @@
+import { envVarFor } from "../assistant/env.ts";
 import type { AssistantConfig } from "../config/config.ts";
 import type {
   ConfigureAssistantState,
@@ -61,27 +62,7 @@ function defaultModelFor(provider: string): string | undefined {
   }
 }
 
-/**
- * Env var names match pi-ai's per-provider conventions (see its env-api-keys
- * table). Using the same names means a reviewer who already followed the
- * provider's own docs (e.g. `export GEMINI_API_KEY=…` for Google's Gemini)
- * doesn't have to re-export under a different label-lens-specific name on
- * the next launch.
- */
-export function envVarFor(provider: string): string {
-  switch (provider) {
-    case "google":
-      return "GEMINI_API_KEY";
-    case "anthropic":
-      return "ANTHROPIC_API_KEY";
-    case "openai":
-      return "OPENAI_API_KEY";
-    case "groq":
-      return "GROQ_API_KEY";
-    default:
-      return `${provider.toUpperCase()}_API_KEY`;
-  }
-}
+export { envVarFor } from "../assistant/env.ts";
 
 function commitConfig(state: ConfigureAssistantState): ReduceResult {
   const provider = state.selectedProvider!;
