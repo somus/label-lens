@@ -505,20 +505,26 @@ function renderAssistantStrip(
   children.push(Text({ content: " " }));
 
   if (expanded && state.reason) {
+    // Constrain reasoning to the same content width as the section header
+    // — otherwise the markdown wraps to the full terminal width on wide
+    // displays and looks unmoored from the `assistant ─────` rule above.
     children.push(
       Box(
-        { flexDirection: "column", flexShrink: 0, marginBottom: 1 },
+        { flexDirection: "column", flexShrink: 0, marginBottom: 1, width: contentWidth },
         Markdown({ content: state.reason }),
       ),
     );
   }
 
   children.push(
-    Text({
-      content: segmentsToStyledText(segs, display),
-      attributes: TextAttributes.BOLD,
-      wrapMode: "word",
-    }),
+    Box(
+      { flexDirection: "column", flexShrink: 0, width: contentWidth },
+      Text({
+        content: segmentsToStyledText(segs, display),
+        attributes: TextAttributes.BOLD,
+        wrapMode: "word",
+      }),
+    ),
   );
 
   return Box({ flexDirection: "column", marginTop: 1, flexShrink: 0 }, ...children);
