@@ -1,4 +1,4 @@
-import type { CliRenderer, PasteEvent } from "@opentui/core";
+import type { CliRenderer } from "@opentui/core";
 import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, enterReview } from "../app/context.ts";
@@ -32,6 +32,7 @@ import { Chrome, type Segment } from "../render/chrome/index.ts";
 import type { QueuePreviewRow } from "../render/chrome/queue-preview.ts";
 import { segmentsToStyledText } from "../render/chrome/status-bar.ts";
 import { splitContextLines } from "../render/context-strip.ts";
+import type { PasteEvent } from "../render/events.ts";
 import { renderFilterBuilder } from "../render/filter-view.ts";
 import { labelChipText } from "../render/label-chip.ts";
 import { foldNamespace } from "../render/label-fold.ts";

@@ -21,3 +21,4 @@ Load-bearing design decisions for LabelLens. Each ADR captures the context, the 
 | [0007](./0007-effective-review-entry.md) | `effective_reviews` as the current-state entry point | Accepted   |
 | [0008](./0008-chrome-system.md) | Chrome system: status bar + action footer | Accepted   |
 | [0009](./0009-assistant-inline-footer.md) | Assistant renders as an inline footer overlay | Accepted   |
+| [0010](./0010-render-primitives-vs-composites.md) | Render layer: primitives vs composites | Accepted   |
