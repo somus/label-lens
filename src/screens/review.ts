@@ -419,7 +419,10 @@ function modalBox(
   const border = borderForRole(display, "overlay");
   const t = resolveTheme(display);
   const overlayBg = t.bg.overlay !== "transparent" ? t.bg.overlay : "black";
-  const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * widthFraction)));
+  // Cap at the same 160ch ceiling clampContentWidth uses for main-column
+  // sections — keeps modals readable on 200+ col terminals without
+  // stretching to the full screen width.
+  const modalWidth = Math.max(50, Math.min(160, Math.floor(termWidth * widthFraction)));
   const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
   const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
   const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
