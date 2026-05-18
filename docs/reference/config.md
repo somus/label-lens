@@ -27,6 +27,8 @@ The file ships a `$schema` URL pointing at [`schema/labellens.config.schema.json
 
 ## `task` (required)
 
+For examples and task-selection guidance, see [Review task types](../explanation/task-types.md).
+
 | Value | Meaning |
 |---|---|
 | `classification` | One label per record. |

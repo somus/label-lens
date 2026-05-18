@@ -27,7 +27,7 @@ Local-first, runs over SSH, ships as a single Bun-compiled binary. State lives n
 
 ## Supported task types
 
-Current support is configured with [`task`](./docs/reference/config.md#task-required). Planned task types are tracked in the [roadmap](./ROADMAP.md).
+Current support is configured with [`task`](./docs/reference/config.md#task-required). See [Review task types](./docs/explanation/task-types.md) for examples and data shapes. Planned task types are tracked in the [roadmap](./ROADMAP.md).
 
 | Task type | Status | Use it for |
 |---|---|---|
