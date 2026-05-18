@@ -1,20 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { ResolvedDisplay } from "../../src/render/capability.ts";
+import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
 import { progressSegments } from "../../src/render/progress-segments.ts";
 
 function display(color: ResolvedDisplay["color"]): ResolvedDisplay {
-  return {
-    color,
-    banding: false,
-    theme: "light",
-    candidatePin: 0.4,
-    layout: "auto",
-    motion: false,
-    sidebar: "auto",
-    queuePreview: "auto",
-    richGradient: false,
-    labelChip: "configured",
-  };
+  return { ...defaultDisplay(), color };
 }
 
 describe("progressSegments", () => {

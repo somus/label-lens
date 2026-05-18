@@ -52,7 +52,8 @@ export async function runReview(): Promise<void> {
 
   const keyError = validateLabelKeys(config, reservedReviewKeys(ALL_COMMANDS));
   if (keyError) {
-    console.error(keyError);
+    console.error("labellens: invalid config.labels[].key");
+    for (const line of keyError.split("\n")) console.error(`  ${line}`);
     process.exit(2);
   }
 

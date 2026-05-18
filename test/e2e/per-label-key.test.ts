@@ -31,12 +31,12 @@ function configWithKeys(labelChip: "configured" | "both" = "configured"): Labell
 
 async function mount(
   store: Awaited<ReturnType<typeof openTmpStore>>,
-  opts: { labelChip?: "configured" | "both" } = {},
+  opts: { labelChip?: "configured" | "both"; width?: number } = {},
 ) {
   const labelChip = opts.labelChip ?? "configured";
   const config = configWithKeys(labelChip);
   const { renderer, renderOnce, captureCharFrame, mockInput } = await createTestRenderer({
-    width: 120,
+    width: opts.width ?? 120,
     height: 24,
   });
   const app = createAppContext({
@@ -94,6 +94,18 @@ describe("per-label key", () => {
     const frame = ctx.captureCharFrame();
     expect(frame).toContain("[f]");
     expect(frame).toContain("food");
+  });
+
+  test("both mode at 80 cols wraps chip rail without overflowing", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ctx = await mount(store, { labelChip: "both", width: 80 });
+    const frame = ctx.captureCharFrame();
+    expect(frame).toContain("[1/f]");
+    expect(frame).toContain("[3/y]");
+    // Every line must fit inside the 80-col viewport.
+    for (const line of frame.split("\n")) {
+      expect(line.length).toBeLessThanOrEqual(80);
+    }
   });
 
   test("picker commits when configured key pressed inside overlay", async () => {

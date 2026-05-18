@@ -160,5 +160,5 @@ export function validateLabelKeys(
     }
   }
   if (errors.length === 0) return null;
-  return ["labellens: invalid config.labels[].key", ...errors.map((e) => `  ${e}`)].join("\n");
+  return errors.join("\n");
 }

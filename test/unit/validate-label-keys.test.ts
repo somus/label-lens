@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ALL_COMMANDS, reservedReviewKeys } from "../../src/actions/registry.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { validateLabelKeys } from "../../src/config/config.ts";
 
@@ -62,5 +63,19 @@ describe("validateLabelKeys", () => {
   test("ignores entries without a key", () => {
     const err = validateLabelKeys(cfg([{ name: "food" }, "travel"]), new Set(["a"]));
     expect(err).toBeNull();
+  });
+
+  test("flags collision with digit accelerator 1-9 via real reserved set", () => {
+    const reserved = reservedReviewKeys(ALL_COMMANDS);
+    const err = validateLabelKeys(cfg([{ name: "special", key: "1" }]), reserved);
+    expect(err).not.toBeNull();
+    expect(err).toContain("'1'");
+    expect(err).toContain("special");
+  });
+
+  test("returned message has no top-level prefix (caller owns it)", () => {
+    const err = validateLabelKeys(cfg([{ name: "approved", key: "a" }]), new Set(["a"]));
+    expect(err).not.toContain("labellens:");
+    expect(err).not.toContain("invalid config.labels");
   });
 });
