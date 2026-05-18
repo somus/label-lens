@@ -19,11 +19,12 @@ jobs:
             # Host arch matches target — no foreign optional-dep install needed.
             foreign_opentui: ""
           - target: darwin-x64
-            runner: macos-13
+            runner: macos-15-intel
             # Build on an x64 host so Bun can resolve OpenTUI's native package
             # during `bun build --compile --target=bun-darwin-x64`. The arm64
             # cross-compile path can install @opentui/core-darwin-x64, but the
-            # compiler still fails to resolve that dynamic import.
+            # compiler still fails to resolve that dynamic import. macos-15-intel
+            # is GitHub's current standard Intel runner label.
             foreign_opentui: ""
           - target: linux-arm64
             runner: ubuntu-24.04-arm
