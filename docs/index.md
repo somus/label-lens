@@ -4,10 +4,9 @@ LabelLens is a terminal-first review tool for cleaning noisy text training datas
 
 Documentation is organised by [Diátaxis](https://diataxis.fr): pick a quadrant by what you need.
 
-<picture>
-  <source srcset="media/hero.webm" type="video/webm">
+<a href="media/hero.webm">
   <img src="media/hero.gif" alt="LabelLens review loop" width="800">
-</picture>
+</a>
 
 ## I want to learn
 

@@ -4,10 +4,9 @@ This tutorial walks you through the full LabelLens loop on a small fixture: inge
 
 You'll need: `labellens` installed (see the [README](../README.md)) and a terminal.
 
-<picture>
-  <source srcset="media/init.webm" type="video/webm">
+<a href="media/init.webm">
   <img src="media/init.gif" alt="Initialise a LabelLens project" width="800">
-</picture>
+</a>
 
 ## 1. Get some data
 

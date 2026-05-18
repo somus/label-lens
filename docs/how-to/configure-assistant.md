@@ -2,10 +2,9 @@
 
 The assistant is off by default. Three paths to turn it on.
 
-<picture>
-  <source srcset="../media/assistant.webm" type="video/webm">
+<a href="../media/assistant.webm">
   <img src="../media/assistant.gif" alt="LabelLens assistant footer" width="800">
-</picture>
+</a>
 
 ## Option A — wizard (recommended for first-time setup)
 
