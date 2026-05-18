@@ -252,6 +252,13 @@ export function mountReviewScreen(args: {
       total: queueTotal,
       contentWidth,
     });
+    // Inline assistant strip slots right below the chip rail (decision)
+    // when the overlay is active — keeps suggestion + label set in the same
+    // eye-line per the inline-footer design (ADR 0009).
+    const assistantStrip =
+      app.overlay?.kind === "assistant"
+        ? renderAssistantStrip(app.overlay.state, app.display, contentWidth)
+        : Box({});
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
       queueHeader,
@@ -259,6 +266,7 @@ export function mountReviewScreen(args: {
       subject,
       signals,
       decision,
+      assistantStrip,
       Box({ flexGrow: 1, flexShrink: 1 }),
       historyStrip,
     );
@@ -449,7 +457,10 @@ function renderOverlay(
     case "note":
       return renderNote(overlay.state, display, termWidth, termHeight);
     case "assistant":
-      return renderAssistant(overlay.state, display, termWidth, termHeight);
+      // Assistant overlay renders inline (below the chip rail) via
+      // renderAssistantStrip in the main body, not as a modal stack. Return
+      // an empty box so the overlay layer doesn't double-render.
+      return Box({});
     case "configure-assistant":
       return renderConfigureAssistant(overlay.state, display, termWidth, termHeight);
     case "palette":
@@ -474,40 +485,32 @@ function renderOverlay(
 }
 
 /**
- * Inline assistant footer (PRD §14.4 superseded by ADR 0009). Renders as a
- * thin absolute-positioned strip pinned to the bottom of the review screen.
- * Collapsed: one-line summary. Expanded (`Tab`): markdown reasoning
- * stacked above the summary line.
+ * Inline assistant strip (PRD §14.4 superseded by ADR 0009). Slots into the
+ * main column right after the chip rail. Collapsed: one-line summary.
+ * Expanded (`Tab`): markdown reasoning stacked above the summary line.
  */
-function renderAssistant(
+function renderAssistantStrip(
   state: AssistantState,
   display: ResolvedDisplay,
-  termWidth: number,
-  termHeight: number,
+  contentWidth: number,
 ): ReturnType<typeof Box> {
   const t = resolveTheme(display);
-  const overlayBg = t.bg.overlay !== "transparent" ? t.bg.overlay : "black";
   const border = borderForRole(display, "overlay");
   const expanded = state.reasoningExpanded && state.reason !== null;
-  const stripHeight = expanded ? Math.min(Math.floor(termHeight * 0.4), 16) : 3;
-  const stripWidth = Math.max(40, termWidth - 4);
-  const leftOffset = Math.floor((termWidth - stripWidth) / 2);
-  const topOffset = Math.max(1, termHeight - stripHeight - 2);
-
   const summary = buildAssistantSummary(state);
 
   const children: ReturnType<typeof Box>[] = [];
   if (expanded && state.reason) {
     children.push(
       Box(
-        { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
+        { flexDirection: "column", flexShrink: 0, marginBottom: 1 },
         Markdown({ content: state.reason }),
       ),
     );
   }
   children.push(
     Box(
-      { flexDirection: "row", flexShrink: 0, marginTop: expanded ? 1 : 0 },
+      { flexDirection: "row", flexShrink: 0 },
       Text({ content: summary, attributes: TextAttributes.BOLD }),
     ),
   );
@@ -517,16 +520,12 @@ function renderAssistant(
       flexDirection: "column",
       borderStyle: border,
       borderColor: t.fg.accent,
-      padding: 1,
-      position: "absolute",
-      top: topOffset,
-      left: leftOffset,
-      width: stripWidth,
-      height: stripHeight,
-      zIndex: 100,
-      shouldFill: true,
+      paddingLeft: 1,
+      paddingRight: 1,
+      marginTop: 1,
+      flexShrink: 0,
+      width: contentWidth,
       overflow: "hidden",
-      backgroundColor: overlayBg,
     },
     ...children,
   );
