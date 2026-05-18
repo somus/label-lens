@@ -21,6 +21,17 @@ LL_BIN_DIR="${LL_BIN_DIR:-$HOME/.local/bin}"
 err() { echo "label-lens installer: $*" >&2; exit 1; }
 log() { echo "label-lens installer: $*"; }
 
+# Move the tmp dir to file scope so the EXIT trap can clean up after main()
+# returns — `set -u` would otherwise abort on the `$tmp` reference once the
+# local goes out of scope.
+TMP=""
+cleanup() {
+  if [ -n "${TMP}" ] && [ -d "${TMP}" ]; then
+    rm -rf "${TMP}"
+  fi
+}
+trap cleanup EXIT
+
 detect_target() {
   local os arch target
   case "$(uname -s)" in
@@ -47,12 +58,49 @@ resolve_version() {
     | sed -E 's/.*"tag_name":[[:space:]]*"([^"]+)".*/\1/'
 }
 
+# Verify the downloaded tarball's SHA256 against the release's manifest.
+# release.yml emits SHA256SUMS.txt alongside the per-target tarballs.
+# Missing manifest (legacy releases) → warn loudly but proceed; checksum
+# mismatch → fatal.
+verify_checksum() {
+  local tarball="$1" target="$2" version="$3"
+  local tarball_name="label-lens-${target}.tar.gz"
+  local manifest_url="${GH}/releases/download/${version}/SHA256SUMS.txt"
+  local manifest="${tarball}.sums"
+  if ! curl -fsSL -o "$manifest" "$manifest_url" 2>/dev/null; then
+    log "warning: SHA256SUMS.txt not found at ${manifest_url}"
+    log "warning: continuing without integrity verification"
+    return
+  fi
+  local expected
+  expected="$(awk -v name="$tarball_name" '$2 == name { print $1 }' "$manifest")"
+  if [ -z "$expected" ]; then
+    log "warning: no entry for ${tarball_name} in SHA256SUMS.txt; skipping"
+    return
+  fi
+  local actual
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$tarball" | awk '{print $1}')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$tarball" | awk '{print $1}')"
+  else
+    log "warning: neither sha256sum nor shasum present; skipping integrity check"
+    return
+  fi
+  if [ "$expected" != "$actual" ]; then
+    err "checksum mismatch for ${tarball_name}
+  expected: ${expected}
+  actual:   ${actual}"
+  fi
+  log "checksum ok (${actual:0:12}…)"
+}
+
 main() {
   for cmd in curl tar uname; do
     command -v "$cmd" >/dev/null || err "missing required command: $cmd"
   done
 
-  local target version url tmp
+  local target version url
   target="$(detect_target)"
   version="$(resolve_version)"
   [ -n "$version" ] || err "could not resolve version (no LL_VERSION and no GitHub release found)"
@@ -60,14 +108,19 @@ main() {
   log "installing label-lens ${version} for ${target}"
   url="${GH}/releases/download/${version}/label-lens-${target}.tar.gz"
 
-  tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
+  TMP="$(mktemp -d)"
+  local tmp="$TMP"
 
   log "downloading ${url}"
   curl -fsSL "$url" -o "$tmp/pkg.tar.gz" || err "download failed (does this release exist?)"
 
+  verify_checksum "$tmp/pkg.tar.gz" "$target" "$version"
+
   log "extracting to ${LL_PREFIX}"
   mkdir -p "$LL_PREFIX"
+  # Clean prior install so we don't leak stale files between versions
+  # (e.g. a renamed parser.worker.js path).
+  rm -rf "${LL_PREFIX:?}"/*
   tar -xzf "$tmp/pkg.tar.gz" -C "$LL_PREFIX" --strip-components=1
 
   mkdir -p "$LL_BIN_DIR"

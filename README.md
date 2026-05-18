@@ -6,13 +6,21 @@ Terminal-first review tool for cleaning noisy text training datasets produced by
 
 ## Install
 
-**curl-installer (macOS, Linux):**
+**curl (macOS arm64, Linux arm64/x64):**
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/somus/label-lens/main/install.sh | sh
 ```
 
-**npm:**
+Pin a specific release:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/somus/label-lens/main/install.sh | LL_VERSION=v0.1.2 sh
+```
+
+By default the installer drops the binary in `~/.local/share/label-lens/` and symlinks `~/.local/bin/labellens`. Override via `LL_PREFIX` and `LL_BIN_DIR`. The release ships `SHA256SUMS.txt` next to the tarballs; the installer verifies before extracting.
+
+**npm fallback** (Intel Mac / containers / non-shell environments):
 
 ```sh
 npm install -g label-lens
