@@ -62,6 +62,24 @@ resolve_version() {
 # release.yml emits SHA256SUMS.txt alongside the per-target tarballs.
 # Missing manifest (legacy releases) → warn loudly but proceed; checksum
 # mismatch → fatal.
+# Known artifact set we ship in each tarball. Tarballs contain only these
+# three files; we remove them (if present) from LL_PREFIX before extracting
+# the new version. Anything else the user dropped in LL_PREFIX stays put.
+#
+# When a future release adds a file, add its name here. Forgetting to add
+# it leaks a stale copy on upgrade — which is bad — but never destructive.
+LL_ARTIFACTS="labellens labellens.bin parser.worker.js"
+
+remove_prior_install_artifacts() {
+  local prefix="$1"
+  local f
+  for f in $LL_ARTIFACTS; do
+    if [ -e "${prefix}/${f}" ] || [ -L "${prefix}/${f}" ]; then
+      rm -f "${prefix}/${f}"
+    fi
+  done
+}
+
 verify_checksum() {
   local tarball="$1" target="$2" version="$3"
   local tarball_name="label-lens-${target}.tar.gz"
@@ -118,9 +136,12 @@ main() {
 
   log "extracting to ${LL_PREFIX}"
   mkdir -p "$LL_PREFIX"
-  # Clean prior install so we don't leak stale files between versions
-  # (e.g. a renamed parser.worker.js path).
-  rm -rf "${LL_PREFIX:?}"/*
+  # Scoped cleanup of prior install (codex P1 #67): never wipe the whole
+  # prefix dir — reviewer may have set LL_PREFIX to a shared location. Only
+  # remove the known LabelLens artifacts we own; leave anything else alone.
+  # Track new files via a manifest so a future addition (e.g. a second
+  # bundled worker) still gets cleaned up on the next install.
+  remove_prior_install_artifacts "$LL_PREFIX"
   tar -xzf "$tmp/pkg.tar.gz" -C "$LL_PREFIX" --strip-components=1
 
   mkdir -p "$LL_BIN_DIR"
