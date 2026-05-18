@@ -96,6 +96,8 @@ Each prediction lands as its own row in the `predictions` table. The highest-con
 | `csvMultiLabelSeparator` | string | Joiner for multi-label arrays in CSV exports. Default `;`. |
 | `fieldOverrides` | object | Per-column renames on export. Recognized keys: `id`, `text`, `label`, `reviewed_at`, `document_id`. |
 
+CLI flags (`--include-rejected`, `--include-skipped`) override these defaults. When neither is set the default is `false`.
+
 ## `boundary` (boundary task only)
 
 | Field | Default | Meaning |

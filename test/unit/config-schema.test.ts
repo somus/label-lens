@@ -72,6 +72,15 @@ describe("validateConfigSchema", () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
+  test("rejects empty csvMultiLabelSeparator (minLength 1)", () => {
+    const bad = makeValid({
+      output: { path: "./out.jsonl", format: "jsonl", csvMultiLabelSeparator: "" },
+    });
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.join("\n")).toMatch(/csvMultiLabelSeparator|minLength/);
+  });
+
   test("rejects label.key longer than one character", () => {
     const bad = makeValid({ labels: [{ name: "food", key: "fd" }] });
     const errors = validateConfigSchema(bad);

@@ -14,6 +14,7 @@
  * batches and once more before the transaction commits.
  */
 import { asc } from "drizzle-orm";
+import type { SignalKindName } from "../config/config.ts";
 import { normalize } from "../ingest/id.ts";
 import type { Db } from "../store/db.ts";
 import {
@@ -24,7 +25,7 @@ import {
 import { predictions, records } from "../store/schema.ts";
 import { disagreementScore, duplicateScore, lowConfidenceScore } from "./compute.ts";
 
-export type SignalKindName = "lowConfidence" | "disagreement" | "duplicate" | "flagged";
+export type { SignalKindName };
 
 export type RunSignalsOptions = {
   lowConfidenceThreshold?: number;
