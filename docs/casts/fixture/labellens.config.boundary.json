@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
+  "task": "boundary",
+  "labels": [
+    "SECTION_HEADER",
+    "ENTRY_START",
+    "CONTINUATION",
+    "NOISE"
+  ],
+  "boundary": {
+    "documentField": "document_id",
+    "contextLines": 3
+  },
+  "input": {
+    "path": "./boundary-lines.jsonl",
+    "format": "jsonl",
+    "fields": {
+      "text": "text",
+      "prediction": "prediction",
+      "confidence": "confidence",
+      "source": "source",
+      "context_before": "context_before",
+      "context_after": "context_after"
+    }
+  },
+  "output": {
+    "path": "./reviewed-boundary.jsonl",
+    "format": "jsonl"
+  },
+  "display": {
+    "color": "truecolor",
+    "banding": "on",
+    "theme": "dark",
+    "candidatePin": 0.4,
+    "layout": "split",
+    "motion": "auto",
+    "sidebar": "on",
+    "queuePreview": "auto",
+    "labelChip": "configured"
+  },
+  "navigation": {
+    "smartNext": false
+  },
+  "assistant": {
+    "enabled": false
+  }
+}

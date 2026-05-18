@@ -18,6 +18,7 @@ Documentation is organised by [Diátaxis](https://diataxis.fr): pick a quadrant 
 |---|---|
 | [Edit `labellens.config.json`](./how-to/edit-config.md) | Set up editor autocomplete + inline docs via the `$schema` field. |
 | [Configure the assistant](./how-to/configure-assistant.md) | Turn on LLM suggestions; pick a provider; switch to local Ollama. |
+| [Choose a review task type](./explanation/task-types.md) | Decide between classification, boundary review, and planned task shapes. |
 | [Work with queues](./how-to/work-with-queues.md) | Triage by source, confidence, disagreement, custom `where:` filters. |
 | [Bulk-relabel a class](./how-to/bulk-relabel.md) | Many records of one label need flipping to another. |
 | [Export results](./how-to/export-results.md) | Write JSONL, CSV, Markdown stats, or the full audit log. |
@@ -40,6 +41,7 @@ Documentation is organised by [Diátaxis](https://diataxis.fr): pick a quadrant 
 | Explanation | Why it matters |
 |---|---|
 | [Prediction vs annotation](./explanation/prediction-vs-annotation.md) | The core domain split. Read this first. |
+| [Review task types](./explanation/task-types.md) | How classification, boundary review, and future task shapes differ. |
 | [Skipped is its own state](./explanation/skipped-state.md) | Why `s` doesn't just defer (ADR 0003). |
 | [Effective Review](./explanation/effective-review.md) | How the audit log + current state interact (ADR 0007). |
 | [Assistant audit](./explanation/assistant-audit.md) | Why viewing the assistant counts as influence (ADR 0004). |
