@@ -14,6 +14,11 @@ Local-first, runs over SSH, ships as a single Bun-compiled binary. State lives n
 
 > **Status:** v0.1 release candidate. See [PRD.md](./PRD.md) and [docs/adr/](./docs/adr/) for design.
 
+<picture>
+  <source srcset="docs/media/hero.webm" type="video/webm">
+  <img src="docs/media/hero.gif" alt="LabelLens review loop" width="800">
+</picture>
+
 ## Install
 
 **curl (macOS arm64/x64, Linux arm64/x64):**
@@ -62,6 +67,11 @@ labellens export stats       # Markdown summary
 | **[`labellens guide`](./src/cli/guide.ts)** | Print the tutorial offline (SSH-friendly). |
 | **`labellens --help`** | Quick reference printed to stdout. |
 | **`man labellens`** | Man page (installed by curl-installer). |
+
+<picture>
+  <source srcset="docs/media/cli-help.webm" type="video/webm">
+  <img src="docs/media/cli-help.gif" alt="LabelLens command-line help" width="800">
+</picture>
 
 ## Project layout
 

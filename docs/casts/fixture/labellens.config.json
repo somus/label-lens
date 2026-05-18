@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
+  "task": "classification",
+  "labels": [
+    "food",
+    "shopping",
+    "travel",
+    "utility",
+    "other",
+    "rent",
+    "salary"
+  ],
+  "classification": {
+    "previewLines": 2
+  },
+  "input": {
+    "path": "./transactions.jsonl",
+    "format": "jsonl",
+    "fields": {
+      "text": "text",
+      "prediction": "prediction",
+      "confidence": "confidence",
+      "source": "source"
+    }
+  },
+  "output": {
+    "path": "./reviewed.jsonl",
+    "format": "jsonl"
+  },
+  "display": {
+    "color": "truecolor",
+    "banding": "auto",
+    "theme": "dark",
+    "candidatePin": 0.4,
+    "layout": "auto",
+    "motion": "auto",
+    "sidebar": "on",
+    "queuePreview": "auto",
+    "labelChip": "configured"
+  },
+  "navigation": {
+    "smartNext": false
+  },
+  "assistant": {
+    "enabled": false
+  }
+}

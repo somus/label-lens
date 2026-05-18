@@ -6,3 +6,6 @@ test/fixtures/small.jsonl    binary
 test/fixtures/medium.jsonl   binary
 test/fixtures/large.jsonl    binary
 test/fixtures/boundary.jsonl binary
+
+docs/media/*.gif  binary
+docs/media/*.webm binary

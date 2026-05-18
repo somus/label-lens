@@ -5,3 +5,5 @@ dist/
 *.log
 .DS_Store
 .claude/
+docs/casts/out/
+docs/casts/sandbox/

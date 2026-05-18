@@ -260,11 +260,12 @@ export function mountReviewScreen(args: {
     // eye-line per the inline-footer design (ADR 0009).
     const assistantVisible = app.overlay?.kind === "assistant";
     if (assistantVisible !== lastAssistantVisible) {
+      const becameVisible = assistantVisible;
+      lastAssistantVisible = assistantVisible;
       // Fade-in plays once on appearance; the motion controller is a no-op at
       // mono / 16-color (display.motion=false) so this respects the config
       // override automatically.
-      if (assistantVisible) app.motion.play("assistant.strip.appear", fadeIn(220));
-      lastAssistantVisible = assistantVisible;
+      if (becameVisible) app.motion.play("assistant.strip.appear", fadeIn(220));
     }
     const assistantStrip = assistantVisible
       ? renderAssistantStrip(

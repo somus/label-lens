@@ -1,0 +1,6 @@
+{"text": "Spotify family plan", "prediction": "shopping", "confidence": 0.39, "source": "llm:gpt-4"}
+{"text": "Lunch at Zomato Bangalore", "prediction": "food", "confidence": 0.92, "source": "llm:gpt-4"}
+{"text": "Uber ride to airport", "prediction": "travel", "confidence": 0.88, "source": "llm:gpt-4"}
+{"text": "Electricity bill BESCOM", "prediction": "utility", "confidence": 0.93, "source": "llm:gpt-4"}
+{"text": "Amazon order #12345", "prediction": "shopping", "confidence": 0.74, "source": "llm:gpt-4"}
+{"text": "Flight to Delhi", "prediction": "travel", "confidence": 0.95, "source": "llm:gpt-4"}
