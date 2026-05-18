@@ -59,7 +59,11 @@ export class AssistantQueryError extends Error {
 }
 
 function isRemoteProvider(provider: string): boolean {
-  return provider !== "ollama" && provider !== "local";
+  // Ollama is the only provider that doesn't leave the machine; matches
+  // validateLocalOnly() in src/config/config.ts. Anything else (including
+  // misconfigured strings like "local") is treated as remote so the privacy
+  // gate + --local-only check still fire.
+  return provider !== "ollama";
 }
 
 /**
