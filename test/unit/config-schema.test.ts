@@ -81,6 +81,12 @@ describe("validateConfigSchema", () => {
     expect(errors.join("\n")).toMatch(/csvMultiLabelSeparator|minLength/);
   });
 
+  test("rejects multi-character keys.<command> override (no chord / modifier overrides)", () => {
+    const bad = makeValid({ keys: { "record.accept": "g d" } });
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
   test("rejects label.key longer than one character", () => {
     const bad = makeValid({ labels: [{ name: "food", key: "fd" }] });
     const errors = validateConfigSchema(bad);

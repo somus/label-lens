@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { type ExportFormat, parseExportArgument, performExport } from "../actions/export/run.ts";
-import type { LabellensConfig } from "../config/config.ts";
+import { type LabellensConfig, validateFieldOverrides } from "../config/config.ts";
 import { ConfigLoadError, loadConfig } from "../config/load.ts";
 import { openDb } from "../store/db.ts";
 
@@ -46,6 +46,15 @@ export async function runExportCli({ args, cwd }: RunExportCliArgs): Promise<voi
       throw new ExportCliError([err.message, ...err.errors.map((e) => `  ${e}`)].join("\n"));
     }
     throw err;
+  }
+  const fieldOverridesError = validateFieldOverrides(config);
+  if (fieldOverridesError) {
+    throw new ExportCliError(
+      [
+        `labellens: invalid output.fieldOverrides`,
+        ...fieldOverridesError.split("\n").map((l) => `  ${l}`),
+      ].join("\n"),
+    );
   }
   const parsed = parseExportArgument(args);
   if (parsed.error) {

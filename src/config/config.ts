@@ -272,10 +272,18 @@ const NotesConfigSchema = Type.Object(
   { description: "Note-overlay config." },
 );
 
-const KeysOverridesSchema = Type.Record(Type.String(), Type.String(), {
-  description:
-    "Per-command keybinding overrides. Keys are command names (e.g. `record.accept`); values are key strings (e.g. `y`). Reserved keys (digits, chord starters, label keys) are still off-limits.",
-});
+const KeysOverridesSchema = Type.Record(
+  Type.String(),
+  Type.String({
+    minLength: 1,
+    maxLength: 1,
+    description: "Single-character key. Modifiers and chords are not supported here.",
+  }),
+  {
+    description:
+      "Per-command keybinding overrides. Keys are command names (e.g. `record.accept`); values are single-character key strings (e.g. `y`). Reserved keys (digits, chord starters, label keys) are still off-limits. Chord overrides (`g d`) and modifier overrides (`ctrl+x`) are intentionally out of scope.",
+  },
+);
 
 export const LabellensConfigSchema = Type.Object(
   {
@@ -352,6 +360,34 @@ export function validateConfigSchema(raw: unknown): string[] {
     }
   }
   return errors;
+}
+
+const DEFAULT_EXPORT_COLUMNS = ["id", "text", "label", "reviewed_at", "document_id"] as const;
+
+/**
+ * Reject `output.fieldOverrides` configurations that would produce two columns
+ * with the same JSON / CSV header. Two overrides mapped to the same name
+ * silently drop the earlier column (last-write-wins on the JSONL object); an
+ * override that collides with a *non-overridden* default name does the same.
+ * Returns null when clean.
+ */
+export function validateFieldOverrides(config: LabellensConfig): string | null {
+  const overrides = config.output.fieldOverrides;
+  if (!overrides) return null;
+  const claimed = new Map<string, string>(); // emitted-name -> source column
+  const errors: string[] = [];
+  for (const column of DEFAULT_EXPORT_COLUMNS) {
+    const renamed = overrides[column as keyof typeof overrides];
+    const emitted = renamed ?? column;
+    const prior = claimed.get(emitted);
+    if (prior !== undefined) {
+      errors.push(
+        `output.fieldOverrides: '${column}' and '${prior}' both map to '${emitted}' on export`,
+      );
+    }
+    claimed.set(emitted, column);
+  }
+  return errors.length === 0 ? null : errors.join("\n");
 }
 
 /**

@@ -78,6 +78,15 @@ export function applyKeyOverrides(
       errors.push(`keys.${name}: override key must not be empty`);
       continue;
     }
+    if (key.length !== 1) {
+      // Schema enforces this already, but the runtime check shields callers
+      // that bypass the loader (tests, future config sources). Chord overrides
+      // (`g d`) would silently bypass the chord-starter collision logic in
+      // `reservedReviewKeys`; modifier overrides (`ctrl+x`) lack a keymap
+      // story today. Out of scope for MVP.
+      errors.push(`keys.${name}: override key '${key}' must be a single character`);
+      continue;
+    }
     if (reserved.has(key)) {
       errors.push(`keys.${name}: '${key}' is reserved by a built-in command or chord starter`);
     }

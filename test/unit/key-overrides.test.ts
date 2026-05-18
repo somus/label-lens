@@ -52,4 +52,14 @@ describe("applyKeyOverrides", () => {
     const result = applyKeyOverrides(commands, { "record.accept": "" }, new Set());
     expect(result.errors[0]).toContain("must not be empty");
   });
+
+  test("rejects multi-character override (chord syntax)", () => {
+    const result = applyKeyOverrides(commands, { "record.accept": "g d" }, new Set());
+    expect(result.errors[0]).toMatch(/single character/);
+  });
+
+  test("rejects modifier-style override", () => {
+    const result = applyKeyOverrides(commands, { "record.accept": "ctrl+x" }, new Set());
+    expect(result.errors[0]).toMatch(/single character/);
+  });
 });

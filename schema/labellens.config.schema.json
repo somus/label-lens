@@ -477,10 +477,13 @@
       "type": "object",
       "patternProperties": {
         "^.*$": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1,
+          "description": "Single-character key. Modifiers and chords are not supported here."
         }
       },
-      "description": "Per-command keybinding overrides. Keys are command names (e.g. `record.accept`); values are key strings (e.g. `y`). Reserved keys (digits, chord starters, label keys) are still off-limits."
+      "description": "Per-command keybinding overrides. Keys are command names (e.g. `record.accept`); values are single-character key strings (e.g. `y`). Reserved keys (digits, chord starters, label keys) are still off-limits. Chord overrides (`g d`) and modifier overrides (`ctrl+x`) are intentionally out of scope."
     }
   },
   "$id": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",

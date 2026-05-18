@@ -7,7 +7,12 @@ import { switchQueue } from "../actions/queue/switch.ts";
 import { relabelByKeyCommand } from "../actions/record/decisions.ts";
 import { ALL_COMMANDS, reservedReviewKeys } from "../actions/registry.ts";
 import { createAppContext } from "../app/context.ts";
-import { type LabellensConfig, validateLabelKeys, validateLocalOnly } from "../config/config.ts";
+import {
+  type LabellensConfig,
+  validateFieldOverrides,
+  validateLabelKeys,
+  validateLocalOnly,
+} from "../config/config.ts";
 import { ConfigLoadError, loadConfig } from "../config/load.ts";
 import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
 import { ingestFile } from "../ingest/ingest.ts";
@@ -76,6 +81,13 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
   if (keyError) {
     console.error("labellens: invalid config.labels[].key");
     for (const line of keyError.split("\n")) console.error(`  ${line}`);
+    process.exit(2);
+  }
+
+  const fieldOverridesError = validateFieldOverrides(config);
+  if (fieldOverridesError) {
+    console.error("labellens: invalid output.fieldOverrides");
+    for (const line of fieldOverridesError.split("\n")) console.error(`  ${line}`);
     process.exit(2);
   }
 
