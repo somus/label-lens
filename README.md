@@ -1,5 +1,12 @@
 # LabelLens
 
+[![CI](https://github.com/somus/label-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/somus/label-lens/actions/workflows/ci.yml)
+[![Release](https://github.com/somus/label-lens/actions/workflows/release.yml/badge.svg)](https://github.com/somus/label-lens/actions/workflows/release.yml)
+[![GitHub release](https://img.shields.io/github/v/release/somus/label-lens?include_prereleases&sort=semver)](https://github.com/somus/label-lens/releases)
+[![License](https://img.shields.io/github/license/somus/label-lens)](./LICENSE)
+![Bun](https://img.shields.io/badge/runtime-Bun-black?logo=bun)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)
+
 **Review noisy text labels from your terminal.**
 
 Your LLM, rules, or weak model labeled the dataset. Some fraction is wrong in ways you only catch by reading the rows. Options today:
@@ -17,6 +24,19 @@ Local-first, runs over SSH, ships as a single Bun-compiled binary. State lives n
 <a href="docs/media/hero.webm">
   <img src="docs/media/hero.gif" alt="LabelLens review loop" width="800">
 </a>
+
+## Supported task types
+
+Current support is configured with [`task`](./docs/reference/config.md#task-required). Planned task types are tracked in the [roadmap](./ROADMAP.md).
+
+| Task type | Status | Use it for |
+|---|---|---|
+| `classification` | Supported now | One label per record, such as intent, topic, or category review. |
+| `boundary` | Supported now | Document or line segmentation where surrounding context matters. |
+| `multi-label` | Planned V1 | Records that can carry multiple labels via toggle-style review. |
+| Extraction review | Planned V1 | Form-style correction of structured fields, without span editing. |
+| Pairwise / preference | Planned later | LLM output comparison and evaluation workflows. |
+| NER / span review | Planned V2 / future | Character-level span correction; deferred because terminal span editing is the hard part. See [PRD §19](./PRD.md#19-why-ner-and-extraction-with-spans-are-deferred). |
 
 ## Install
 
