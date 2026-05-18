@@ -92,10 +92,22 @@ function main(): void {
   chmodSync(join(OUT, "labellens"), 0o755);
   chmodSync(join(OUT, "labellens.bin"), 0o755);
 
+  // Man page — generated from src/cli/help.ts so it always tracks the
+  // canonical --help text. install.sh symlinks this into the user's
+  // ~/.local/share/man/man1 (or /usr/local/share/man/man1 for root installs).
+  const manResult = spawnSync("bun", ["run", "scripts/build-man.ts", targetName], {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
+  if (manResult.status !== 0) {
+    throw new Error("scripts/build-man.ts failed");
+  }
+
   console.log(`Built ${OUT}`);
   console.log(`  labellens          (shim)`);
   console.log(`  labellens.bin      (compiled binary)`);
   console.log(`  parser.worker.js   (OpenTUI tree-sitter worker)`);
+  console.log(`  labellens.1        (man page)`);
 }
 
 main();

@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 import { ExportCliError, runExportCli } from "./cli/export.ts";
+import { printGuide } from "./cli/guide.ts";
+import { printHelp } from "./cli/help.ts";
 import { runInit } from "./cli/init.ts";
 import { MigrateCliError, runMigrateCli } from "./cli/migrate.ts";
 import { runReview } from "./cli/run.ts";
@@ -18,6 +20,16 @@ async function main(): Promise<void> {
 
   if (cmd === "--version" || cmd === "-v") {
     console.log(`labellens ${VERSION}`);
+    return;
+  }
+
+  if (cmd === "--help" || cmd === "-h" || cmd === "help") {
+    printHelp();
+    return;
+  }
+
+  if (cmd === "guide") {
+    printGuide();
     return;
   }
 
@@ -63,9 +75,7 @@ async function main(): Promise<void> {
   }
 
   console.error(`labellens: unknown command '${cmd}'`);
-  console.error(
-    "usage: labellens [init <file.jsonl> | export [format] | migrate --rename <old>:<new>]",
-  );
+  console.error("Run 'labellens --help' for usage.");
   process.exit(2);
 }
 

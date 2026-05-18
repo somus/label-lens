@@ -68,7 +68,7 @@ resolve_version() {
 #
 # When a future release adds a file, add its name here. Forgetting to add
 # it leaks a stale copy on upgrade — which is bad — but never destructive.
-LL_ARTIFACTS="labellens labellens.bin parser.worker.js"
+LL_ARTIFACTS="labellens labellens.bin parser.worker.js labellens.1"
 
 remove_prior_install_artifacts() {
   local prefix="$1"
@@ -163,12 +163,35 @@ main() {
   mkdir -p "$LL_BIN_DIR"
   ln -sf "${LL_PREFIX}/labellens" "${LL_BIN_DIR}/labellens"
 
+  # Optional: symlink the man page into a man dir on $MANPATH if we can find
+  # one. Best-effort — failure here doesn't break the install.
+  install_man_page "${LL_PREFIX}/labellens.1"
+
   log "installed: ${LL_BIN_DIR}/labellens -> ${LL_PREFIX}/labellens"
   case ":$PATH:" in
     *:"$LL_BIN_DIR":*) ;;
     *) log "note: ${LL_BIN_DIR} is not in your PATH. Add this to your shell rc:"
        log "   export PATH=\"${LL_BIN_DIR}:\$PATH\"" ;;
   esac
+}
+
+install_man_page() {
+  local src="$1"
+  if [ ! -f "$src" ]; then
+    return
+  fi
+  # Pick the first writable man1 dir we know about. Standard layout for
+  # user-local: ~/.local/share/man/man1. Root install: /usr/local/share/man/man1.
+  local man_dir=""
+  if [ "$(id -u)" = "0" ]; then
+    man_dir="/usr/local/share/man/man1"
+  else
+    man_dir="${HOME}/.local/share/man/man1"
+  fi
+  if mkdir -p "$man_dir" 2>/dev/null; then
+    ln -sf "$src" "${man_dir}/labellens.1"
+    log "man page: ${man_dir}/labellens.1 (run 'man labellens')"
+  fi
 }
 
 main "$@"

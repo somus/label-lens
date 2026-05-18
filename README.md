@@ -2,54 +2,63 @@
 
 Terminal-first review tool for cleaning noisy text training datasets produced by rules, LLMs, weak supervision, or early model predictions. Local-first; runs over SSH; ships as a single Bun-compiled binary.
 
-> **Status:** under active development. See [PRD.md](./PRD.md) and [docs/adr/](./docs/adr/) for design.
+> **Status:** v0.1 release candidate. See [PRD.md](./PRD.md) and [docs/adr/](./docs/adr/) for design.
 
 ## Install
 
-**curl (macOS arm64, Linux arm64/x64):**
+**curl (macOS arm64/x64, Linux arm64/x64):**
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/somus/label-lens/main/install.sh | sh
 ```
 
-Pin a specific release:
+Pin a version with `LL_VERSION=v0.1.2`, override paths with `LL_PREFIX` / `LL_BIN_DIR`. Each release ships `SHA256SUMS.txt`; the installer verifies before extracting.
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/somus/label-lens/main/install.sh | LL_VERSION=v0.1.2 sh
-```
-
-By default the installer drops the binary in `~/.local/share/label-lens/` and symlinks `~/.local/bin/labellens`. Override via `LL_PREFIX` and `LL_BIN_DIR`.
-
-**Integrity verification.** Each release ships `SHA256SUMS.txt` alongside the tarballs. The installer downloads the manifest before extracting:
-
-- Manifest missing (404) → warn + continue. Backward-compat for pre-`v0.0.3` releases that didn't ship checksums.
-- Manifest empty (network truncation, broken proxy) → warn + continue. Rare; manual verification recommended.
-- Manifest present but missing your target → **fatal**. Release was published incomplete or tampered with; the installer refuses to extract.
-- Hash mismatch → fatal.
-
-**npm fallback** (Intel Mac / containers / non-shell environments):
+**npm fallback** (containers, non-shell environments):
 
 ```sh
 npm install -g label-lens
-# or
-bun install -g label-lens
 ```
 
-## Quickstart
+## 60-second quickstart
 
 ```sh
 labellens init data.jsonl   # infer schema, write labellens.config.json
 labellens                   # open the review screen
 ```
 
-Press `a` to accept the prediction, `j` / `k` to navigate, `q` to quit. The reviewed records persist in `.labellens/state.db` next to the dataset.
+In the TUI:
+
+- `a` accept · `r` relabel · `1`–`9` quick-relabel · `x` reject · `s` skip
+- `j` / `k` navigate · `[` / `]` cycle queues
+- `i` LLM assistant (configures on first press) · `t` stats · `?` help · `q` quit
+
+When done:
+
+```sh
+labellens export jsonl       # write reviewed dataset
+labellens export stats       # Markdown summary
+```
+
+## Docs
+
+| | |
+|---|---|
+| **[Tutorial](./docs/tutorial.md)** | Full 5-minute walkthrough. |
+| **[How-to guides](./docs/how-to/)** | Configure the assistant, work with queues, bulk-relabel, export, migrate labels, run over SSH, use Ollama locally. |
+| **[Reference](./docs/reference/)** | Config schema, keybindings, queue grammar, CLI flags, output formats. |
+| **[Explanation](./docs/explanation/)** | Domain model, why skipped is its own state, audit semantics. |
+| **[`labellens guide`](./src/cli/guide.ts)** | Print the tutorial offline (SSH-friendly). |
+| **`labellens --help`** | Quick reference printed to stdout. |
+| **`man labellens`** | Man page (installed by curl-installer). |
 
 ## Project layout
 
 - `PRD.md` — product spec.
 - `CONTEXT.md` — domain glossary.
+- `docs/` — user-facing documentation ([index](./docs/index.md)).
 - `docs/adr/` — architecture decision records.
-- `CLAUDE.md` — orientation for AI agents working on this repo.
+- `AGENTS.md` (alias `CLAUDE.md`) — orientation for AI agents working on this repo.
 
 ## License
 
