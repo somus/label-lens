@@ -343,6 +343,21 @@ export function mountReviewScreen(args: {
     void dispatch(registry, scope, app, action);
   };
 
+  const dispatchPropagatedKey = (
+    event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
+    contextScope: Scope,
+  ) => {
+    app.activeScope = contextScope;
+    const action = chord.feed("global", {
+      name: event.name,
+      ctrl: event.ctrl,
+      shift: event.shift,
+      meta: event.meta,
+    });
+    if (!action) return;
+    void dispatch(registry, contextScope, app, action);
+  };
+
   const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
     app.noteInput();
     if (app.overlay) {
@@ -358,7 +373,7 @@ export function mountReviewScreen(args: {
       const queueId = app.queueId ?? initialQueueId;
       applyEffects(app, queueId, result.effects, dispatchCommand);
       if (result.propagated) {
-        dispatchKey(event, propagatedScope(sourceOverlay, app));
+        dispatchPropagatedKey(event, propagatedScope(sourceOverlay, app));
       } else if (mounted) {
         renderState();
       }
@@ -412,7 +427,7 @@ function normalizeOverlayForTerminal(overlay: Overlay, termHeight: number): Over
   };
 }
 
-function propagatedScope(overlay: Overlay, app: AppContext): Scope | undefined {
+function propagatedScope(overlay: Overlay, app: AppContext): Scope {
   if (overlay.kind === "stats") return "stats";
   if (overlay.kind === "queue") return "queue";
   if (overlay.kind === "help") return overlay.state.scope;

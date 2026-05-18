@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createTestRenderer } from "@opentui/core/testing";
+import { sql } from "drizzle-orm";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { defaultDisplay } from "../../src/render/capability.ts";
@@ -31,6 +32,10 @@ async function setup() {
   mountReviewScreen({ renderer, app });
   await renderOnce();
   return { store, app, mockInput, renderOnce, captureCharFrame };
+}
+
+function reviewCount(ctx: Awaited<ReturnType<typeof setup>>): number {
+  return ctx.store.db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM reviews`)[0]!.n;
 }
 
 describe("overlay propagation e2e", () => {
@@ -96,5 +101,45 @@ describe("overlay propagation e2e", () => {
     await ctx.renderOnce();
 
     expect(ctx.app.overlay?.kind).toBe("palette");
+  });
+
+  test("read-only overlays do not propagate review decision keys", async () => {
+    const stats = await setup();
+    using _statsStore = stats.store;
+    stats.mockInput.pressKey("t");
+    await stats.renderOnce();
+    stats.mockInput.pressKey("a");
+    await stats.renderOnce();
+    expect(stats.app.overlay?.kind).toBe("stats");
+    expect(reviewCount(stats)).toBe(0);
+
+    const help = await setup();
+    using _helpStore = help.store;
+    help.mockInput.pressKey("?");
+    await help.renderOnce();
+    help.mockInput.pressKey("a");
+    await help.renderOnce();
+    expect(help.app.overlay?.kind).toBe("help");
+    expect(reviewCount(help)).toBe(0);
+
+    const guidelines = await setup();
+    using _guidelinesStore = guidelines.store;
+    guidelines.mockInput.pressKey("g");
+    await guidelines.renderOnce();
+    guidelines.mockInput.pressKey("g");
+    await guidelines.renderOnce();
+    guidelines.mockInput.pressKey("a");
+    await guidelines.renderOnce();
+    expect(guidelines.app.overlay?.kind).toBe("guidelines");
+    expect(reviewCount(guidelines)).toBe(0);
+
+    const queue = await setup();
+    using _queueStore = queue.store;
+    queue.mockInput.pressKey("Q", { shift: true });
+    await queue.renderOnce();
+    queue.mockInput.pressKey("a");
+    await queue.renderOnce();
+    expect(queue.app.overlay?.kind).toBe("queue");
+    expect(reviewCount(queue)).toBe(0);
   });
 });
