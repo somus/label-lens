@@ -24,7 +24,7 @@ EXPORT FORMATS
   jsonl      one row per reviewed record (default)
   csv        same shape, CSV-encoded
   stats      Markdown summary report
-  log        full audit trail (every review row)
+  review-log full audit trail (every review row)
 
 GLOBAL FLAGS
   --local-only         refuse remote LLM providers. Launch aborts if the
@@ -58,7 +58,7 @@ EXAMPLES
 
   Export reviewed data + a stats summary:
     labellens export jsonl
-    labellens export stats --out review.md
+    labellens export stats --output review.md
 
   Rename a label after deciding to consolidate:
     labellens migrate --rename shopping:utility
