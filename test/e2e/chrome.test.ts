@@ -7,7 +7,6 @@ import type { ResolvedDisplay } from "../../src/render/capability.ts";
 import { Chrome, type Segment } from "../../src/render/chrome/index.ts";
 import { Text } from "../../src/render/text.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
-import { mountStatsScreen } from "../../src/screens/stats.ts";
 import { displayFor } from "../util/display.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
@@ -67,7 +66,7 @@ async function setupQueue(store: TmpStore, display: ResolvedDisplay) {
 }
 
 async function setupStats(store: TmpStore, display: ResolvedDisplay) {
-  const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
+  const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
     width: 120,
     height: 30,
   });
@@ -78,12 +77,9 @@ async function setupStats(store: TmpStore, display: ResolvedDisplay) {
     requestRender: () => {},
     onQuit: () => {},
   });
-  mountStatsScreen({
-    renderer,
-    app,
-    onDrill: () => {},
-    onCancel: () => {},
-  });
+  mountReviewScreen({ renderer, app });
+  await renderOnce();
+  mockInput.pressKey("t");
   await renderOnce();
   return { captureCharFrame };
 }
@@ -162,14 +158,14 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toContain("[esc] cancel");
   });
 
-  test("stats screen renders chrome with Stats title and drill hint", async () => {
+  test("stats overlay renders Stats title and drill hint", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { captureCharFrame } = await setupStats(store, TRUECOLOR_LIGHT);
     const frame = captureCharFrame();
     expect(frame).toContain("Stats");
     expect(frame).toContain("[j/k] navigate");
     expect(frame).toContain("[enter] drill");
-    expect(frame).toContain("[esc] back");
+    expect(frame).toContain("[esc] close");
   });
 
   test("hint-only mode renders status + body + footer with no AppContext or scope", async () => {

@@ -24,3 +24,4 @@ Load-bearing design decisions for LabelLens. Each ADR captures the context, the 
 | [0010](./0010-render-primitives-vs-composites.md) | Render layer: primitives vs composites | Accepted   |
 | [0011](./0011-cursor-not-a-deepening-target.md) | `Cursor` is not a deepening target | Accepted   |
 | [0012](./0012-where-dsl-excludes-orphans-by-default.md) | `where:` DSL excludes orphans by default | Accepted   |
+| [0013](./0013-overlay-key-propagation.md) | Overlay key propagation | Accepted   |

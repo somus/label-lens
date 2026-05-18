@@ -47,7 +47,7 @@ describe("stats command + palette wiring", () => {
     expect(app.overlay?.kind).toBe("stats");
   });
 
-  test("stats.show and palette.stats use the same Stats screen callback when mounted", async () => {
+  test("stats.show and palette.stats both open the stats overlay directly", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = createAppContext({
       db: store.db,
@@ -56,16 +56,13 @@ describe("stats command + palette wiring", () => {
       requestRender: () => {},
       onQuit: () => {},
     });
-    let opened = 0;
-    app.openStatsScreen = () => {
-      opened += 1;
-    };
 
     await dispatch(defaultRegistry(), "review", app, "stats.show");
+    expect(app.overlay?.kind).toBe("stats");
+    app.closeOverlay();
     await dispatch(defaultRegistry(), "review", app, "palette.stats");
 
-    expect(opened).toBe(2);
-    expect(app.overlay).toBeNull();
+    expect(app.overlay?.kind).toBe("stats");
   });
 
   test("palette.stats opens stats overlay in any scope (global)", async () => {

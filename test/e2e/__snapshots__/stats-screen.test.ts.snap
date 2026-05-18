@@ -1,45 +1,45 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`stats screen e2e renders core sections + first-drillable highlight + footer 1`] = `
+exports[`stats overlay e2e renders core sections + first-drillable highlight + footer 1`] = `
 "                                                                                                    
-  LabelLens  tiny.jsonl  Stats                                                    7 drillable rows  
+  LabelLens  tiny.jsonl  Pending  1 / 9             Reviewed: 1 / 10  ·  Skipped: 0  ·  Pending: 9  
+                                                                                                    
+  Pending ──────────────────────────────────────────────────────────────────────────────────  1 / 9 
+              ┌────────────────────────────────────────────────────────────────────┐                
+              │                                                                    │                
+              │  == Stats ======================================================== │                
+ ┌────────────│                                                                    │──────────────┐ 
+ │ ▶ Uber ride│                                                                    │              │ 
+ └────────────│  Acceptance by source ───────────────────────────────────────────  │──────────────┘ 
+  ▆ Amazon ord│ >   llm:gpt-4                  0%  (1 reviewed)                 →  │                
+  ▄ Netflix mo│                                                                    │                
+              │  Relabel by source ──────────────────────────────────────────────  │                
+  prediction ─│     llm:gpt-4                100%  (1 reviewed)                 →  │─────────────── 
+              │                                                                    │                
+  label      ◇│  Top corrections ────────────────────────────────────────────────  │                
+  confidence #│     food → travel                     1                         →  │                
+  source     [│                                                                    │                
+              │  Labels with highest correction rate ────────────────────────────  │                
+  labels ─────│     food                     100%  (1 reviewed)                 →  │─────────────── 
+              │                                                                    │                
+    [1]  food │  Weakest sources ────────────────────────────────────────────────  │                
+              │     llm:gpt-4                100%  (1 reviewed)                 →  │                
+              │                                                                    │                
+              │  Imported issues ────────────────────────────────────────────────  │                
+              │     label_issue                  1 record                       →  │                
+              │                                                                    │                
+              │  Suggested next queue ───────────────────────────────────────────  │                
+              │     by-source:llm:gpt-4   (score 7.00)                          →  │                
+              │                                                                    │                
+              │                                                                    │                
+              │  [j/k] navigate · [enter] drill · [esc] close                      │                
+              │                                                                    │                
+              └────────────────────────────────────────────────────────────────────┘                
                                                                                                     
                                                                                                     
-  Acceptance by source ──────────────────────────────────────────────────────────────────────────   
                                                                                                     
- > llm:gpt-4                      0%  (1 reviewed)                                             →    
-                                                                                                    
-  Relabel by source ─────────────────────────────────────────────────────────────────────────────   
-                                                                                                    
-   llm:gpt-4                    100%  (1 reviewed)                                             →    
-                                                                                                    
-  Top corrections ───────────────────────────────────────────────────────────────────────────────   
-                                                                                                    
-   food → travel                           1                                                   →    
-                                                                                                    
-  Labels with highest correction rate ───────────────────────────────────────────────────────────   
-                                                                                                    
-   food                         100%  (1 reviewed)                                             →    
-                                                                                                    
-  Weakest sources ───────────────────────────────────────────────────────────────────────────────   
-                                                                                                    
-   llm:gpt-4                    100%  (1 reviewed)                                             →    
-                                                                                                    
-  Imported issues ───────────────────────────────────────────────────────────────────────────────   
-                                                                                                    
-   label_issue                      1 record                                                   →    
-                                                                                                    
-  Suggested next queue ──────────────────────────────────────────────────────────────────────────   
-                                                                                                    
-   by-source:llm:gpt-4   (score 7.00)                                                          →    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-   [j/k] navigate  [enter] drill  [esc] back                                                        
+  history  ~ travel      [u] undo                                                                   
+  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] … 
                                                                                                     
 "
 `;

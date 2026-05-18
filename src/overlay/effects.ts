@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { switchQueue } from "../actions/queue/switch.ts";
 import { type AppContext, effectiveQueueId } from "../app/context.ts";
 import { flash } from "../render/anim.ts";
 import { predicateQueue } from "../store/queues/predicate.ts";
@@ -144,6 +145,10 @@ export function applyEffects(
           break;
         }
         void dispatchCommand(effect.commandName, effect.argument);
+        break;
+      case "drill":
+        app.closeOverlay();
+        switchQueue(app, effect.queueId);
         break;
       case "pushPaletteHistory":
         app.pushPaletteHistory(effect.entry);

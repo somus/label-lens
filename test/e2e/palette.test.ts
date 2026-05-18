@@ -4,7 +4,6 @@ import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
-import { mountStatsScreen } from "../../src/screens/stats.ts";
 import { displayFor } from "../util/display.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
@@ -29,9 +28,9 @@ async function setup(store: TmpStore, display: ResolvedDisplay = defaultDisplay(
     requestRender: () => {},
     onQuit: () => {},
   });
-  const reviewHandle = mountReviewScreen({ renderer, app });
+  mountReviewScreen({ renderer, app });
   await renderOnce();
-  return { app, renderer, reviewHandle, mockInput, renderOnce, captureCharFrame };
+  return { app, renderer, mockInput, renderOnce, captureCharFrame };
 }
 
 describe("palette e2e", () => {
@@ -187,16 +186,16 @@ describe("palette e2e", () => {
     expect(captureCharFrame()).toContain("Queues");
   });
 
-  test(":stats opens the same Stats screen path as t", async () => {
+  test(":stats opens the same stats overlay path as t", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const { app, mockInput, renderOnce } = await setup(store, displayFor({ color: "truecolor" }));
-    let opened = 0;
-    app.openStatsScreen = () => {
-      opened += 1;
-    };
     mockInput.pressKey("t");
     await renderOnce();
-    expect(opened).toBe(1);
+    expect(app.overlay?.kind).toBe("stats");
+    mockInput.pressEscape();
+    await new Promise((r) => setTimeout(r, 30));
+    await renderOnce();
+    expect(app.overlay).toBeNull();
 
     mockInput.pressKey(":");
     await renderOnce();
@@ -207,23 +206,12 @@ describe("palette e2e", () => {
     mockInput.pressKey("RETURN");
     await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(opened).toBe(2);
-    expect(app.overlay).toBeNull();
+    expect(app.overlay?.kind).toBe("stats");
   });
 
-  test(":stats opens the Stats screen instead of repainting review after palette close", async () => {
+  test(":stats opens stats as an overlay over review", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { app, renderer, reviewHandle, mockInput, renderOnce, captureCharFrame } =
-      await setup(store);
-    app.openStatsScreen = () => {
-      reviewHandle.destroy();
-      mountStatsScreen({
-        renderer,
-        app,
-        onDrill: () => {},
-        onCancel: () => {},
-      });
-    };
+    const { app, mockInput, renderOnce, captureCharFrame } = await setup(store);
 
     mockInput.pressKey(":");
     await renderOnce();
@@ -235,7 +223,8 @@ describe("palette e2e", () => {
     await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
 
-    expect(app.activeScope).toBe("stats");
+    expect(app.overlay?.kind).toBe("stats");
+    expect(app.activeScope).toBe("review");
     expect(captureCharFrame()).toContain("Stats");
   });
 

@@ -34,7 +34,7 @@ by-source:llm:gpt-4         → primary_source = "llm:gpt-4"
 by-source:regex             → primary_source = "regex"
 ```
 
-Drilldown target from the stats screen's "By source" rows.
+Drilldown target from the stats surface's "By source" rows.
 
 ### `by-reason:<r>`
 
@@ -56,7 +56,7 @@ Imported issues from the JSONL `issues[]` array land here too (e.g. Cleanlab-sty
 
 ### `by-correction:<from>:<to>`
 
-Latest effective review flipped `<from>` → `<to>`. Drilldown target from "Corrections" rows on the stats screen.
+Latest effective review flipped `<from>` → `<to>`. Drilldown target from "Corrections" rows on the stats surface.
 
 Split on the **last** colon, so colon-namespaced from-labels survive:
 

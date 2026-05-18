@@ -77,7 +77,7 @@ After migration:
 
 ```
 labellens
-t                  # stats screen
+t                  # stats overlay
 ```
 
 The "By label" rows should show the new distribution. Drill into `by-label:utility` to confirm the migrated records landed.

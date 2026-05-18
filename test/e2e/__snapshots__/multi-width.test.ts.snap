@@ -34,36 +34,36 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
 "
 `;
 
-exports[`multi-width snapshot sweep (plan A16) stats screen @ 80x30 1`] = `
+exports[`multi-width snapshot sweep (plan A16) stats overlay @ 80x30 1`] = `
 "                                                                                
-  LabelLens  tiny.jsonl  Stats                                2 drillable rows  
+  LabelLens  tiny.jsonl  Pending  1 / 10                                        
+                                                                                
+  Pending ─╭──────────────────────────────────────────────────────╮────  1 / 10 
+           │                                                      │             
+           │  ══ Stats ══════════════════════════════════════════ │             
+           │                                                      │             
+ ╭─────────│                                                      │───────────╮ 
+ │ Lunch at│  Imported issues ──────────────────────────────────  │           │ 
+ ╰─────────│ >   label_issue                  1 record         →  │───────────╯ 
+  █ Uber ri│                                                      │             
+  ▆ Amazon │  Suggested next queue ─────────────────────────────  │             
+           │     low-confidence   (score 5.00)                 →  │             
+  predictio│                                                      │──────────── 
+           │                                                      │             
+  label    │                                                      │             
+  confidenc│                                                      │             
+  source   │                                                      │             
+           │                                                      │             
+  labels ──│                                                      │──────────── 
+           │                                                      │             
+  ◆ [1]  fo│                                                      │             
+           │  [j/k] navigate · [enter] drill · [esc] close        │             
+           │                                                      │             
+           ╰──────────────────────────────────────────────────────╯             
                                                                                 
                                                                                 
-  Imported issues ───────────────────────────────────────────────────────────   
                                                                                 
- > label_issue                      1 record                               →    
-                                                                                
-  Suggested next queue ──────────────────────────────────────────────────────   
-                                                                                
-   low-confidence   (score 5.00)                                           →    
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-   [j/k] navigate  [enter] drill  [esc] back                                    
+  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊… 
                                                                                 
 "
 `;
@@ -136,36 +136,36 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
 "
 `;
 
-exports[`multi-width snapshot sweep (plan A16) stats screen @ 120x30 1`] = `
+exports[`multi-width snapshot sweep (plan A16) stats overlay @ 120x30 1`] = `
 "                                                                                                                        
+  Pending ────────────────────────────────────────────────────────────────  1 / 10                                      
                                                                                                                         
-  Imported issues ───────────────────────────────────────────────────────────────                                       
+                   ╭──────────────────────────────────────────────────────────────────────────────╮                     
+                   │                                                                              │                     
+ ╭─────────────────│  ══ Stats ══════════════════════════════════════════════════════════════════ │                     
+ │ Lunch at Zomato │                                                                              │                     
+ ╰─────────────────│                                                                              │                     
+  █ Uber ride to ai│  Imported issues ──────────────────────────────────────────────────────────  │                     
+  ▆ Amazon order #1│ >   label_issue                  1 record                                 →  │                     
+                   │                                                                              │                     
+  prediction ──────│  Suggested next queue ─────────────────────────────────────────────────────  │                     
+                   │     low-confidence   (score 5.00)                                         →  │                     
+  label      ◇ food│                                                                              │                     
+  confidence ██████│                                                                              │                     
+  source     [llm:g│                                                                              │                     
+                   │                                                                              │iny.jsonl            
+  labels ──────────│                                                                              │                     
+                   │                                                                              │───────────────────  
+  ◆ [1]  food  92% │                                                                              │                     
+                   │                                                                              │                  0  
+                   │                                                                              │                  0  
+                   │  [j/k] navigate · [enter] drill · [esc] close                                │                  0  
+                   │                                                                              │                     
+                   ╰──────────────────────────────────────────────────────────────────────────────╯░░░░░░░░░]   0%      
+                                                                                    Signals ──────────────────────────  
                                                                                                                         
- > label_issue                      1 record                                   →                                        
-                                                                                                                        
-  Suggested next queue ──────────────────────────────────────────────────────────                                       
-                                                                                                                        
-   low-confidence   (score 5.00)                                               →                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
-                                                                                    test/fixtures/tiny.jsonl            
-                                                                                                                        
-                                                                                    Totals ───────────────────────────  
-                                                                                                                        
-                                                                                    total                           10  
-                                                                                    reviewed                         0  
-                                                                                    pending                         10  
-                                                                                    accepted                         0  
-                                                                                    relabeled                        0  
-                                                                                    rejected                         0  
-                                                                                    skipped                          0  
-   [j/k] navigate  [enter] drill  [esc] back                                                                            
+                                                                                    ●  label_issue                   1  
+  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note    [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
                                                                                                                         
 "
 `;
@@ -238,36 +238,36 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
 "
 `;
 
-exports[`multi-width snapshot sweep (plan A16) stats screen @ 160x30 1`] = `
+exports[`multi-width snapshot sweep (plan A16) stats overlay @ 160x30 1`] = `
 "                                                                                                                                                                
+  Pending ────────────────────────────────────────────────────────────────────────────────────────────  1 / 10                                                  
                                                                                                                                                                 
-  Imported issues ───────────────────────────────────────────────────────────────────────────────────────────                                                   
+                                       ╭──────────────────────────────────────────────────────────────────────────────╮                                         
+                                       │                                                                              │                                         
+ ╭─────────────────────────────────────│  ══ Stats ══════════════════════════════════════════════════════════════════ │                                         
+ │ Lunch at Zomato Bangalore           │                                                                              │                                         
+ ╰─────────────────────────────────────│                                                                              │                                         
+  █ Uber ride to airport               │  Imported issues ──────────────────────────────────────────────────────────  │                                         
+  ▆ Amazon order #12345                │ >   label_issue                  1 record                                 →  │                                         
+                                       │                                                                              │                                         
+  prediction ──────────────────────────│  Suggested next queue ─────────────────────────────────────────────────────  │                                         
+                                       │     low-confidence   (score 5.00)                                         →  │                                         
+  label      ◇ food                    │                                                                              │                                         
+  confidence ████████░  92%            │                                                                              │                                         
+  source     [llm:gpt-4]               │                                                                              │                                         
+                                       │                                                                              │xtures/tiny.jsonl                        
+  labels ──────────────────────────────│                                                                              │                                         
+                                       │                                                                              │s ─────────────────────────────────────  
+  ◆ [1]  food  92%      [2]  travel    │                                                                              │                                         
+                                       │                                                                              │d                                     0  
+                                       │                                                                              │                                      0  
+                                       │  [j/k] navigate · [enter] drill · [esc] close                                │                                      0  
+                                       │                                                                              │                                         
+                                       ╰──────────────────────────────────────────────────────────────────────────────╯ 0/10 [░░░░░░░░░░]   0%                  
+                                                                                                                Signals ──────────────────────────────────────  
                                                                                                                                                                 
- > label_issue                      1 record                                                               →                                                    
-                                                                                                                                                                
-  Suggested next queue ──────────────────────────────────────────────────────────────────────────────────────                                                   
-                                                                                                                                                                
-   low-confidence   (score 5.00)                                                                           →                                                    
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                                                                
-                                                                                                                test/fixtures/tiny.jsonl                        
-                                                                                                                                                                
-                                                                                                                Totals ───────────────────────────────────────  
-                                                                                                                                                                
-                                                                                                                total                                       10  
-                                                                                                                reviewed                                     0  
-                                                                                                                pending                                     10  
-                                                                                                                accepted                                     0  
-                                                                                                                relabeled                                    0  
-                                                                                                                rejected                                     0  
-                                                                                                                skipped                                      0  
-   [j/k] navigate  [enter] drill  [esc] back                                                                                                                    
+                                                                                                                ●  label_issue                               1  
+  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note                                            [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
                                                                                                                                                                 
 "
 `;

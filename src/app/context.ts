@@ -108,13 +108,6 @@ export type AppContext = {
    * queue overlay over Review.
    */
   openQueueScreen?: () => void;
-  /**
-   * Set by the orchestrator (cli/run.ts) so review-scope `t` and the
-   * `:stats` palette can open the Stats screen. Unset in tests; the
-   * corresponding command flashes "Stats screen unavailable" rather than
-   * crashing.
-   */
-  openStatsScreen?: () => void;
   paletteHistory: string[];
   pushPaletteHistory(entry: string): void;
   /**

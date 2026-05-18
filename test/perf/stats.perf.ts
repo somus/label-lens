@@ -3,7 +3,7 @@ import { createTestRenderer } from "@opentui/core/testing";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { defaultDisplay } from "../../src/render/capability.ts";
-import { mountStatsScreen } from "../../src/screens/stats.ts";
+import { mountReviewScreen } from "../../src/screens/review.ts";
 import { queueRecords } from "../../src/store/queries.ts";
 import { resolveQueue } from "../../src/store/queues/registry.ts";
 import { insertReview } from "../../src/store/records.ts";
@@ -21,11 +21,11 @@ function makeConfig(): LabellensConfig {
   };
 }
 
-// Measures user-felt cost of opening the stats screen: aggregation + first
-// frame. mountStatsScreen calls allStats internally, so a separate
+// Measures user-felt cost of opening the stats overlay: aggregation + first
+// frame. stats.show calls allStats internally, so a separate
 // "aggregate only" timing would just double-count the same work — and the
 // PRD §10.8 envelope is phrased around the open-to-first-frame experience.
-test("stats screen opens on large fixture within envelope", async () => {
+test("stats overlay opens on large fixture within envelope", async () => {
   using store = await openTmpStore({ prefix: "perf-stats-", ingest: "large.jsonl" });
 
   // Seed reviews so stats has signal to aggregate over — empty reviews would
@@ -46,7 +46,7 @@ test("stats screen opens on large fixture within envelope", async () => {
     }
   });
 
-  const { renderer, renderOnce } = await createTestRenderer({ width: 100, height: 30 });
+  const { renderer, mockInput, renderOnce } = await createTestRenderer({ width: 100, height: 30 });
   const app = createAppContext({
     db: store.db,
     config: makeConfig(),
@@ -55,8 +55,10 @@ test("stats screen opens on large fixture within envelope", async () => {
     onQuit: () => {},
   });
 
+  mountReviewScreen({ renderer, app });
+  await renderOnce();
   const t0 = performance.now();
-  mountStatsScreen({ renderer, app, onDrill: () => {}, onCancel: () => {} });
+  mockInput.pressKey("t");
   await renderOnce();
   const elapsed = performance.now() - t0;
   assertPerf("stats_open_large_ms", elapsed);

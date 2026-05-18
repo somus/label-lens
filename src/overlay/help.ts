@@ -81,5 +81,5 @@ export function reduceHelp(state: HelpState, event: OverlayEvent): ReduceResult 
   if (name === "up") {
     return { overlay: packed({ ...state, scroll: Math.max(state.scroll - 1, 0) }), effects: [] };
   }
-  return { overlay: packed(state), effects: [] };
+  return { overlay: packed(state), effects: [], propagated: true };
 }

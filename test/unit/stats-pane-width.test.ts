@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { defaultDisplay, type ResolvedDisplay } from "../../src/render/capability.ts";
-import { computeStatsPaneWidth } from "../../src/screens/stats.ts";
+import { computeStatsPaneWidth } from "../../src/render/stats-view.ts";
 
 function display(overrides: Partial<ResolvedDisplay>): ResolvedDisplay {
   return { ...defaultDisplay(), ...overrides };

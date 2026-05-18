@@ -2,6 +2,7 @@ import type { AssistantResponse } from "../assistant/schema.ts";
 import type { AssistantConfig } from "../config/config.ts";
 import type { KeyEvent } from "../keymap/engine.ts";
 import type { Predicate } from "../store/queues/predicate.ts";
+import type { QueueId } from "../store/queues/registry.ts";
 import type { ReviewStatus, SourceOfTruth } from "../types.ts";
 import type { FilterBuilderState } from "./filter-builder.ts";
 import type { GuidelinesState } from "./guidelines.ts";
@@ -153,10 +154,12 @@ export type Effect =
       sessionApiKey?: string;
     }
   | { kind: "runCommand"; commandName: string; argument?: string }
+  | { kind: "drill"; queueId: QueueId }
   | { kind: "pushPaletteHistory"; entry: string }
   | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number };
 
 export type ReduceResult = {
   overlay: Overlay | null;
   effects: Effect[];
+  propagated?: boolean;
 };

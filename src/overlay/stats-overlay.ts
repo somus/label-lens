@@ -1,15 +1,19 @@
-import type { Section, StatRow } from "../store/stats.ts";
+import type { QueueId } from "../store/queues/registry.ts";
+import { drillToQueue, type Section, type StatRow } from "../store/stats.ts";
 import type { OverlayEvent, ReduceResult } from "./types.ts";
 
-export type StatsLine = {
-  display: string;
-  isHeader: boolean;
-};
+export type StatsLine =
+  | { kind: "section-header"; label: string }
+  | { kind: "row"; display: string; row: StatRow; drillTo: QueueId | null };
 
 export type StatsOverlayState = {
   lines: StatsLine[];
+  highlight: number;
   scroll: number;
 };
+
+const STATS_PAGE = 20;
+const SECTIONS_IN_SIDEBAR = new Set(["Progress", "Decisions"]);
 
 function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
@@ -47,13 +51,13 @@ function formatRow(row: StatRow): string {
 export function openStatsOverlay(sections: Section[]): StatsOverlayState {
   const lines: StatsLine[] = [];
   for (const s of sections) {
-    lines.push({ display: s.label, isHeader: true });
+    if (SECTIONS_IN_SIDEBAR.has(s.label)) continue;
+    lines.push({ kind: "section-header", label: s.label });
     for (const row of s.rows) {
-      lines.push({ display: formatRow(row), isHeader: false });
+      lines.push({ kind: "row", display: formatRow(row), row, drillTo: drillToQueue(row) });
     }
-    lines.push({ display: "", isHeader: false });
   }
-  return { lines, scroll: 0 };
+  return { lines, highlight: firstDrillable(lines), scroll: 0 };
 }
 
 function packed(state: StatsOverlayState): { kind: "stats"; state: StatsOverlayState } {
@@ -68,19 +72,56 @@ export function reduceStatsOverlay(state: StatsOverlayState, event: OverlayEvent
   if (name === "escape" || name === "q") return { overlay: null, effects: [{ kind: "close" }] };
 
   if (name === "down" || name === "j") {
+    const highlight =
+      state.highlight >= 0 ? clampedDrillable(state.lines, state.highlight, 1) : state.highlight;
     return {
       overlay: packed({
         ...state,
-        scroll: Math.min(state.scroll + 1, Math.max(0, state.lines.length - 5)),
+        highlight,
+        scroll: scrollForHighlight(state.scroll, highlight),
       }),
       effects: [],
     };
   }
   if (name === "up" || name === "k") {
+    const highlight =
+      state.highlight >= 0 ? clampedDrillable(state.lines, state.highlight, -1) : state.highlight;
     return {
-      overlay: packed({ ...state, scroll: Math.max(state.scroll - 1, 0) }),
+      overlay: packed({ ...state, highlight, scroll: scrollForHighlight(state.scroll, highlight) }),
       effects: [],
     };
   }
-  return { overlay: packed(state), effects: [] };
+  if (name === "return" || name === "enter") {
+    const line = state.highlight >= 0 ? state.lines[state.highlight] : undefined;
+    if (line?.kind === "row" && line.drillTo !== null) {
+      return { overlay: null, effects: [{ kind: "drill", queueId: line.drillTo }] };
+    }
+    return { overlay: packed(state), effects: [] };
+  }
+  return { overlay: packed(state), effects: [], propagated: true };
+}
+
+function firstDrillable(lines: StatsLine[]): number {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line.kind === "row" && line.drillTo !== null) return i;
+  }
+  return -1;
+}
+
+function clampedDrillable(lines: StatsLine[], from: number, dir: 1 | -1): number {
+  let i = from + dir;
+  while (i >= 0 && i < lines.length) {
+    const line = lines[i]!;
+    if (line.kind === "row" && line.drillTo !== null) return i;
+    i += dir;
+  }
+  return from;
+}
+
+function scrollForHighlight(scroll: number, highlight: number): number {
+  if (highlight < 0) return scroll;
+  if (highlight < scroll) return highlight;
+  if (highlight >= scroll + STATS_PAGE) return highlight - STATS_PAGE + 1;
+  return scroll;
 }

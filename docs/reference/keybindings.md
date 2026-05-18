@@ -42,7 +42,7 @@ The default scope when no overlay or screen is open.
 |---|---|
 | `:` | Command palette |
 | `?` | Help overlay (contextual; lists every binding for the active scope) |
-| `t` | Stats screen |
+| `t` | Stats overlay |
 | `g d` | Document view (boundary task) |
 | `g g` | Guidelines viewer |
 | `Q` (`shift+q`) | Queue overlay |
@@ -94,13 +94,13 @@ Paste works via bracketed paste (`Cmd+V`, `Ctrl+Shift+V`). Control chars strippe
 | `Enter` | Switch to selected queue |
 | `Esc` | Cancel |
 
-## Stats screen (`t`)
+## Stats overlay (`t`)
 
 | Key | Action |
 |---|---|
 | `j` / `k` | Navigate stat row |
 | `Enter` | Drill into queue for the focused row |
-| `Esc` | Back to review |
+| `Esc` | Close |
 
 ## Doc view (`g d`, boundary task)
 

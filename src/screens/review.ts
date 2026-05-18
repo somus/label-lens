@@ -43,6 +43,7 @@ import { progressSegments } from "../render/progress-segments.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Scrollbar } from "../render/scrollbar.ts";
 import { clampContentWidth, SectionHeader } from "../render/section-header.ts";
+import { renderStatsOverlay } from "../render/stats-view.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole, resolveTheme } from "../render/theme.ts";
 import { issuesForRecord } from "../store/issues.ts";
@@ -324,16 +325,7 @@ export function mountReviewScreen(args: {
 
   app.requestRender = renderState;
 
-  const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
-    app.noteInput();
-    if (app.overlay) {
-      const result = reduceOverlay(app.overlay, { kind: "key", event });
-      app.overlay = result.overlay;
-      const queueId = app.queueId ?? initialQueueId;
-      applyEffects(app, queueId, result.effects, dispatchCommand);
-      if (mounted) renderState();
-      return;
-    }
+  const dispatchKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
     const scope = app.docView ? "doc-view" : "review";
     app.activeScope = scope;
     const action = chord.feed(scope, {
@@ -344,6 +336,23 @@ export function mountReviewScreen(args: {
     });
     if (!action) return;
     void dispatch(registry, scope, app, action);
+  };
+
+  const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
+    app.noteInput();
+    if (app.overlay) {
+      const result = reduceOverlay(app.overlay, { kind: "key", event });
+      app.overlay = result.overlay;
+      const queueId = app.queueId ?? initialQueueId;
+      applyEffects(app, queueId, result.effects, dispatchCommand);
+      if (result.propagated) {
+        dispatchKey(event);
+      } else if (mounted) {
+        renderState();
+      }
+      return;
+    }
+    dispatchKey(event);
   };
 
   /**
@@ -1028,44 +1037,6 @@ function truncateEnd(s: string, max: number): string {
   if (s.length <= max) return s;
   if (max === 1) return "…";
   return `${s.slice(0, max - 1)}…`;
-}
-
-function renderStatsOverlay(
-  state: import("../overlay/stats-overlay.ts").StatsOverlayState,
-  display: ResolvedDisplay,
-  termWidth: number,
-  termHeight: number,
-): ReturnType<typeof Box> {
-  const PAGE = 20;
-  const visible = state.lines.slice(state.scroll, state.scroll + PAGE);
-  const more = state.lines.length - state.scroll - visible.length;
-  return modalBox(
-    display,
-    termWidth,
-    termHeight,
-    0.7,
-    `Stats${more > 0 ? `   (+${more} more)` : ""}`,
-    Box(
-      { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
-      Box(
-        { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-        ...visible.map((line) =>
-          Text({
-            content: line.display,
-            attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
-          }),
-        ),
-      ),
-      Scrollbar({
-        display,
-        total: state.lines.length,
-        visible: PAGE,
-        scrollTop: state.scroll,
-        caps: true,
-      }),
-    ),
-    Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
-  );
 }
 
 function pickerRow(
