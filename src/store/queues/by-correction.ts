@@ -1,5 +1,6 @@
-import { asc, sql } from "drizzle-orm";
+import { and, asc, sql } from "drizzle-orm";
 import { recordsWithPrimary } from "../schema.ts";
+import { nonOrphan } from "./predicates.ts";
 import type { QueueDefinition } from "./registry.ts";
 
 /**
@@ -14,17 +15,20 @@ export function byCorrection(from: string, to: string): QueueDefinition {
     id: `by-correction:${from}:${to}`,
     label: `Correction: ${from} → ${to}`,
     query: {
-      where: sql`EXISTS (
-        SELECT 1 FROM effective_reviews er
-        WHERE er.record_id = ${recordsWithPrimary.id}
-          AND er.id = (
-            SELECT er2.id FROM effective_reviews er2
-            WHERE er2.record_id = ${recordsWithPrimary.id}
-            ORDER BY er2.id DESC LIMIT 1
-          )
-          AND er.prev_label = ${from}
-          AND er.final_label = ${to}
-      ) AND ${recordsWithPrimary.orphan} = 0`,
+      where: and(
+        sql`EXISTS (
+          SELECT 1 FROM effective_reviews er
+          WHERE er.record_id = ${recordsWithPrimary.id}
+            AND er.id = (
+              SELECT er2.id FROM effective_reviews er2
+              WHERE er2.record_id = ${recordsWithPrimary.id}
+              ORDER BY er2.id DESC LIMIT 1
+            )
+            AND er.prev_label = ${from}
+            AND er.final_label = ${to}
+        )`,
+        nonOrphan(),
+      ),
       orderBy: asc(recordsWithPrimary.rowIndex),
     },
   };

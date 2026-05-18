@@ -1,5 +1,6 @@
-import { asc, sql } from "drizzle-orm";
+import { and, asc, sql } from "drizzle-orm";
 import { recordsWithPrimary } from "../schema.ts";
+import { nonOrphan } from "./predicates.ts";
 import type { QueueDefinition } from "./registry.ts";
 
 export function byIssue(type: string): QueueDefinition {
@@ -8,10 +9,13 @@ export function byIssue(type: string): QueueDefinition {
     id: `by-issue:${type}`,
     label: `Issue: ${type}`,
     query: {
-      where: sql`EXISTS (
-        SELECT 1 FROM issues i
-        WHERE i.record_id = ${recordsWithPrimary.id} AND i.type = ${type}
-      ) AND ${recordsWithPrimary.orphan} = 0`,
+      where: and(
+        sql`EXISTS (
+          SELECT 1 FROM issues i
+          WHERE i.record_id = ${recordsWithPrimary.id} AND i.type = ${type}
+        )`,
+        nonOrphan(),
+      ),
       orderBy: asc(recordsWithPrimary.rowIndex),
     },
   };

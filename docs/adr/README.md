@@ -23,3 +23,4 @@ Load-bearing design decisions for LabelLens. Each ADR captures the context, the 
 | [0009](./0009-assistant-inline-footer.md) | Assistant renders as an inline footer overlay | Accepted   |
 | [0010](./0010-render-primitives-vs-composites.md) | Render layer: primitives vs composites | Accepted   |
 | [0011](./0011-cursor-not-a-deepening-target.md) | `Cursor` is not a deepening target | Accepted   |
+| [0012](./0012-where-dsl-excludes-orphans-by-default.md) | `where:` DSL excludes orphans by default | Accepted   |

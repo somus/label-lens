@@ -1,7 +1,6 @@
-import { sql } from "drizzle-orm";
 import type { AppContext } from "../app/context.ts";
 import { queueRecords } from "../store/queries.ts";
-import { queueCount } from "../store/queues/queue-counts.ts";
+import { nonOrphanRecordCount, queueCount } from "../store/queues/queue-counts.ts";
 import { QUEUE_CYCLE, type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import type { RecordWithPrimaryPrediction } from "../types.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
@@ -79,13 +78,9 @@ export function openQueue(app: AppContext): QueueState {
 }
 
 function totalRecordCount(app: AppContext): number {
-  // Cheap COUNT(*) scoped to non-orphan rows, matching the built-in queue
-  // counts. Including orphans here would make per-queue progress bars
-  // under-report after a re-ingest that flagged rows as orphans (queue
-  // count exclude them, total would not).
-  return (
-    app.db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records WHERE orphan = 0`)[0]?.n ?? 0
-  );
+  // Scoped to non-orphan rows so per-queue progress bars stay coherent with
+  // built-in queue counts after a re-ingest that flagged rows as orphans.
+  return nonOrphanRecordCount(app.db);
 }
 
 function packed(state: QueueState): Overlay {

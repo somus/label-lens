@@ -1,5 +1,6 @@
-import { sql } from "drizzle-orm";
+import { and, sql } from "drizzle-orm";
 import { recordsWithPrimary } from "../schema.ts";
+import { nonOrphan, unreviewed } from "./predicates.ts";
 import type { QueueDefinition } from "./registry.ts";
 
 // Composite score = (low_confidence) + (disagreement) + (flagged).
@@ -17,10 +18,7 @@ export const smartPending: QueueDefinition = {
   id: "smart-pending",
   label: "Pending (smart)",
   query: {
-    where: sql`NOT EXISTS (
-      SELECT 1 FROM effective_reviews er
-      WHERE er.record_id = ${recordsWithPrimary.id}
-    ) AND ${recordsWithPrimary.orphan} = 0`,
+    where: and(unreviewed(), nonOrphan()),
     orderBy: sql`${scoreExpr} DESC, (${recordsWithPrimary.primaryConfidence} IS NULL), ${recordsWithPrimary.primaryConfidence} ASC, ${recordsWithPrimary.rowIndex} ASC`,
   },
 };

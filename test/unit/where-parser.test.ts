@@ -149,12 +149,15 @@ describe("where: parser", () => {
     expect(after.length).toBe(9);
   });
 
-  test("orphan column: where:orphan = 1 lists only orphans; = 0 hides them", async () => {
+  test("orphan column needs include-orphans: prefix to surface orphans", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
     store.db.run(sql`UPDATE records SET orphan = 1 WHERE id = ${id}`);
 
-    const isOrphan = queueRecords(store.db, resolveQueue("where:orphan = 1").query);
+    const isOrphan = queueRecords(
+      store.db,
+      resolveQueue("where:include-orphans: orphan = 1").query,
+    );
     expect(isOrphan).toHaveLength(1);
     expect(isOrphan[0]!.id).toBe(id);
 

@@ -1,5 +1,6 @@
-import { asc, sql } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
 import { recordsWithPrimary } from "../schema.ts";
+import { latestEffectiveFinalLabel, nonOrphan, unreviewed } from "./predicates.ts";
 import type { QueueDefinition } from "./registry.ts";
 
 /**
@@ -13,9 +14,8 @@ import type { QueueDefinition } from "./registry.ts";
  * fall through to the prediction on rejection, which is the opposite of the
  * intended semantics.
  *
- * The subquery's `ORDER BY er.id DESC LIMIT 1` is correct because
- * `effective_reviews` already filters to non-undone, non-compensated rows
- * (ADR 0007); the LIMIT 1 picks the most recent of those per record.
+ * The LIMIT 1 / latest-effective semantics are encapsulated in
+ * `latestEffectiveFinalLabel()`; see ADR 0007.
  */
 export function byLabel(value: string): QueueDefinition {
   if (value.length === 0) throw new Error("by-label needs <label>");
@@ -23,19 +23,13 @@ export function byLabel(value: string): QueueDefinition {
     id: `by-label:${value}`,
     label: `Label: ${value}`,
     query: {
-      where: sql`((
-        (
-          SELECT er.final_label FROM effective_reviews er
-          WHERE er.record_id = ${recordsWithPrimary.id}
-          ORDER BY er.id DESC LIMIT 1
-        ) = ${value}
-      ) OR (
-        NOT EXISTS (
-          SELECT 1 FROM effective_reviews er
-          WHERE er.record_id = ${recordsWithPrimary.id}
-        )
-        AND ${recordsWithPrimary.primaryLabel} = ${value}
-      )) AND ${recordsWithPrimary.orphan} = 0`,
+      where: and(
+        or(
+          latestEffectiveFinalLabel(value),
+          and(unreviewed(), eq(recordsWithPrimary.primaryLabel, value)),
+        ),
+        nonOrphan(),
+      ),
       orderBy: asc(recordsWithPrimary.rowIndex),
     },
   };
