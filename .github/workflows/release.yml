@@ -19,12 +19,12 @@ jobs:
             # Host arch matches target — no foreign optional-dep install needed.
             foreign_opentui: ""
           - target: darwin-x64
-            runner: macos-14
-            # Cross-compile from arm64 host. Bun ≥ 1.3.11 installs foreign-arch
-            # optional deps cleanly (supersedes ADR 0006); we still need to ask
-            # for the darwin-x64 OpenTUI native lib explicitly because the
-            # default `bun install` only pulls the host-matching one.
-            foreign_opentui: "@opentui/core-darwin-x64"
+            runner: macos-13
+            # Build on an x64 host so Bun can resolve OpenTUI's native package
+            # during `bun build --compile --target=bun-darwin-x64`. The arm64
+            # cross-compile path can install @opentui/core-darwin-x64, but the
+            # compiler still fails to resolve that dynamic import.
+            foreign_opentui: ""
           - target: linux-arm64
             runner: ubuntu-24.04-arm
             foreign_opentui: ""
