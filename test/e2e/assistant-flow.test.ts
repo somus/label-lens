@@ -92,9 +92,10 @@ describe("assistant flow e2e", () => {
     await ctx.renderOnce();
 
     expect(ctx.app.overlay?.kind).toBe("assistant");
-    if (ctx.app.overlay?.kind === "assistant") {
-      expect(ctx.app.overlay.state.status).toBe("done");
+    if (ctx.app.overlay?.kind === "assistant" && ctx.app.overlay.state.status === "done") {
       expect(ctx.app.overlay.state.suggestion).toBe("food");
+    } else {
+      throw new Error("expected assistant overlay in done state");
     }
   });
 
@@ -115,11 +116,11 @@ describe("assistant flow e2e", () => {
 
     ctx.mockInput.pressTab();
     await ctx.renderOnce();
-    if (ctx.app.overlay?.kind === "assistant") {
+    if (ctx.app.overlay?.kind === "assistant" && ctx.app.overlay.state.status === "done") {
       expect(ctx.app.overlay.state.reasoningExpanded).toBe(true);
       expect(ctx.app.overlay.state.reason).toContain("Cafe + lunch");
     } else {
-      throw new Error("expected assistant overlay");
+      throw new Error("expected assistant overlay in done state");
     }
   });
 

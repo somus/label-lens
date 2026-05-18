@@ -78,10 +78,10 @@ describe("record.openAssistant", () => {
     // Let microtasks drain so the .then() handler runs.
     await new Promise((r) => setTimeout(r, 5));
     expect(app.overlay?.kind).toBe("assistant");
-    if (app.overlay?.kind === "assistant") {
-      expect(app.overlay.state.status).toBe("done");
+    if (app.overlay?.kind === "assistant" && app.overlay.state.status === "done") {
       expect(app.overlay.state.suggestion).toBe("food");
-      expect(app.overlay.state.buffer).toContain("thinking");
+    } else {
+      throw new Error("expected assistant overlay in done state");
     }
   });
 
@@ -101,11 +101,10 @@ describe("record.openAssistant", () => {
     });
     await dispatch(defaultRegistry(), "review", app, "record.openAssistant");
     await new Promise((r) => setTimeout(r, 5));
-    if (app.overlay?.kind === "assistant") {
-      expect(app.overlay.state.status).toBe("error");
+    if (app.overlay?.kind === "assistant" && app.overlay.state.status === "error") {
       expect(app.overlay.state.errorMessage).toContain("network down");
     } else {
-      throw new Error("expected assistant overlay");
+      throw new Error("expected assistant overlay in error state");
     }
   });
 
@@ -121,11 +120,10 @@ describe("record.openAssistant", () => {
       }),
     );
     await dispatch(defaultRegistry(), "review", app, "record.openAssistant");
-    if (app.overlay?.kind === "assistant") {
-      expect(app.overlay.state.status).toBe("error");
+    if (app.overlay?.kind === "assistant" && app.overlay.state.status === "error") {
       expect(app.overlay.state.errorMessage).toContain("model");
     } else {
-      throw new Error("expected assistant overlay");
+      throw new Error("expected assistant overlay in error state");
     }
   });
 });

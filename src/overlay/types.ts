@@ -52,27 +52,40 @@ export type NoteState = {
   presets: string[];
 };
 
-export type AssistantState = {
+/** Fields every assistant overlay variant carries, regardless of status. */
+export type AssistantBase = {
   recordId: string;
   /** Predicted label at the time the overlay was opened. Used as `prev_label`
    * on the audit row when the reviewer commits a relabel or reject (mirrors
    * the picker / decision-command pattern). Null when no prediction exists. */
   predictedLabel: string | null;
-  status: "loading" | "streaming" | "done" | "error";
-  /** Reasoning text accumulated from streamToken events (PRD §14.4 footer). */
-  buffer: string;
-  /** Final suggested label after `streamEnd`. */
-  suggestion: string | null;
-  /** Final reasoning markdown after `streamEnd`. */
-  reason: string | null;
-  /** Final confidence after `streamEnd`. */
-  confidence: AssistantResponse["confidence"] | null;
-  /** Final recommendedAction after `streamEnd`. Controls what Enter commits. */
-  recommendedAction: AssistantResponse["recommendedAction"] | null;
-  /** True after `Tab` press — render reasoning markdown above the footer. */
+  /** True after `Tab` press — render reasoning markdown above the footer.
+   * Tracked on the base so the reviewer can pre-toggle before `done`. */
   reasoningExpanded: boolean;
-  errorMessage: string | null;
 };
+
+/** Discriminated by `status` — each variant carries only the fields that are
+ * valid at that point in the stream lifecycle. Keeps `commit()` and the
+ * render layer narrow without nullable bag-of-fields gymnastics. */
+export type AssistantState =
+  | (AssistantBase & { status: "loading" })
+  | (AssistantBase & {
+      status: "streaming";
+      /** Reasoning text accumulated from streamToken events (PRD §14.4 footer). */
+      buffer: string;
+    })
+  | (AssistantBase & {
+      status: "done";
+      /** Final suggested label after `streamEnd`. */
+      suggestion: string;
+      /** Final reasoning markdown after `streamEnd`. */
+      reason: string;
+      /** Final confidence after `streamEnd`. */
+      confidence: AssistantResponse["confidence"];
+      /** Final recommendedAction after `streamEnd`. Controls what Enter commits. */
+      recommendedAction: AssistantResponse["recommendedAction"];
+    })
+  | (AssistantBase & { status: "error"; errorMessage: string });
 
 /** Steps of the first-press configure flow (PRD §10.5). */
 export type ConfigureAssistantStep = "provider" | "auth" | "privacy" | "commit";
@@ -141,12 +154,7 @@ export type Effect =
     }
   | { kind: "runCommand"; commandName: string; argument?: string }
   | { kind: "pushPaletteHistory"; entry: string }
-  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number }
-  /** Flash an error and close the overlay — emitted when the assistant
-   * returns a `recommendedAction` outside the known set. Belt-and-suspenders
-   * (StringEnum constrains the field upstream); guarantees the reviewer
-   * isn't left staring at a `done` overlay where Enter does nothing. */
-  | { kind: "assistantInvalidAction"; recordId: string; action: string };
+  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number };
 
 export type ReduceResult = {
   overlay: Overlay | null;

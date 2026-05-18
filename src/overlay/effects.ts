@@ -148,9 +148,6 @@ export function applyEffects(
       case "pushPaletteHistory":
         app.pushPaletteHistory(effect.entry);
         break;
-      case "assistantInvalidAction":
-        app.setFlash(`Assistant returned unknown action '${effect.action}'`, "error");
-        break;
       case "scheduleFilterPreview":
         setTimeout(() => {
           const overlay = app.overlay;

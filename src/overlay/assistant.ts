@@ -1,4 +1,11 @@
-import type { AssistantState, Effect, Overlay, OverlayEvent, ReduceResult } from "./types.ts";
+import type {
+  AssistantBase,
+  AssistantState,
+  Effect,
+  Overlay,
+  OverlayEvent,
+  ReduceResult,
+} from "./types.ts";
 
 /**
  * Build an assistant overlay state for `record.openAssistant`. Stays in
@@ -12,14 +19,8 @@ export function openAssistant(
   return {
     recordId,
     predictedLabel,
-    status: "loading",
-    buffer: "",
-    suggestion: null,
-    reason: null,
-    confidence: null,
-    recommendedAction: null,
     reasoningExpanded: false,
-    errorMessage: null,
+    status: "loading",
   };
 }
 
@@ -27,18 +28,26 @@ function packed(state: AssistantState): Overlay {
   return { kind: "assistant", state };
 }
 
-function actionToStatus(action: AssistantState["recommendedAction"]) {
+function baseOf(state: AssistantState): AssistantBase {
+  return {
+    recordId: state.recordId,
+    predictedLabel: state.predictedLabel,
+    reasoningExpanded: state.reasoningExpanded,
+  };
+}
+
+type DoneAction = Extract<AssistantState, { status: "done" }>["recommendedAction"];
+
+function actionToStatus(action: DoneAction): "accepted" | "relabeled" | "rejected" | "skipped" {
   switch (action) {
     case "accept":
-      return "accepted" as const;
+      return "accepted";
     case "relabel":
-      return "relabeled" as const;
+      return "relabeled";
     case "reject":
-      return "rejected" as const;
+      return "rejected";
     case "skip":
-      return "skipped" as const;
-    default:
-      return null;
+      return "skipped";
   }
 }
 
@@ -49,24 +58,6 @@ function commit(state: AssistantState): ReduceResult {
     return { overlay: packed(state), effects: [] };
   }
   const status = actionToStatus(state.recommendedAction);
-  if (!status || !state.suggestion) {
-    // recommendedAction outside the known set is theoretical (StringEnum
-    // constrains it) but the reviewer is otherwise stuck on a "done" overlay
-    // where Enter is a silent no-op. Flash + dismiss so they get feedback and
-    // can retry.
-    return {
-      overlay: null,
-      effects: [
-        { kind: "markAssistantViewed", recordId: state.recordId },
-        {
-          kind: "assistantInvalidAction",
-          recordId: state.recordId,
-          action: state.recommendedAction ?? "(none)",
-        },
-        { kind: "close" },
-      ],
-    };
-  }
   // prev_label follows the same convention as picker / decision commands:
   // record the predicted label on relabel + reject, null on accept + skip.
   const prevLabel = status === "relabeled" || status === "rejected" ? state.predictedLabel : null;
@@ -99,21 +90,23 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
       return dismiss(state);
     case "commit":
       return commit(state);
-    case "streamToken":
+    case "streamToken": {
+      const prior = state.status === "streaming" ? state.buffer : "";
       return {
         overlay: packed({
-          ...state,
+          ...baseOf(state),
           status: "streaming",
-          buffer: state.buffer + event.token,
+          buffer: prior + event.token,
         }),
         effects: [],
       };
+    }
     case "streamEnd": {
       const r = event.response;
       if (!r) {
         return {
           overlay: packed({
-            ...state,
+            ...baseOf(state),
             status: "error",
             errorMessage: "Assistant stream ended without a structured response.",
           }),
@@ -122,7 +115,7 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
       }
       return {
         overlay: packed({
-          ...state,
+          ...baseOf(state),
           status: "done",
           suggestion: r.suggestedLabel,
           confidence: r.confidence,
@@ -135,7 +128,7 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
     case "streamError":
       return {
         overlay: packed({
-          ...state,
+          ...baseOf(state),
           status: "error",
           errorMessage: event.error instanceof Error ? event.error.message : String(event.error),
         }),
@@ -152,10 +145,8 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
 function reduceKey(state: AssistantState, name: string): ReduceResult {
   if (name === "escape") return dismiss(state);
   if (name === "tab") {
-    return {
-      overlay: packed({ ...state, reasoningExpanded: !state.reasoningExpanded }),
-      effects: [],
-    };
+    const toggled: AssistantState = { ...state, reasoningExpanded: !state.reasoningExpanded };
+    return { overlay: packed(toggled), effects: [] };
   }
   if (name === "return") return commit(state);
   return { overlay: packed(state), effects: [] };
