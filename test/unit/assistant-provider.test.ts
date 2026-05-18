@@ -32,10 +32,14 @@ let registration: FauxProviderRegistration;
 beforeEach(() => {
   // Each test gets a fresh faux registration so queued responses don't leak.
   registration = registerFauxProvider({ provider: REMOTE_PROVIDER_NAME });
+  // Provider now requires an apiKey (env-var fallback resolves to pi-ai's
+  // canonical name); fauxes ignore the key but the gate still fires.
+  process.env.ANTHROPIC_API_KEY = "test-key";
 });
 
 afterEach(() => {
   registration.unregister();
+  delete process.env.ANTHROPIC_API_KEY;
 });
 
 function makePromptInput(overrides: Partial<CanonicalPromptInput> = {}): CanonicalPromptInput {
@@ -276,6 +280,93 @@ describe("queryAssistant privacy + --local-only gates", () => {
       expect((err as AssistantQueryError).code).toBe("local-only-violation");
     }
     expect(registration.state.callCount).toBe(0);
+  });
+
+  test("no env var set anywhere throws no-provider listing both candidates", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const fakeVar = "LABELLENS_TEST_MISSING_KEY";
+    delete process.env[fakeVar];
+    // Clear the canonical fallback (set by beforeEach) so neither resolves.
+    delete process.env.ANTHROPIC_API_KEY;
+    queueSubmit(validResponse);
+    try {
+      await queryAssistant({
+        db: store.db,
+        recordId,
+        assistant: {
+          enabled: true,
+          provider: REMOTE_PROVIDER_NAME,
+          privacyAcknowledged: true,
+          apiKeyEnvVar: fakeVar,
+        },
+        localOnly: false,
+        model: registration.getModel(),
+        promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
+      });
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(AssistantQueryError);
+      expect((err as AssistantQueryError).code).toBe("no-provider");
+      // Error message lists both candidates so the reviewer knows which to export.
+      expect((err as AssistantQueryError).message).toContain(fakeVar);
+      expect((err as AssistantQueryError).message).toContain("ANTHROPIC_API_KEY");
+    }
+    expect(registration.state.callCount).toBe(0);
+  });
+
+  test("apiKeyEnvVar empty but canonical pi-ai var set → falls back and succeeds", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const staleVar = "LABELLENS_TEST_STALE_VAR";
+    delete process.env[staleVar];
+    // beforeEach already set ANTHROPIC_API_KEY = "test-key". Old wizard run's
+    // apiKeyEnvVar=LABELLENS_TEST_STALE_VAR is empty, but pi-ai's canonical
+    // ANTHROPIC_API_KEY resolves → call proceeds without forcing reconfigure.
+    queueSubmit(validResponse);
+    const result = await queryAssistant({
+      db: store.db,
+      recordId,
+      assistant: {
+        enabled: true,
+        provider: REMOTE_PROVIDER_NAME,
+        privacyAcknowledged: true,
+        apiKeyEnvVar: staleVar,
+      },
+      localOnly: false,
+      model: registration.getModel(),
+      promptInput: makePromptInput(),
+      labelNames: LABEL_NAMES,
+    });
+    expect(result.response).toEqual(validResponse);
+  });
+
+  test("apiKeyEnvVar populated → key passed to pi-ai (no 403 fallback path)", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const recordId = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const fakeVar = "LABELLENS_TEST_API_KEY";
+    process.env[fakeVar] = "sk-fake";
+    queueSubmit(validResponse);
+    try {
+      const result = await queryAssistant({
+        db: store.db,
+        recordId,
+        assistant: {
+          enabled: true,
+          provider: REMOTE_PROVIDER_NAME,
+          privacyAcknowledged: true,
+          apiKeyEnvVar: fakeVar,
+        },
+        localOnly: false,
+        model: registration.getModel(),
+        promptInput: makePromptInput(),
+        labelNames: LABEL_NAMES,
+      });
+      expect(result.response).toEqual(validResponse);
+    } finally {
+      delete process.env[fakeVar];
+    }
   });
 
   test("--local-only + ollama provider passes through to model call", async () => {

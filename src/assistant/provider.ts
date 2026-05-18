@@ -1,18 +1,55 @@
-import { type Model, stream, type Tool, Type } from "@earendil-works/pi-ai";
+import { type Model, StringEnum, stream, type Tool, Type } from "@earendil-works/pi-ai";
 import type { AssistantConfig } from "../config/config.ts";
 import { cacheAssistantResponse, getCachedAssistantResponse } from "../store/assistant-queries.ts";
 import type { Db } from "../store/db.ts";
+import { envVarFor, resolveApiKey } from "./env.ts";
 import { type CanonicalPromptInput, canonicalizePrompt, hashPrompt } from "./prompt.ts";
 import { buildAssistantPrompt } from "./prompt-template.ts";
 import { type AssistantResponse, AssistantResponseSchema, isAssistantResponse } from "./schema.ts";
 
 const SUBMIT_TOOL_NAME = "submit_label_suggestion";
 
-const submitTool: Tool = {
-  name: SUBMIT_TOOL_NAME,
-  description: "Submit your label suggestion for the candidate record. Call this exactly once.",
-  parameters: AssistantResponseSchema,
-};
+/**
+ * Build the submit tool with `suggestedLabel` constrained to the actual
+ * configured label set. Forcing the enum at the API level eliminates the
+ * "selection mismatch" / hallucinated-label class of errors — the model
+ * can only return one of our names. Falls back to the open AssistantResponseSchema
+ * when labelNames is empty (testing / edge case).
+ */
+function buildSubmitTool(labelNames: readonly string[]): Tool {
+  if (labelNames.length === 0) {
+    return {
+      name: SUBMIT_TOOL_NAME,
+      description: "Submit your label suggestion for the candidate record. Call this exactly once.",
+      parameters: AssistantResponseSchema,
+    };
+  }
+  const ConstrainedSchema = Type.Object({
+    suggestedLabel: StringEnum([...labelNames] as [string, ...string[]], {
+      description: "Configured label to recommend. Must be one of the listed values.",
+    }),
+    confidence: StringEnum(["low", "medium", "high"], {
+      description: "Assistant's confidence in its own recommendation.",
+    }),
+    reasoning: Type.String({
+      description: "Markdown-formatted explanation of the recommendation.",
+    }),
+    evidenceFor: Type.Array(Type.String(), {
+      description: "Short bullet phrases supporting the suggested label.",
+    }),
+    evidenceAgainst: Type.Array(Type.String(), {
+      description: "Short bullet phrases against the suggested label.",
+    }),
+    recommendedAction: StringEnum(["accept", "relabel", "reject", "skip"], {
+      description: "How the reviewer should commit.",
+    }),
+  });
+  return {
+    name: SUBMIT_TOOL_NAME,
+    description: "Submit your label suggestion for the candidate record. Call this exactly once.",
+    parameters: ConstrainedSchema,
+  };
+}
 
 export type QueryAssistantArgs = {
   db: Db;
@@ -133,15 +170,34 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   const { systemPrompt, userPrompt } = buildAssistantPrompt(promptInput);
 
   // Tool-only structured output: instruct the model to call submitTool exactly
-  // once. pi-ai validates the tool arguments against AssistantResponseSchema
-  // during the toolcall_end event.
+  // once. The tool's `suggestedLabel` parameter is a StringEnum over the
+  // configured labels so the model can't hallucinate names that aren't in
+  // config.labels.
+  const tool = buildSubmitTool(labelNames);
   const ctx = {
     systemPrompt,
     messages: [{ role: "user" as const, content: userPrompt, timestamp: Date.now() }],
-    tools: [submitTool],
+    tools: [tool],
   };
 
-  const s = stream(model, ctx, { signal });
+  // Resolve apiKey from the configured env var first, then pi-ai's canonical
+  // per-provider name as a fallback. Without this, configs saved by an older
+  // wizard run (which set apiKeyEnvVar=GOOGLE_API_KEY for Google) would never
+  // pick up the user's actual GEMINI_API_KEY exported per Google's own docs
+  // and pi-ai's table.
+  const apiKey = remote ? resolveApiKey(assistant.provider, assistant.apiKeyEnvVar) : undefined;
+  if (remote && !apiKey) {
+    const tried = [assistant.apiKeyEnvVar, envVarFor(assistant.provider)]
+      .filter((v): v is string => Boolean(v))
+      .filter((v, i, a) => a.indexOf(v) === i);
+    // `envVarFor` always returns a non-empty fallback (`<PROVIDER>_API_KEY`),
+    // so `tried` is virtually guaranteed to be non-empty — but if a custom
+    // provider ever resolves to an empty string the reviewer would otherwise
+    // see "Export one of: ".
+    const hint = tried.length > 0 ? tried.join(" or ") : "set an env var (unknown provider)";
+    throw new AssistantQueryError("no-provider", `No API key found. Export ${hint}.`);
+  }
+  const s = stream(model, ctx, apiKey ? { signal, apiKey } : { signal });
 
   let finalToolCall: { name: string; arguments: Record<string, unknown> } | null = null;
 
@@ -202,6 +258,6 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   return { response, wasCached: false };
 }
 
-// Re-export for callers that want to build the Tool elsewhere or inspect the
-// canonical schema (e.g. ADR diagnostics).
-export { AssistantResponseSchema, SUBMIT_TOOL_NAME, submitTool, Type };
+// Re-export for callers that want to inspect the canonical schema
+// (e.g. ADR diagnostics).
+export { AssistantResponseSchema, SUBMIT_TOOL_NAME, Type };

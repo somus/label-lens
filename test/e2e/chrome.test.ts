@@ -103,19 +103,24 @@ describe("chrome — status bar + action footer", () => {
     // Action footer (bottom). Primary review commands must appear.
     expect(frame).toContain("[a] accept");
     expect(frame).toContain("[r] relabel");
+    expect(frame).toContain("[i] ask");
     expect(frame).toContain("[x] reject");
     expect(frame).toContain("[s] skip");
     expect(frame).toContain("[n] note");
     expect(frame).toContain("[:] palette");
-    expect(frame).toContain("[?] help");
     expect(frame).toContain("[t] stats");
+    // `[?] help` intentionally NOT in the footer — `?` is the universal
+    // help key across TUIs; freeing the 9ch slot lets `[i] ask` and the
+    // `[/]` cycle hint fit at 120 cols without truncating other items.
+    expect(frame).not.toContain("[?] help");
     // Secondary actions (m mark, u undo, j next) discoverable via `?` help —
     // intentionally excluded from the footer to keep it scannable.
     expect(frame).not.toContain("[m] mark");
     expect(frame).not.toContain("[u] undo");
-    // Boundary-only command stays visible in classification mode (rendered
-    // dimmed via tone) so the binding remains discoverable (ADR 0008).
     expect(frame).toContain("[gd] doc");
+    // Queue-cycle hint surfaces next to `[Q]` instead of two separate
+    // `[/]` entries (saves ~22ch on the row).
+    expect(frame).toContain("[Q] queues [/]");
   });
 
   test("review chrome renders on truecolor", async () => {

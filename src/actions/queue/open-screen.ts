@@ -6,7 +6,9 @@ export const openQueueScreen: Command = {
   scope: "review",
   binding: "shift+q",
   hidden: true,
-  footer: { label: "queues", order: 95, group: "utility" },
+  // `[/]` suffix hints at the prev/next queue cycle keys (`[`, `]`) next
+  // to the queue-screen binding — keeps both discoverable in one row.
+  footer: { label: "queues [/]", order: 95, group: "utility" },
   enabled: () => true,
   run: (ctx) => {
     ctx.openOverlay({ kind: "queue", state: openQueue(ctx) });

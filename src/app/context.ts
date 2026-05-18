@@ -133,11 +133,24 @@ export type AppContext = {
   viewedAssistant: Set<string>;
   clearViewedAssistant(): void;
   /**
+   * In-flight assistant stream's AbortController. Set by `record.openAssistant`
+   * when a query fires; cleared (and aborted) by `cancelAssistantStream` when
+   * the reviewer dismisses the overlay or navigates to a different record so
+   * orphaned requests don't keep burning provider quota.
+   */
+  assistantAbort: { recordId: string; controller: AbortController } | null;
+  cancelAssistantStream(): void;
+  /**
    * True when `--local-only` was set on the CLI. Threaded into provider
    * validation so a misconfigured remote provider aborts before any network
    * call.
    */
   localOnly: boolean;
+  /**
+   * Absolute path to `labellens.config.json`. Set by `runReview`; unset in
+   * unit tests so the `updateAssistantConfig` effect skips the disk write.
+   */
+  configPath?: string;
   /**
    * Set by the screen at mount so palette/help commands can read the active
    * registry without each command importing the global one. Unset in unit
@@ -158,6 +171,7 @@ export function createAppContext(args: {
   onQuit: () => void;
   motionOptions?: Pick<MotionSchedulerOptions, "now" | "setInterval" | "clearInterval">;
   localOnly?: boolean;
+  configPath?: string;
 }): AppContext {
   const cursors = new Map<QueueId, Cursor>();
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -291,6 +305,11 @@ export function createAppContext(args: {
       ctx.requestRender();
     },
     closeOverlay() {
+      // If the closing overlay was the assistant, cancel its in-flight
+      // stream — Esc, Enter (commit), and configure-overlay re-open all
+      // funnel through here. Aborts that target a different record are
+      // already a no-op so this is safe to call unconditionally.
+      ctx.cancelAssistantStream();
       ctx.overlay = null;
       ctx.requestRender();
     },
@@ -298,8 +317,27 @@ export function createAppContext(args: {
     viewedAssistant: new Set<string>(),
     clearViewedAssistant() {
       ctx.viewedAssistant.clear();
+      // Reviewer left the focus session for this record — also cancel any
+      // assistant stream still in flight against it. Keeping the request alive
+      // wastes quota and risks tokens arriving after the overlay was already
+      // dismissed.
+      ctx.cancelAssistantStream();
+    },
+    assistantAbort: null,
+    cancelAssistantStream() {
+      const cur = ctx.assistantAbort;
+      if (!cur) return;
+      ctx.assistantAbort = null;
+      try {
+        cur.controller.abort();
+      } catch {
+        // AbortController.abort() can throw on environments where it's been
+        // patched (older bun). Swallow — the request will just complete and
+        // its callbacks already self-check that the overlay is still focused.
+      }
     },
     localOnly: args.localOnly ?? false,
+    configPath: args.configPath,
     pushPaletteHistory(entry) {
       const trimmed = entry.trim();
       if (trimmed.length === 0) return;

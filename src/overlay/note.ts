@@ -36,7 +36,25 @@ export function reduceNote(state: NoteState, event: OverlayEvent): ReduceResult 
     case "streamEnd":
     case "streamError":
       return { overlay: packed(state), effects: [] };
+    case "paste":
+      // Strip stray ESC/control chars (bracketed-paste residue); preserve
+      // newlines so multi-line notes round-trip clipboard intact.
+      return {
+        overlay: packed({
+          ...state,
+          value: state.value + event.text.split("").filter(isNoteInputChar).join(""),
+        }),
+        effects: [],
+      };
   }
+}
+
+function isNoteInputChar(ch: string): boolean {
+  const code = ch.charCodeAt(0);
+  // Keep tab + newlines + carriage return + every printable char. Drop other
+  // C0 controls + DEL.
+  if (code === 0x09 || code === 0x0a || code === 0x0d) return true;
+  return code >= 0x20 && code !== 0x7f;
 }
 
 function reduceKey(state: NoteState, event: KeyEvent): ReduceResult {

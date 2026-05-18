@@ -29,6 +29,9 @@ export const nextQueue: Command = {
   name: "queue.next",
   scope: "review",
   binding: "]",
+  // Cycle keys aren't standalone footer entries — they'd cost ~22ch on a
+  // 120-col row. `[Q] queues  [/]` (see open-screen.ts) advertises the
+  // pair next to the queue-screen binding.
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => step(ctx, 1),
 };

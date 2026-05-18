@@ -1,10 +1,12 @@
+import { writeFileSync } from "node:fs";
 import { type AppContext, effectiveQueueId } from "../app/context.ts";
 import { flash } from "../render/anim.ts";
 import { predicateQueue } from "../store/queues/predicate.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { insertReview, updateRecordNote } from "../store/records.ts";
-import type { Effect } from "./types.ts";
+import { reduceOverlay } from "./reduce.ts";
+import type { Effect, OverlayEvent } from "./types.ts";
 
 /**
  * Refresh whichever cursor is actually backing the active screen. Smart-next
@@ -25,6 +27,25 @@ function refreshQueue(app: AppContext, queueId: QueueId): { total: number } {
 }
 
 export type DispatchCommandFn = (name: string, argument?: string) => void | Promise<void>;
+
+/**
+ * Post an async overlay event (e.g. streamToken from `queryAssistant`) onto
+ * the active overlay's reducer. Routes through `reduceOverlay` so reducers
+ * stay pure, then applies any emitted effects. No-ops when no overlay is
+ * open (the reviewer dismissed before the token arrived).
+ */
+export function dispatchOverlayEvent(app: AppContext, queueId: QueueId, event: OverlayEvent): void {
+  if (!app.overlay) return;
+  const result = reduceOverlay(app.overlay, event);
+  if (result.overlay) {
+    // Direct mutate — closeOverlay() would also clear and re-render, but the
+    // reducer here typically returns the same kind with updated state, and we
+    // want one render at the end, not two.
+    app.overlay = result.overlay;
+  }
+  applyEffects(app, queueId, result.effects);
+  app.requestRender();
+}
 
 /**
  * Interpret data Effects emitted by an Overlay reducer against the AppContext.
@@ -88,6 +109,35 @@ export function applyEffects(
         // record.next / record.prev so the next record starts fresh.
         app.viewedAssistant.add(effect.recordId);
         break;
+      case "updateAssistantConfig": {
+        // In-memory update so the next `i` press finds the assistant enabled
+        // without restarting. Disk write is best-effort: failure flashes an
+        // error but the session keeps the in-memory config — reviewer can
+        // proceed and fix the file later. `configPath` is unset in unit
+        // tests; the persistence branch is then a no-op.
+        app.config.assistant = effect.assistant;
+        // sessionApiKey is exported into process.env for the active session
+        // only — never persisted to disk. Subsequent runs need the reviewer
+        // to export the same env var in their shell (PRD §10.5).
+        if (effect.sessionApiKey && effect.assistant.apiKeyEnvVar) {
+          process.env[effect.assistant.apiKeyEnvVar] = effect.sessionApiKey;
+          app.setFlash(
+            `assistant: ready. Export ${effect.assistant.apiKeyEnvVar} in your shell for the next launch.`,
+            "info",
+          );
+        }
+        if (app.configPath) {
+          try {
+            writeFileSync(app.configPath, `${JSON.stringify(app.config, null, 2)}\n`);
+          } catch (err) {
+            app.setFlash(
+              `assistant: failed to persist config (${err instanceof Error ? err.message : String(err)})`,
+              "error",
+            );
+          }
+        }
+        break;
+      }
       case "runCommand":
         if (!dispatchCommand) {
           app.setFlash(`palette: cannot dispatch ${effect.commandName} (no handler)`, "error");
@@ -97,6 +147,9 @@ export function applyEffects(
         break;
       case "pushPaletteHistory":
         app.pushPaletteHistory(effect.entry);
+        break;
+      case "assistantInvalidAction":
+        app.setFlash(`Assistant returned unknown action '${effect.action}'`, "error");
         break;
       case "scheduleFilterPreview":
         setTimeout(() => {

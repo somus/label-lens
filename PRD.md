@@ -295,7 +295,7 @@ Optional in-pane assistant for ambiguous records. Triggered by `i` ("inquire"). 
 - Assistant must be explicitly enabled in config (off by default).
 - Explicit `--local-only` mode disables remote providers.
 
-**SSH-default activation flow.** `labellens init` writes `assistant.enabled = false`. The first time the reviewer presses `i` over an SSH session (or any session, really), the panel opens with a one-shot prompt: pick provider, paste API key OR point at Ollama, OR cancel. No silent network attempts. Choice is persisted to `labellens.config.json` for next session. The privacy notice in "What gets sent" below is shown verbatim before the first remote call commits.
+**SSH-default activation flow.** `labellens init` writes `assistant.enabled = false`. The first time the reviewer presses `i` over a session with `enabled: false`, the `configure-assistant` overlay opens with a step machine: pick provider (digit accelerator) → enter API key (remote) or Ollama URL (local) → acknowledge the privacy notice → commit. No silent network attempts. The choice is persisted to `labellens.config.json` for next session (in-memory updates land immediately so the next `i` press fires the query). The privacy notice in "What gets sent" below is shown verbatim on the privacy step before any remote call commits. The footer surface itself (post-configure) is the inline strip described in §14.4 (ADR 0009).
 
 **Audit tagging — viewing counts.** `source_of_truth` (§11.2) is set to `human+assistant` for any review action committed while the assistant panel was open or had been opened for the focused record during that focus session — not only when the suggestion was Enter-accepted. Reading a suggestion is influence; the audit tag reflects exposure. See ADR 0004.
 
@@ -712,15 +712,15 @@ Switch active queue without leaving Review. `Shift+Q` and bare `:queue` open a m
 
 See Section 10.8.
 
-### 14.4 Assistant panel
+### 14.4 Assistant footer (ADR 0009)
 
-Slides in from the right of the review screen. Shows streaming reasoning, evidence for/against, recommended action. Reviewer can `Enter` to accept the suggestion (still records as human action) or `Esc` to dismiss.
+The LLM assistant renders as a short overlay strip pinned to the bottom of the review screen, **not** a right-side panel. Collapsed form is one line: `LLM: <recommendedAction> → <suggestedLabel> (<confidence>)` followed by `[tab] reasoning · [enter] commit · [esc] dismiss`. Press `Tab` once and the strip grows upward to show the reasoning markdown; press `Tab` again to collapse. `Enter` commits the recommended action (tagged `human+assistant` per ADR 0004); `Esc` dismisses without committing (still tagged viewed per ADR 0004).
 
-The streaming response uses OpenTUI's `MarkdownRenderable` in **streaming mode** (`{ streaming: true, internalBlockMode: 'top-level' }`), mounted inside a `ScrollbackSurface`. As tokens arrive, blocks settle in order — heading, then paragraph, then fenced code block — and the renderable exposes `_stableBlockCount`: the number of head-of-tree blocks that are no longer growing. The panel commits each newly-stable block to scrollback as it seals, which gives flicker-free token-by-token rendering with proper tree-sitter highlighting on fenced code once the closing fence arrives. (This is the pattern OpenTUI's docs explicitly recommend for streaming markdown.) The renderer needs `screenMode: 'split-footer'` and `externalOutputMode: 'capture-stdout'` for `ScrollbackSurface` to work — both are renderer-level options set at construction.
+While the provider is streaming, the strip displays `LLM: <truncated buffer>…` so the reviewer sees forward progress. On `streamEnd` (`AssistantResponse` payload), the summary settles to the structured form above. On `streamError`, the strip shows the error message and `[esc] dismiss`.
 
-The same `MarkdownRenderable` powers the guidelines viewer (`g`) when guidelines are provided as Markdown, but in non-streaming mode (the file is already complete). Users who prefer a paginated reading experience can open guidelines in `less` via `:help guidelines`.
+The reasoning area uses the existing non-streaming `MarkdownRenderable` (same primitive that powers the guidelines viewer). No `ScrollbackSurface`, no `streaming: true` renderable, no `screenMode: 'split-footer'` — slice 11 ships without the streaming-markdown plumbing the original design called for, on the rationale that it traded too much for too little (full ADR 0009).
 
-Both surfaces require the OpenTUI tree-sitter worker (`parser.worker.js`) to be present alongside the binary at runtime — see §16.1 for the build/release operational requirement.
+Guidelines (`g g`) keeps using `MarkdownRenderable` in non-streaming mode; users who prefer paginated reading can still open guidelines in `less` via `:help guidelines`. Both surfaces require the OpenTUI tree-sitter worker (`parser.worker.js`) at runtime — see §16.1.
 
 ### 14.5 Rendering strategy
 

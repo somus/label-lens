@@ -1,16 +1,25 @@
-import type { CliRenderer } from "@opentui/core";
+import type { CliRenderer, PasteEvent } from "@opentui/core";
 import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, enterReview } from "../app/context.ts";
+import { ASSISTANT_PRIVACY_NOTICE } from "../assistant/privacy_notice.ts";
 import { createChordResolver } from "../keymap/chord.ts";
+import { CONFIGURE_PROVIDERS, envVarFor } from "../overlay/configure-assistant.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint } from "../overlay/hints.ts";
 import type { QueueState } from "../overlay/queue.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
-import type { NoteState, Overlay, PickerCandidate, PickerState } from "../overlay/types.ts";
-import { pulse } from "../render/anim.ts";
+import type {
+  AssistantState,
+  ConfigureAssistantState,
+  NoteState,
+  Overlay,
+  PickerCandidate,
+  PickerState,
+} from "../overlay/types.ts";
+import { fadeIn, pulse } from "../render/anim.ts";
 import { Box } from "../render/box.ts";
 import {
   pickQueuePreview,
@@ -32,7 +41,7 @@ import { renderPalette as renderPaletteV2 } from "../render/palette-view.ts";
 import { progressSegments } from "../render/progress-segments.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Scrollbar } from "../render/scrollbar.ts";
-import { clampContentWidth } from "../render/section-header.ts";
+import { clampContentWidth, SectionHeader } from "../render/section-header.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole, resolveTheme } from "../render/theme.ts";
 import { issuesForRecord } from "../store/issues.ts";
@@ -81,6 +90,9 @@ export function mountReviewScreen(args: {
   // Track chord pending key across renders so we only start the fade-out
   // motion on transition (calling play() per frame would reset progress).
   let lastChordKey: string | null = null;
+  // Track assistant strip visibility across renders so the fade-in plays once
+  // when it first appears (not on every keystroke while the overlay is open).
+  let lastAssistantVisible = false;
 
   const renderState = () => {
     if (!mounted) return;
@@ -243,6 +255,25 @@ export function mountReviewScreen(args: {
       total: queueTotal,
       contentWidth,
     });
+    // Inline assistant strip slots right below the chip rail (decision)
+    // when the overlay is active — keeps suggestion + label set in the same
+    // eye-line per the inline-footer design (ADR 0009).
+    const assistantVisible = app.overlay?.kind === "assistant";
+    if (assistantVisible !== lastAssistantVisible) {
+      // Fade-in plays once on appearance; the motion controller is a no-op at
+      // mono / 16-color (display.motion=false) so this respects the config
+      // override automatically.
+      if (assistantVisible) app.motion.play("assistant.strip.appear", fadeIn(220));
+      lastAssistantVisible = assistantVisible;
+    }
+    const assistantStrip = assistantVisible
+      ? renderAssistantStrip(
+          (app.overlay as { kind: "assistant"; state: AssistantState }).state,
+          app.display,
+          contentWidth,
+          app.motion.snapshot("assistant.strip.appear"),
+        )
+      : Box({});
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
       queueHeader,
@@ -250,6 +281,7 @@ export function mountReviewScreen(args: {
       subject,
       signals,
       decision,
+      assistantStrip,
       Box({ flexGrow: 1, flexShrink: 1 }),
       historyStrip,
     );
@@ -312,9 +344,27 @@ export function mountReviewScreen(args: {
     void dispatch(registry, scope, app, action);
   };
 
+  /**
+   * Bracketed paste from terminals arrives as one `paste` event with the
+   * full clipboard payload. Without this handler the bytes vanish (or worse,
+   * the leading ESC of the bracket marker triggers the overlay's escape
+   * branch and closes the configure / note prompt mid-paste). Type matches
+   * OpenTUI's `PasteEvent` (KeyHandlerEventMap['paste']).
+   */
+  const onPaste = (event: PasteEvent) => {
+    if (!app.overlay) return;
+    const text = new TextDecoder().decode(event.bytes);
+    const result = reduceOverlay(app.overlay, { kind: "paste", text });
+    app.overlay = result.overlay;
+    const queueId = app.queueId ?? initialQueueId;
+    applyEffects(app, queueId, result.effects, dispatchCommand);
+    if (mounted) renderState();
+  };
+
   const onResize = () => renderState();
 
   renderer.keyInput.on("keypress", onKey);
+  renderer.keyInput.on("paste", onPaste);
   renderer.on("resize", onResize);
   renderState();
 
@@ -322,6 +372,7 @@ export function mountReviewScreen(args: {
     destroy: () => {
       mounted = false;
       renderer.keyInput.off("keypress", onKey);
+      renderer.keyInput.off("paste", onPaste);
       renderer.off("resize", onResize);
     },
   };
@@ -422,14 +473,12 @@ function renderOverlay(
     case "note":
       return renderNote(overlay.state, display, termWidth, termHeight);
     case "assistant":
-      return modalBox(
-        display,
-        termWidth,
-        termHeight,
-        0.5,
-        "Assistant",
-        Text({ content: " assistant overlay (slice 11)" }),
-      );
+      // Assistant overlay renders inline (below the chip rail) via
+      // renderAssistantStrip in the main body, not as a modal stack. Return
+      // an empty box so the overlay layer doesn't double-render.
+      return Box({});
+    case "configure-assistant":
+      return renderConfigureAssistant(overlay.state, display, termWidth, termHeight);
     case "palette":
       return renderPaletteV2(
         overlay.state,
@@ -451,6 +500,214 @@ function renderOverlay(
   }
 }
 
+/**
+ * Inline assistant section (PRD §14.4 superseded by ADR 0009). Matches the
+ * chrome of `prediction` / `labels` — SectionHeader + indented body rows —
+ * so the strip reads as another section rather than a floating modal.
+ * Collapsed: one summary line. Expanded (`Tab`): markdown reasoning above
+ * the summary row.
+ */
+function renderAssistantStrip(
+  state: AssistantState,
+  display: ResolvedDisplay,
+  contentWidth: number,
+  fadeSnapshot?: import("../render/anim.ts").MotionSnapshot,
+): ReturnType<typeof Box> {
+  const expanded = state.reasoningExpanded && state.reason !== null;
+  const segs = buildAssistantSegments(state);
+  const trailing = buildAssistantStatusTrailing(state);
+  // During fade-in (motion progress < 1) drop BOLD on the summary line so the
+  // strip visibly settles in rather than snapping to full weight. At mono /
+  // 16-color the motion controller stays inactive so this is a no-op.
+  const fadingIn = (fadeSnapshot?.active ?? false) && (fadeSnapshot?.progress ?? 1) < 1;
+
+  const children: ReturnType<typeof Text | typeof Box>[] = [];
+  children.push(SectionHeader({ display, label: "assistant", width: contentWidth, trailing }));
+  children.push(Text({ content: " " }));
+
+  if (expanded && state.reason) {
+    // Constrain reasoning to the same content width as the section header
+    // — otherwise the markdown wraps to the full terminal width on wide
+    // displays and looks unmoored from the `assistant ─────` rule above.
+    children.push(
+      Box(
+        { flexDirection: "column", flexShrink: 0, marginBottom: 1, width: contentWidth },
+        Markdown({ content: state.reason }),
+      ),
+    );
+  }
+
+  children.push(
+    Box(
+      { flexDirection: "column", flexShrink: 0, width: contentWidth },
+      Text({
+        content: segmentsToStyledText(segs, display),
+        attributes: fadingIn ? TextAttributes.DIM : TextAttributes.BOLD,
+        wrapMode: "word",
+      }),
+    ),
+  );
+
+  return Box({ flexDirection: "column", marginTop: 1, flexShrink: 0 }, ...children);
+}
+
+function buildAssistantSegments(state: AssistantState): Segment[] {
+  if (state.status === "loading") {
+    return [
+      { text: " LLM ", tone: "accent" },
+      { text: "thinking…", tone: "muted" },
+      { text: "   ", tone: "default" },
+      { text: "[esc]", tone: "accent" },
+      { text: " cancel", tone: "muted" },
+    ];
+  }
+  if (state.status === "streaming") {
+    return [
+      { text: " LLM ", tone: "accent" },
+      { text: truncate(state.buffer, 60), tone: "muted" },
+    ];
+  }
+  if (state.status === "error") {
+    return [
+      { text: " ✗ ", tone: "danger" },
+      { text: state.errorMessage ?? "unknown error", tone: "muted" },
+      { text: "   ", tone: "default" },
+      { text: "[esc]", tone: "accent" },
+      { text: " dismiss", tone: "muted" },
+    ];
+  }
+  // done
+  const action = state.recommendedAction ?? "?";
+  const label = state.suggestion ?? "?";
+  const conf = state.confidence ?? "?";
+  const hasReason = state.reason !== null && state.reason.trim().length > 0;
+  const segs: Segment[] = [
+    { text: " ◆", tone: "accent" },
+    { text: " ", tone: "default" },
+    { text: action, tone: "default" },
+    { text: " → ", tone: "muted" },
+    { text: label, tone: "accent" },
+    { text: "  ", tone: "default" },
+    { text: conf, tone: "muted" },
+    { text: "   ", tone: "default" },
+  ];
+  // Suppress the Tab hint when the assistant returned empty reasoning —
+  // pressing Tab would otherwise toggle a blank panel.
+  if (hasReason) {
+    segs.push({ text: "[tab]", tone: "accent" }, { text: " reasoning · ", tone: "muted" });
+  }
+  segs.push(
+    { text: "[enter]", tone: "accent" },
+    { text: " commit · ", tone: "muted" },
+    { text: "[esc]", tone: "accent" },
+    { text: " dismiss", tone: "muted" },
+  );
+  return segs;
+}
+
+function buildAssistantStatusTrailing(state: AssistantState): Segment[] | undefined {
+  if (state.status === "loading") return [{ text: "loading…", tone: "muted" }];
+  if (state.status === "streaming") return [{ text: "streaming", tone: "muted" }];
+  if (state.status === "error") return [{ text: "error", tone: "danger" }];
+  return [{ text: "ready", tone: "muted" }];
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
+function renderConfigureAssistant(
+  state: ConfigureAssistantState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  switch (state.step) {
+    case "provider": {
+      const lines = CONFIGURE_PROVIDERS.map(
+        (p, i) => `  [${i + 1}] ${p.slug === state.selectedProvider ? "▸ " : "  "}${p.label}`,
+      );
+      const body: ReturnType<typeof Text>[] = [
+        Text({ content: "Pick an assistant provider:" }),
+        Text({ content: "" }),
+        ...lines.map((l) => Text({ content: l })),
+        Text({ content: "" }),
+        Text({
+          content: state.error
+            ? ` ! ${state.error}`
+            : " Press 1-9 to select, [enter] continue, [esc] cancel",
+          attributes: state.error ? TextAttributes.BOLD : TextAttributes.DIM,
+        }),
+      ];
+      return modalBox(display, termWidth, termHeight, 0.5, "Configure Assistant", ...body);
+    }
+    case "auth": {
+      const local = state.selectedProvider === "ollama";
+      const value = local ? (state.ollamaUrl ?? "") : (state.apiKey ?? "");
+      const fieldLabel = local ? "Ollama URL" : "API key";
+      const mask = local ? value : "*".repeat(value.length);
+      const envVar = state.selectedProvider ? envVarFor(state.selectedProvider) : "";
+      const body: ReturnType<typeof Text>[] = [
+        Text({ content: `Provider: ${state.selectedProvider}` }),
+        Text({ content: "" }),
+        Text({ content: `${fieldLabel}:` }),
+        Text({ content: ` > ${mask}_`, attributes: TextAttributes.BOLD }),
+        Text({ content: "" }),
+      ];
+      if (local) {
+        // Reassure the reviewer up-front: Ollama runs locally and the next
+        // step skips the remote-call privacy notice entirely.
+        body.push(
+          Text({
+            content: " This model runs locally; no data leaves your machine.",
+            attributes: TextAttributes.DIM,
+          }),
+          Text({ content: "" }),
+        );
+      } else {
+        body.push(
+          Text({
+            content: ` Key is session-only. Export ${envVar} in your shell for next launch.`,
+            attributes: TextAttributes.DIM,
+          }),
+          Text({ content: "" }),
+        );
+      }
+      body.push(
+        Text({
+          content: state.error
+            ? ` ! ${state.error}`
+            : ` Type ${local ? "URL" : "key"} (paste OK), [enter] continue, [esc] cancel`,
+          attributes: state.error ? TextAttributes.BOLD : TextAttributes.DIM,
+        }),
+      );
+      return modalBox(display, termWidth, termHeight, 0.5, "Configure Assistant", ...body);
+    }
+    case "privacy": {
+      const body: ReturnType<typeof Text>[] = [
+        Text({ content: "Privacy notice (please read):", attributes: TextAttributes.BOLD }),
+        Text({ content: "" }),
+        Text({ content: ASSISTANT_PRIVACY_NOTICE, wrapMode: "word" }),
+        Text({ content: "" }),
+        Text({
+          content: " [y] accept and finish · [n] cancel",
+          attributes: TextAttributes.DIM,
+        }),
+      ];
+      return modalBox(display, termWidth, termHeight, 0.6, "Configure Assistant", ...body);
+    }
+    case "commit":
+      return modalBox(
+        display,
+        termWidth,
+        termHeight,
+        0.4,
+        "Configure Assistant",
+        Text({ content: " Saving config…" }),
+      );
+  }
+}
+
 function renderGuidelines(
   state: GuidelinesState,
   display: ResolvedDisplay,
@@ -467,9 +724,11 @@ function renderGuidelines(
   const dashed = applyQuadrantHeaders(lines.slice(start).join("\n"));
   const moreAbove = start > 0;
   const titleSuffix = total > 1 ? `   line ${start + 1}/${total}` : "";
-  // Approximation for the scrollbar's visible window — markdown render
-  // height varies per node, so the reducer's page constant is a hint, not
-  // a pixel-perfect viewport mapping.
+  // Scrollbar visible window scales with modal height so the thumb is
+  // proportional on tall terminals instead of pinned to GUIDELINES_PAGE
+  // (10) which made the bar look wedged near the top on 60+ row screens.
+  const modalHeight = Math.max(12, termHeight - Math.floor(termHeight * 0.12) * 2 - 2);
+  const visiblePage = Math.max(GUIDELINES_PAGE, modalHeight - 6);
   return modalBox(
     display,
     termWidth,
@@ -485,7 +744,7 @@ function renderGuidelines(
       Scrollbar({
         display,
         total,
-        visible: GUIDELINES_PAGE,
+        visible: visiblePage,
         scrollTop: start,
         caps: true,
       }),
@@ -524,7 +783,12 @@ function renderHelp(
   termHeight: number,
 ): ReturnType<typeof Box> {
   const rich = display.color === "truecolor" || display.color === "256";
-  const visible = state.entries.slice(state.scroll, state.scroll + HELP_PAGE);
+  // Dynamic page = modal inner height (modalHeight ≈ 0.76 * termHeight - 2,
+  // minus header + footer + padding ≈ 6 rows). Fall back to HELP_PAGE when
+  // termHeight is tiny so the visible slice is never negative.
+  const modalHeight = Math.max(12, termHeight - Math.floor(termHeight * 0.12) * 2 - 2);
+  const pageSize = Math.max(HELP_PAGE, modalHeight - 6);
+  const visible = state.entries.slice(state.scroll, state.scroll + pageSize);
   const more = state.entries.length - state.scroll - visible.length;
   // Plan G3: insert section sub-headers when the entry's category flips.
   // Categories come from command-name prefix (`palette`, `queue`, `record`,
@@ -583,7 +847,7 @@ function renderHelp(
       Scrollbar({
         display,
         total: state.entries.length,
-        visible: HELP_PAGE,
+        visible: pageSize,
         scrollTop: state.scroll,
         caps: true,
       }),

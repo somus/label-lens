@@ -17,11 +17,8 @@ export const helpShow: Command = {
   name: "help.show",
   scope: "global",
   binding: "?",
-  footer: {
-    label: "help",
-    order: 130,
-    scopes: ["review", "queue", "stats", "doc-view"],
-    group: "utility",
-  },
+  // No footer entry — `?` is universally "help" across TUIs. Freeing the
+  // 9ch slot lets `[i] ask` (assistant) and `[Q] queues [/]` (queues +
+  // cycle hint) fit at 120 cols without truncating other primary items.
   run: openContextualHelp,
 };

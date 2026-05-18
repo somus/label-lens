@@ -1,3 +1,5 @@
+import { reduceAssistant } from "./assistant.ts";
+import { reduceConfigureAssistant } from "./configure-assistant.ts";
 import { reduceFilterBuilder } from "./filter-builder.ts";
 import { reduceGuidelines } from "./guidelines.ts";
 import { reduceHelp } from "./help.ts";
@@ -16,8 +18,9 @@ export function reduceOverlay(overlay: Overlay, event: OverlayEvent): ReduceResu
     case "note":
       return reduceNote(overlay.state, event);
     case "assistant":
-      // Slice 11 will plug in reduceAssistant. Until then, any event closes.
-      return { overlay: null, effects: [{ kind: "close" }] };
+      return reduceAssistant(overlay.state, event);
+    case "configure-assistant":
+      return reduceConfigureAssistant(overlay.state, event);
     case "palette":
       return reducePalette(overlay.state, event);
     case "filter-builder":

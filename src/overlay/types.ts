@@ -1,3 +1,5 @@
+import type { AssistantResponse } from "../assistant/schema.ts";
+import type { AssistantConfig } from "../config/config.ts";
 import type { KeyEvent } from "../keymap/engine.ts";
 import type { Predicate } from "../store/queues/predicate.ts";
 import type { ReviewStatus, SourceOfTruth } from "../types.ts";
@@ -46,16 +48,47 @@ export type NoteState = {
 
 export type AssistantState = {
   recordId: string;
+  /** Predicted label at the time the overlay was opened. Used as `prev_label`
+   * on the audit row when the reviewer commits a relabel or reject (mirrors
+   * the picker / decision-command pattern). Null when no prediction exists. */
+  predictedLabel: string | null;
   status: "loading" | "streaming" | "done" | "error";
+  /** Reasoning text accumulated from streamToken events (PRD §14.4 footer). */
   buffer: string;
+  /** Final suggested label after `streamEnd`. */
   suggestion: string | null;
+  /** Final reasoning markdown after `streamEnd`. */
   reason: string | null;
+  /** Final confidence after `streamEnd`. */
+  confidence: AssistantResponse["confidence"] | null;
+  /** Final recommendedAction after `streamEnd`. Controls what Enter commits. */
+  recommendedAction: AssistantResponse["recommendedAction"] | null;
+  /** True after `Tab` press — render reasoning markdown above the footer. */
+  reasoningExpanded: boolean;
   errorMessage: string | null;
+};
+
+/** Steps of the first-press configure flow (PRD §10.5). */
+export type ConfigureAssistantStep = "provider" | "auth" | "privacy" | "commit";
+
+export type ConfigureAssistantState = {
+  step: ConfigureAssistantStep;
+  /** Provider slug picked in the `provider` step (e.g. "anthropic", "ollama"). */
+  selectedProvider?: string;
+  /** API key typed in the `auth` step for remote providers. */
+  apiKey?: string;
+  /** Ollama URL typed in the `auth` step for local providers. */
+  ollamaUrl?: string;
+  /** `y` press in the `privacy` step flips this true and advances to `commit`. */
+  privacyConfirmed?: boolean;
+  /** Optional error from a prior step (e.g. empty auth field). */
+  error?: string;
 };
 
 export type Overlay =
   | { kind: "picker"; state: PickerState }
   | { kind: "note"; state: NoteState }
+  | { kind: "configure-assistant"; state: ConfigureAssistantState }
   | { kind: "assistant"; state: AssistantState }
   | { kind: "palette"; state: PaletteState }
   | { kind: "filter-builder"; state: FilterBuilderState }
@@ -69,8 +102,9 @@ export type OverlayKind = Overlay["kind"];
 /** Uniform event union — keystrokes, async stream tokens, lifecycle. */
 export type OverlayEvent =
   | { kind: "key"; event: KeyEvent }
+  | { kind: "paste"; text: string }
   | { kind: "streamToken"; token: string }
-  | { kind: "streamEnd" }
+  | { kind: "streamEnd"; response?: AssistantResponse }
   | { kind: "streamError"; error: unknown }
   | { kind: "cancel" }
   | { kind: "commit" };
@@ -88,9 +122,25 @@ export type Effect =
     }
   | { kind: "updateNote"; recordId: string; value: string }
   | { kind: "markAssistantViewed"; recordId: string }
+  | {
+      kind: "updateAssistantConfig";
+      assistant: AssistantConfig;
+      /**
+       * API key typed during the configure flow. Set into `process.env` for
+       * the active session via `assistant.apiKeyEnvVar` and never persisted
+       * to disk. Reviewer is told to export the var in their shell for the
+       * next launch (PRD §10.5 privacy notice).
+       */
+      sessionApiKey?: string;
+    }
   | { kind: "runCommand"; commandName: string; argument?: string }
   | { kind: "pushPaletteHistory"; entry: string }
-  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number };
+  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number }
+  /** Flash an error and close the overlay — emitted when the assistant
+   * returns a `recommendedAction` outside the known set. Belt-and-suspenders
+   * (StringEnum constrains the field upstream); guarantees the reviewer
+   * isn't left staring at a `done` overlay where Enter does nothing. */
+  | { kind: "assistantInvalidAction"; recordId: string; action: string };
 
 export type ReduceResult = {
   overlay: Overlay | null;
