@@ -19,13 +19,34 @@ import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "..");
 const SRC_DIR = resolve(ROOT, "src");
-// Matches any relative import that traverses into `dev/`. Examples caught:
-//   from "../dev/seed-dev.ts"
-//   from "../../dev/fixtures/generator.ts"
-//   from '../../../dev/foo'
-// Absolute `from "dev/..."` is not used in this repo (no path aliases), but
-// caught defensively.
-const FORBIDDEN_PATTERN = /from\s+["'](?:\.\.\/)+dev\/|from\s+["']dev\//;
+// Matches any module reference that traverses into `dev/`. Covers all of:
+//   import x from "../dev/seed-dev.ts"
+//   import { foo } from "../../dev/fixtures/generator.ts"
+//   export { y } from "../../../dev/foo"
+//   import "../dev/seed-dev.ts"           ← side-effect (no `from`)
+//   require("../dev/foo")                 ← defensive, TS rarely uses this
+// Absolute `from "dev/..."` is not used in this repo (no path aliases) but
+// caught defensively. Regex is per-line, so `^` and `\b` anchors work
+// against the line content directly.
+const FORBIDDEN_PATTERNS: RegExp[] = [
+  // `import ... from "../dev/..."` and `export ... from "../dev/..."`
+  /\bfrom\s+["'](?:\.\.\/)+dev\//,
+  /\bfrom\s+["']dev\//,
+  // Bare side-effect `import "../dev/..."` (no `from` clause). Must require
+  // whitespace then a quote so we don't match `import { x } from "..."`.
+  /^\s*import\s+["'](?:\.\.\/)+dev\//,
+  /^\s*import\s+["']dev\//,
+  // `require("../dev/...")` — caught defensively.
+  /\brequire\s*\(\s*["'](?:\.\.\/)+dev\//,
+  /\brequire\s*\(\s*["']dev\//,
+];
+
+function lineMatches(line: string): boolean {
+  for (const pattern of FORBIDDEN_PATTERNS) {
+    if (pattern.test(line)) return true;
+  }
+  return false;
+}
 
 function* walk(dir: string): Iterable<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -46,7 +67,7 @@ function main(): void {
   for (const file of walk(SRC_DIR)) {
     const lines = readFileSync(file, "utf-8").split("\n");
     lines.forEach((line, idx) => {
-      if (FORBIDDEN_PATTERN.test(line)) {
+      if (lineMatches(line)) {
         violations.push({ file, line: idx + 1, text: line.trim() });
       }
     });
