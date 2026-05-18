@@ -62,6 +62,20 @@ jobs:
         working-directory: dist
         run: tar -czf label-lens-${{ matrix.target }}.tar.gz label-lens-${{ matrix.target }}
 
+      - name: Per-target SHA256
+        # Capture this matrix run's checksum so the aggregate job below can
+        # stitch all three into a single SHA256SUMS.txt that install.sh reads
+        # to verify integrity. macOS ships `shasum`, Linux ships `sha256sum`;
+        # both emit `<hash>  <filename>` which the aggregator concatenates.
+        working-directory: dist
+        run: |
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum label-lens-${{ matrix.target }}.tar.gz > label-lens-${{ matrix.target }}.tar.gz.sha256
+          else
+            shasum -a 256 label-lens-${{ matrix.target }}.tar.gz > label-lens-${{ matrix.target }}.tar.gz.sha256
+          fi
+          cat label-lens-${{ matrix.target }}.tar.gz.sha256
+
       - name: Upload to release
         uses: softprops/action-gh-release@v3
         with:
@@ -73,6 +87,66 @@ jobs:
           name: build-${{ matrix.target }}
           path: dist/label-lens-${{ matrix.target }}/
           retention-days: 1
+
+      - name: Stage checksum for aggregate job
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-${{ matrix.target }}
+          path: dist/label-lens-${{ matrix.target }}.tar.gz.sha256
+          retention-days: 1
+
+  publish-checksums:
+    name: Publish SHA256SUMS.txt
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Pull per-target checksums
+        uses: actions/download-artifact@v4
+        with:
+          path: sha
+          pattern: sha256-*
+
+      - name: Concatenate into SHA256SUMS.txt
+        # Per-target steps already emit canonical `<hash>  <filename>`
+        # output; `find … | sort` keeps the order deterministic across
+        # matrix interleaving, plain `cat` keeps the concatenation honest
+        # (no awk gymnastics that could silently rewrite a line).
+        run: |
+          set -eu
+          out="SHA256SUMS.txt"
+          : > "$out"
+          for f in $(find sha -name "*.sha256" | sort); do
+            cat "$f" >> "$out"
+          done
+          cat "$out"
+
+      - name: Assert all four targets present
+        # publish-checksums runs even when one matrix row fails
+        # (fail-fast: false on build-binaries). Refuse to publish a
+        # SHA256SUMS.txt that's missing any target — install.sh now
+        # fatal-errors on a non-empty manifest that omits the user's
+        # target, and a half-baked manifest would break the curl path
+        # for every user on the missing platform.
+        run: |
+          set -eu
+          missing=0
+          for target in darwin-arm64 darwin-x64 linux-arm64 linux-x64; do
+            if ! grep -q "  label-lens-${target}.tar.gz\$" SHA256SUMS.txt; then
+              echo "::error::SHA256SUMS.txt is missing entry for label-lens-${target}.tar.gz"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Refusing to publish incomplete SHA256SUMS.txt — check matrix builds."
+            exit 1
+          fi
+
+      - name: Upload SHA256SUMS.txt to release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: SHA256SUMS.txt
 
   publish-npm:
     name: Publish npm packages

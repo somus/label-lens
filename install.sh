@@ -21,6 +21,17 @@ LL_BIN_DIR="${LL_BIN_DIR:-$HOME/.local/bin}"
 err() { echo "label-lens installer: $*" >&2; exit 1; }
 log() { echo "label-lens installer: $*"; }
 
+# Move the tmp dir to file scope so the EXIT trap can clean up after main()
+# returns — `set -u` would otherwise abort on the `$tmp` reference once the
+# local goes out of scope.
+TMP=""
+cleanup() {
+  if [ -n "${TMP}" ] && [ -d "${TMP}" ]; then
+    rm -rf "${TMP}"
+  fi
+}
+trap cleanup EXIT
+
 detect_target() {
   local os arch target
   case "$(uname -s)" in
@@ -47,12 +58,83 @@ resolve_version() {
     | sed -E 's/.*"tag_name":[[:space:]]*"([^"]+)".*/\1/'
 }
 
+# Verify the downloaded tarball's SHA256 against the release's manifest.
+# release.yml emits SHA256SUMS.txt alongside the per-target tarballs.
+# Missing manifest (legacy releases) → warn loudly but proceed; checksum
+# mismatch → fatal.
+# Known artifact set we ship in each tarball. Tarballs contain only these
+# three files; we remove them (if present) from LL_PREFIX before extracting
+# the new version. Anything else the user dropped in LL_PREFIX stays put.
+#
+# When a future release adds a file, add its name here. Forgetting to add
+# it leaks a stale copy on upgrade — which is bad — but never destructive.
+LL_ARTIFACTS="labellens labellens.bin parser.worker.js"
+
+remove_prior_install_artifacts() {
+  local prefix="$1"
+  local f
+  for f in $LL_ARTIFACTS; do
+    if [ -e "${prefix}/${f}" ] || [ -L "${prefix}/${f}" ]; then
+      rm -f "${prefix}/${f}"
+    fi
+  done
+}
+
+verify_checksum() {
+  local tarball="$1" target="$2" version="$3"
+  local tarball_name="label-lens-${target}.tar.gz"
+  local manifest_url="${GH}/releases/download/${version}/SHA256SUMS.txt"
+  local manifest="${tarball}.sums"
+
+  # Three outcomes:
+  #   1. manifest 404 / curl fails  → warn + skip (legacy release predating
+  #                                   SHA256SUMS.txt; backward compat).
+  #   2. manifest empty (zero bytes) → warn + skip (likely network truncation
+  #                                   or proxy interference; not necessarily
+  #                                   malicious).
+  #   3. manifest non-empty but no entry for our target → fatal. Release was
+  #                                   published incomplete or tampered with;
+  #                                   never silently extract.
+  if ! curl -fsSL -o "$manifest" "$manifest_url" 2>/dev/null; then
+    log "warning: SHA256SUMS.txt not found at ${manifest_url}"
+    log "warning: continuing without integrity verification (legacy release?)"
+    return
+  fi
+  if [ ! -s "$manifest" ]; then
+    log "warning: SHA256SUMS.txt is empty (network truncation?)"
+    log "warning: continuing without integrity verification"
+    return
+  fi
+  local expected
+  expected="$(awk -v name="$tarball_name" '$2 == name { print $1 }' "$manifest")"
+  if [ -z "$expected" ]; then
+    err "no checksum entry for ${tarball_name} in SHA256SUMS.txt
+This release looks incomplete or tampered with. Verify manually at:
+  ${GH}/releases/tag/${version}"
+  fi
+  local actual
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$tarball" | awk '{print $1}')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$tarball" | awk '{print $1}')"
+  else
+    log "warning: neither sha256sum nor shasum present; skipping integrity check"
+    return
+  fi
+  if [ "$expected" != "$actual" ]; then
+    err "checksum mismatch for ${tarball_name}
+  expected: ${expected}
+  actual:   ${actual}"
+  fi
+  log "checksum ok (${actual:0:12}…)"
+}
+
 main() {
   for cmd in curl tar uname; do
     command -v "$cmd" >/dev/null || err "missing required command: $cmd"
   done
 
-  local target version url tmp
+  local target version url
   target="$(detect_target)"
   version="$(resolve_version)"
   [ -n "$version" ] || err "could not resolve version (no LL_VERSION and no GitHub release found)"
@@ -60,14 +142,22 @@ main() {
   log "installing label-lens ${version} for ${target}"
   url="${GH}/releases/download/${version}/label-lens-${target}.tar.gz"
 
-  tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
+  TMP="$(mktemp -d)"
+  local tmp="$TMP"
 
   log "downloading ${url}"
   curl -fsSL "$url" -o "$tmp/pkg.tar.gz" || err "download failed (does this release exist?)"
 
+  verify_checksum "$tmp/pkg.tar.gz" "$target" "$version"
+
   log "extracting to ${LL_PREFIX}"
   mkdir -p "$LL_PREFIX"
+  # Scoped cleanup of prior install (codex P1 #67): never wipe the whole
+  # prefix dir — reviewer may have set LL_PREFIX to a shared location. Only
+  # remove the known LabelLens artifacts we own; leave anything else alone.
+  # Track new files via a manifest so a future addition (e.g. a second
+  # bundled worker) still gets cleaned up on the next install.
+  remove_prior_install_artifacts "$LL_PREFIX"
   tar -xzf "$tmp/pkg.tar.gz" -C "$LL_PREFIX" --strip-components=1
 
   mkdir -p "$LL_BIN_DIR"
