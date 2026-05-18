@@ -14,7 +14,11 @@ pre-commit:
       glob: "*.{ts,tsx}"
       run: bun test
 
+    - name: no-dev-imports
+      glob: "src/**/*.ts"
+      run: bun run scripts/check-no-dev-imports.ts
+
 pre-push:
   jobs:
     - name: full-check
-      run: bun run typecheck && bunx biome check && bun test
+      run: bun run typecheck && bunx biome check && bun test && bun run scripts/check-no-dev-imports.ts

@@ -6,11 +6,11 @@
  * labellens.config.json. Idempotent: nukes the dir first.
  *
  * Usage:
- *   bun run scripts/seed-dev.ts                       # default 150 classification records
- *   bun run scripts/seed-dev.ts --count 1000          # bigger
- *   bun run scripts/seed-dev.ts --seed 42             # different deterministic dataset
- *   bun run scripts/seed-dev.ts --task boundary       # boundary task fixture (3-5 docs)
- *   LL_DEV_DIR=/tmp/foo bun run scripts/seed-dev.ts
+ *   bun run dev/seed-dev.ts                       # default 150 classification records
+ *   bun run dev/seed-dev.ts --count 1000          # bigger
+ *   bun run dev/seed-dev.ts --seed 42             # different deterministic dataset
+ *   bun run dev/seed-dev.ts --task boundary       # boundary task fixture (3-5 docs)
+ *   LL_DEV_DIR=/tmp/foo bun run dev/seed-dev.ts
  */
 
 import { spawnSync } from "node:child_process";
@@ -20,10 +20,11 @@ import type { LabellensConfig } from "../src/config/config.ts";
 import { ingestFile } from "../src/ingest/ingest.ts";
 import { runSignals } from "../src/signals/run.ts";
 import { openDb } from "../src/store/db.ts";
-import { insertReview } from "../src/store/records.ts";
+import { insertReview, updateRecordNote } from "../src/store/records.ts";
 import { toggleTag } from "../src/store/tags.ts";
 import {
   BOUNDARY_LABELS,
+  EXTRA_LABELS,
   type GeneratedRecord,
   generateBoundary,
   generateClassification,
@@ -39,9 +40,22 @@ type GenOptions = {
   task: Task;
   withMarks: number;
   withReviews: number;
+  withNotes: number;
   withDuplicates: number;
+  withManyLabels: boolean;
+  withBoundaryMultiSource: boolean;
   noPrefill: boolean;
 };
+
+const NOTE_TEMPLATES = [
+  "double-check against bank statement",
+  "merchant reuses card for multiple categories",
+  "amount unusually high; verify",
+  "predicted source carries no confidence",
+  "model_v1 disagrees — worth a second look",
+  "follow up next quarter",
+  "potential refund; revisit when bank confirms",
+];
 
 function parseArgs(): GenOptions {
   const out: GenOptions = {
@@ -50,7 +64,10 @@ function parseArgs(): GenOptions {
     task: "classification",
     withMarks: 5,
     withReviews: 8,
+    withNotes: 4,
     withDuplicates: 3,
+    withManyLabels: false,
+    withBoundaryMultiSource: false,
     noPrefill: false,
   };
   for (let i = 2; i < process.argv.length; i++) {
@@ -59,7 +76,10 @@ function parseArgs(): GenOptions {
     else if (arg === "--seed") out.seed = Number(process.argv[++i]);
     else if (arg === "--with-marks") out.withMarks = Number(process.argv[++i]);
     else if (arg === "--with-reviews") out.withReviews = Number(process.argv[++i]);
+    else if (arg === "--with-notes") out.withNotes = Number(process.argv[++i]);
     else if (arg === "--with-duplicates") out.withDuplicates = Number(process.argv[++i]);
+    else if (arg === "--with-many-labels") out.withManyLabels = true;
+    else if (arg === "--with-boundary-multi-source") out.withBoundaryMultiSource = true;
     else if (arg === "--no-prefill") out.noPrefill = true;
     else if (arg === "--task") {
       const v = process.argv[++i];
@@ -79,6 +99,9 @@ function parseArgs(): GenOptions {
   if (!Number.isFinite(out.withReviews) || out.withReviews < 0) {
     throw new Error("--with-reviews must be a non-negative integer");
   }
+  if (!Number.isFinite(out.withNotes) || out.withNotes < 0) {
+    throw new Error("--with-notes must be a non-negative integer");
+  }
   if (!Number.isFinite(out.withDuplicates) || out.withDuplicates < 0) {
     throw new Error("--with-duplicates must be a non-negative integer");
   }
@@ -87,13 +110,58 @@ function parseArgs(): GenOptions {
 
 function generate(opts: GenOptions): GeneratedRecord[] {
   if (opts.task === "boundary") {
-    return generateBoundary({ size: "small", seed: opts.seed }).records;
+    return generateBoundary({
+      size: "small",
+      seed: opts.seed,
+      withMultiSource: opts.withBoundaryMultiSource,
+    }).records;
   }
   return generateClassification({
     seed: opts.seed,
     count: opts.count,
     withDuplicates: opts.withDuplicates,
   }).records;
+}
+
+/**
+ * Append `EXTRA_LABELS` to the inferred `config.labels` so the chip rail's
+ * `+N more (r)` hint exercises (only fires when `labels.length > 9`).
+ * Default classification template has 7 labels; this push lands at 11.
+ */
+async function patchConfigForManyLabels(configPath: string): Promise<void> {
+  const parsed = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
+  const existing = new Set(parsed.labels.map((l) => (typeof l === "string" ? l : l.name)));
+  for (const extra of EXTRA_LABELS) {
+    if (!existing.has(extra)) parsed.labels.push(extra);
+  }
+  await Bun.write(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
+  console.log(
+    `Many-labels: extended config.labels to ${parsed.labels.length} entries (+${EXTRA_LABELS.length}).`,
+  );
+}
+
+/**
+ * Attach a short note to N random records so the `note: <text>` row in
+ * the prediction signals block exercises. Notes are drawn from a fixed
+ * template list (deterministic via the seed) and sampled without
+ * replacement from records that don't already carry one.
+ */
+function prefillNotesOpen(db: ReturnType<typeof openDb>, opts: GenOptions): void {
+  if (opts.withNotes <= 0) return;
+  const rand = rng(opts.seed ^ 0xb0b1e);
+  const rows = db.$client.prepare("SELECT id FROM records ORDER BY row_index ASC").all() as {
+    id: string;
+  }[];
+  const candidates = rows.slice();
+  let written = 0;
+  for (let i = 0; i < opts.withNotes && candidates.length > 0; i++) {
+    const idx = Math.floor(rand() * candidates.length);
+    const row = candidates.splice(idx, 1)[0]!;
+    const tpl = NOTE_TEMPLATES[Math.floor(rand() * NOTE_TEMPLATES.length)]!;
+    updateRecordNote(db, row.id, tpl);
+    written++;
+  }
+  console.log(`Prefilled notes: ${written}.`);
 }
 
 async function writeJsonl(path: string, rows: GeneratedRecord[]): Promise<void> {
@@ -194,6 +262,9 @@ async function main(): Promise<void> {
   // Ingest now (instead of waiting for first `labellens` run) so the prefill
   // step has records to mark / review against.
   const configPath = join(dir, "labellens.config.json");
+  if (opts.withManyLabels && opts.task === "classification") {
+    await patchConfigForManyLabels(configPath);
+  }
   const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
   const dbPath = join(dir, ".labellens", "state.db");
   const db = openDb(dbPath);
@@ -205,6 +276,7 @@ async function main(): Promise<void> {
     if (!opts.noPrefill && (opts.withMarks > 0 || opts.withReviews > 0)) {
       prefillStateOpen(db, opts);
     }
+    if (!opts.noPrefill) prefillNotesOpen(db, opts);
   } finally {
     db.$client.close();
   }

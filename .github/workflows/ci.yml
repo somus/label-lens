@@ -25,6 +25,50 @@ jobs:
 
       - run: bun test
 
+      - name: no src → dev imports
+        run: bun run scripts/check-no-dev-imports.ts
+
+  binary-isolation:
+    name: dev tooling absent from shipped binary
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run build:bin
+
+      # Belt + suspenders: src/main.ts is the compile entry, so Bun's tree-
+      # shaking already excludes dev/ from the binary. This grep catches the
+      # day someone adds an accidental dev-side import that survives bundling.
+      # Strings checked are seed/generator identifiers that should never appear
+      # in the user-facing artifact.
+      - name: grep binary for dev-only identifiers
+        run: |
+          BIN_DIR="dist/label-lens-linux-x64"
+          BIN="$BIN_DIR/labellens.bin"
+          if [ ! -f "$BIN" ]; then
+            echo "binary not built at $BIN"
+            exit 1
+          fi
+          forbidden=(generateClassification generateBoundary seed-dev "dev/dev.ts" "dev/seed-dev.ts")
+          status=0
+          for s in "${forbidden[@]}"; do
+            if grep -aq "$s" "$BIN"; then
+              echo "FAIL: shipped binary contains forbidden string '$s'"
+              status=1
+            fi
+          done
+          if [ $status -eq 0 ]; then
+            echo "binary isolation: ok"
+          fi
+          exit $status
+
   perf:
     name: perf envelope
     runs-on: ubuntu-latest

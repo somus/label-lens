@@ -2,9 +2,9 @@
 /**
  * One-command dev playground. Subcommands:
  *
- *   bun run scripts/dev.ts up     # init if needed, then launch TUI
- *   bun run scripts/dev.ts down   # remove the dev dir entirely
- *   bun run scripts/dev.ts status # show what's in $LL_DEV_DIR
+ *   bun run dev/dev.ts up     # init if needed, then launch TUI
+ *   bun run dev/dev.ts down   # remove the dev dir entirely
+ *   bun run dev/dev.ts status # show what's in $LL_DEV_DIR
  *
  * Knobs (env or flags):
  *   LL_DEV_DIR=/tmp/foo            # override target dir (default /tmp/llens-dev)
@@ -13,7 +13,7 @@
  *   --seed <n>                     # PRNG seed (default 1)
  *   --task <classification|boundary>  # dataset flavor (default classification)
  *
- * Same flags pass through to scripts/seed-dev.ts.
+ * Same flags pass through to dev/seed-dev.ts.
  */
 
 import { spawnSync } from "node:child_process";
@@ -21,7 +21,7 @@ import { existsSync, rmSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const REPO_ROOT = resolve(import.meta.dir, "..");
-const SEED_SCRIPT = join(REPO_ROOT, "scripts", "seed-dev.ts");
+const SEED_SCRIPT = join(REPO_ROOT, "dev", "seed-dev.ts");
 const MAIN = join(REPO_ROOT, "src", "main.ts");
 const DEFAULT_DIR = "/tmp/llens-dev";
 
@@ -39,7 +39,11 @@ function passthroughSeedArgs(): string[] {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--reset") continue;
-    if (arg === "--no-prefill") {
+    if (
+      arg === "--no-prefill" ||
+      arg === "--with-many-labels" ||
+      arg === "--with-boundary-multi-source"
+    ) {
       out.push(arg);
       continue;
     }
@@ -48,7 +52,9 @@ function passthroughSeedArgs(): string[] {
       arg === "--seed" ||
       arg === "--task" ||
       arg === "--with-marks" ||
-      arg === "--with-reviews"
+      arg === "--with-reviews" ||
+      arg === "--with-notes" ||
+      arg === "--with-duplicates"
     ) {
       out.push(arg, argv[++i] ?? "");
     }
@@ -106,7 +112,7 @@ function status(): void {
 
 function usage(): never {
   console.error(
-    "usage: bun run scripts/dev.ts <up | down | status> [--reset] [--count N] [--seed N] [--task classification|boundary] [--with-marks N] [--with-reviews N] [--no-prefill]",
+    "usage: bun run dev/dev.ts <up | down | status> [--reset] [--count N] [--seed N] [--task classification|boundary] [--with-marks N] [--with-reviews N] [--with-notes N] [--with-duplicates N] [--with-many-labels] [--with-boundary-multi-source] [--no-prefill]",
   );
   process.exit(2);
 }

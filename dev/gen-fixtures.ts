@@ -4,9 +4,9 @@
  * Deterministic fixture generator for test/fixtures/.
  *
  * Usage:
- *   bun scripts/gen-fixtures.ts <name>          # one fixture
- *   bun scripts/gen-fixtures.ts --all           # all five
- *   bun scripts/gen-fixtures.ts <name> --out P  # write elsewhere (used by tests)
+ *   bun dev/gen-fixtures.ts <name>          # one fixture
+ *   bun dev/gen-fixtures.ts --all           # all five
+ *   bun dev/gen-fixtures.ts <name> --out P  # write elsewhere (used by tests)
  *
  * Targets and seeds:
  *   small    — classification, seed 1, count 1000
@@ -59,7 +59,7 @@ function parseArgs(argv: string[]): { targets: Target[]; out?: string } {
     }
   }
   if (targets.length === 0) {
-    throw new Error(`usage: bun scripts/gen-fixtures.ts <name|--all> [--out path]
+    throw new Error(`usage: bun dev/gen-fixtures.ts <name|--all> [--out path]
   names: ${TARGETS.join(", ")}`);
   }
   if (out && targets.length > 1) {

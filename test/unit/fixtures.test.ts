@@ -5,7 +5,7 @@ import {
   generateBoundary,
   generateClassification,
   serializeJsonl,
-} from "../../scripts/fixtures/generator.ts";
+} from "../../dev/fixtures/generator.ts";
 import { resolveDocumentId } from "../../src/boundary/document.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { recordsInDoc } from "../../src/store/queries.ts";
