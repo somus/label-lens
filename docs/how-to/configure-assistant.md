@@ -2,6 +2,10 @@
 
 The assistant is off by default. Three paths to turn it on.
 
+<a href="../media/assistant.webm">
+  <img src="../media/assistant.gif" alt="LabelLens assistant footer" width="800">
+</a>
+
 ## Option A — wizard (recommended for first-time setup)
 
 1. Launch `labellens`.

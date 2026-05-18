@@ -4,6 +4,10 @@ This tutorial walks you through the full LabelLens loop on a small fixture: inge
 
 You'll need: `labellens` installed (see the [README](../README.md)) and a terminal.
 
+<a href="media/init.webm">
+  <img src="media/init.gif" alt="Initialise a LabelLens project" width="800">
+</a>
+
 ## 1. Get some data
 
 Save this as `transactions.jsonl`:

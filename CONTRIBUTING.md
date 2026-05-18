@@ -49,6 +49,22 @@ Regenerate committed fixtures:
 bun dev/gen-fixtures.ts --all
 ```
 
+### Screencasts
+
+Docs screencasts are recorded with `vhs` from deterministic tapes under `docs/casts/tapes/`. Install the recorder once:
+
+```sh
+brew install vhs
+```
+
+Regenerate the committed media before tagging a release:
+
+```sh
+bun run scripts/record-casts.ts
+```
+
+The script records each tape into `docs/casts/out/` and publishes `gif`/`webm` files into `docs/media/`. Check the `.webm` files locally before opening or merging the release PR.
+
 ### Exercise the compiled binary path
 
 ```sh

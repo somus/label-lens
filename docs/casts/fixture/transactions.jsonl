@@ -1,0 +1,12 @@
+{"text": "Lunch at Zomato Bangalore", "prediction": "food", "confidence": 0.92, "source": "llm:gpt-4"}
+{"text": "Uber ride to airport", "prediction": "travel", "confidence": 0.88, "source": "llm:gpt-4"}
+{"text": "Amazon order #12345", "prediction": "shopping", "confidence": 0.74, "source": "llm:gpt-4"}
+{"text": "Netflix monthly", "prediction": "utility", "confidence": 0.41, "source": "llm:gpt-4"}
+{"text": "Salary credit October", "prediction": "salary", "confidence": 0.99, "source": "llm:gpt-4"}
+{"text": "Rent transfer to landlord", "prediction": "rent", "confidence": 0.96, "source": "llm:gpt-4"}
+{"text": "Coffee at Blue Tokai", "prediction": "food", "confidence": 0.81, "source": "llm:gpt-4"}
+{"text": "ATM withdrawal", "prediction": "other", "confidence": 0.22, "source": "llm:gpt-4"}
+{"text": "Refund from Swiggy", "prediction": "food", "confidence": 0.78, "source": "regex.simple"}
+{"text": "Electricity bill BESCOM", "prediction": "utility", "confidence": 0.93, "source": "llm:gpt-4"}
+{"text": "Spotify family plan", "prediction": "shopping", "confidence": 0.39, "source": "llm:gpt-4"}
+{"text": "Flight to Delhi", "prediction": "travel", "confidence": 0.95, "source": "llm:gpt-4"}

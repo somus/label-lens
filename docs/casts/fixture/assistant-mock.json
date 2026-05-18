@@ -1,0 +1,26 @@
+{
+  "tokenDelayMs": 320,
+  "tokens": [
+    "Checking the prediction. ",
+    "'Spotify family plan' ",
+    "is a recurring service ",
+    "subscription rather than a ",
+    "one-off purchase. That fits ",
+    "`utility` better than ",
+    "`shopping`. Recommend ",
+    "relabel."
+  ],
+  "response": {
+    "suggestedLabel": "utility",
+    "confidence": "high",
+    "reasoning": "Spotify is a recurring subscription service. Subscriptions are typically classified as utilities in this taxonomy, not one-off shopping purchases.",
+    "evidenceFor": [
+      "recurring monthly subscription",
+      "service, not a physical good"
+    ],
+    "evidenceAgainst": [
+      "platform is a media-shopping marketplace"
+    ],
+    "recommendedAction": "relabel"
+  }
+}

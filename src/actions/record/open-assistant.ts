@@ -27,6 +27,10 @@ export function __setAssistantQueryFn(fn: typeof queryFn | null): void {
   queryFn = fn ?? queryAssistant;
 }
 
+export function __getAssistantQueryFn(): typeof queryFn {
+  return queryFn;
+}
+
 /**
  * `i` opens the inline assistant footer for the focused record. First press
  * with `assistant.enabled = false` redirects into the configure overlay

@@ -70,6 +70,14 @@ async function main(): Promise<void> {
   }
 
   if (cmd === undefined) {
+    if (process.env.LABELLENS_ASSISTANT_MOCK_FILE) {
+      if (VERSION === "dev") {
+        const { installAssistantMockIfRequested } = await import("./assistant/mock-bootstrap.ts");
+        installAssistantMockIfRequested();
+      } else {
+        console.warn("LABELLENS_ASSISTANT_MOCK_FILE is ignored in release builds.");
+      }
+    }
     await runReview({ localOnly });
     return;
   }
