@@ -36,7 +36,7 @@ labellens export jsonl                    # write to output.path from config
 labellens export csv
 labellens export stats                    # Markdown summary
 labellens export log                      # full audit trail (every review row, including undone)
-labellens export jsonl --out custom.jsonl # override path
+labellens export jsonl --output custom.jsonl # override output base/path
 ```
 
 | Format | What it writes |

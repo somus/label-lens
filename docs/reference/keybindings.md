@@ -2,6 +2,10 @@
 
 LabelLens scopes its keymap by screen / overlay. Press `?` in any scope for the live, filterable version of this table — the in-app help reads the same registry.
 
+<a href="../media/notes-undo-history.webm">
+  <img src="../media/notes-undo-history.gif" alt="Adding a note, making decisions, and undoing through review history" width="800">
+</a>
+
 ## Review scope
 
 The default scope when no overlay or screen is open.

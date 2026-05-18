@@ -93,7 +93,7 @@ examples:
   labellens export                                   # use config defaults
   labellens export csv                               # csv at sibling path
   labellens export jsonl --include-rejected
-  labellens export stats -o ./reports/run-42.md
+  labellens export stats -o ./reports/run-42
 
 CSV multi-label arrays are joined by ';' (MVP).`;
 }
