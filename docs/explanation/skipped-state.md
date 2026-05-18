@@ -2,6 +2,10 @@
 
 When you press `s`, the record is **skipped** — not deferred, not bookmarked, not "kind of pending". Skipped is a distinct review state with its own queue (`skipped`) and its own status column value (`reviews.status = 'skipped'`).
 
+<a href="../media/queue-skipped.webm">
+  <img src="../media/queue-skipped.gif" alt="Skipped records leaving pending and appearing in their own queue" width="800">
+</a>
+
 ## Why a separate state?
 
 The intuitive design is "skip = come back later" → record stays in the `pending` queue. We rejected that for two reasons:

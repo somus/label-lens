@@ -4,6 +4,10 @@ A queue is just a saved filter over your records. Switching between queues is fa
 
 See [Reference: queues](../reference/queues.md) for the full grammar.
 
+<a href="../media/queue-skipped.webm">
+  <img src="../media/queue-skipped.gif" alt="Switching queues and revisiting skipped records" width="800">
+</a>
+
 ## Quick patterns
 
 ### Find low-confidence records

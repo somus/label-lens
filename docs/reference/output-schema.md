@@ -1,6 +1,6 @@
 # Reference: output schemas
 
-Shapes emitted by `labellens export`. All paths default to `output.path` from `labellens.config.json`; override with `--out <path>`.
+Shapes emitted by `labellens export`. All paths default to `output.path` from `labellens.config.json`; override the base with `--output <path>`.
 
 ## `labellens export jsonl`
 

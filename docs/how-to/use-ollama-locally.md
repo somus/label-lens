@@ -2,6 +2,10 @@
 
 Best path for sensitive datasets. No data leaves the machine.
 
+<a href="../media/local-only-ollama.webm">
+  <img src="../media/local-only-ollama.gif" alt="Launching LabelLens with an Ollama assistant config and local-only mode" width="800">
+</a>
+
 ## Setup
 
 1. **Install Ollama:**
