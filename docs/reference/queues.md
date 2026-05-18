@@ -92,6 +92,17 @@ Free-form predicate via the palette:
 
 `=`, `!=`, `<`, `<=`, `>`, `>=`, `in`. Combine with `and` / `or`; precedence: `and` > `or`; parens override.
 
+### Orphans
+
+`where:` excludes orphan records by default — matches every built-in queue except `orphans`. To include them, prefix the expression with `include-orphans:`:
+
+```
+:queue where: status = 'accepted'                    → no orphans (default)
+:queue where: include-orphans: status = 'accepted'   → includes orphan rows
+```
+
+See [ADR 0012](../adr/0012-where-dsl-excludes-orphans-by-default.md).
+
 ### Safety
 
 The parser is recursive-descent over a strict whitelist. Values bind via drizzle `${value}` interpolation — no string concatenation, no SQL injection. Unknown columns or operators throw `WhereParseError`.

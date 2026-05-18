@@ -1,13 +1,16 @@
+import { and } from "drizzle-orm";
 import {
+  compilePredicate,
   isPredicateColumn,
   OPERATORS,
   type Predicate,
   type PredicateColumn,
   type PredicateOperator,
   type PredicateValue,
-  predicateQueue,
+  serializePredicate,
   WhereParseError,
 } from "./queues/predicate.ts";
+import { nonOrphan } from "./queues/predicates.ts";
 import type { QueueDefinition } from "./queues/registry.ts";
 
 export { WhereParseError } from "./queues/predicate.ts";
@@ -242,6 +245,18 @@ export function parseWherePredicate(expr: string): Predicate {
   return predicate;
 }
 
+const INCLUDE_ORPHANS_PREFIX = /^\s*include-orphans:\s*/;
+
 export function parseWhere(expr: string): QueueDefinition {
-  return predicateQueue(parseWherePredicate(expr), expr);
+  const includeOrphans = INCLUDE_ORPHANS_PREFIX.test(expr);
+  const body = includeOrphans ? expr.replace(INCLUDE_ORPHANS_PREFIX, "") : expr;
+  const predicate = parseWherePredicate(body);
+  // CONTEXT.md: every built-in queue except `orphans` excludes orphan records.
+  // The `where:` DSL matches that default; `include-orphans:` opts out.
+  const compiled = compilePredicate(predicate);
+  return {
+    id: `where:${expr}`,
+    label: `Where: ${serializePredicate(predicate)}`,
+    query: { where: includeOrphans ? compiled : and(nonOrphan(), compiled) },
+  };
 }
