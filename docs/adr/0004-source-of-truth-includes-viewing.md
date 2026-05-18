@@ -1,5 +1,8 @@
 # `source_of_truth = 'human+assistant'` whenever the assistant was viewed, not only when its suggestion was accepted
 
+- **Status:** Accepted
+- **Date:** 2026-05-09
+
 A review entry is tagged `human+assistant` whenever the assistant panel was rendered for that record before the action was committed — including the case where the reviewer read the suggestion, dismissed it with `Esc`, and then chose a different label. `human` is reserved for actions taken without ever opening the panel for that record.
 
 The alternative — only flipping the tag when the reviewer literally accepts the assistant's suggestion via `Enter` — undercounts assistant influence and weakens the audit story for downstream "did an LLM contaminate this dataset?" reviews. Reading a suggestion is influence, even when the reviewer disagrees.

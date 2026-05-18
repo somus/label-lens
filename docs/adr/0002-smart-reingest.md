@@ -1,5 +1,8 @@
 # Re-ingest distinguishes text changes from prediction-only changes
 
+- **Status:** Accepted
+- **Date:** 2026-05-09
+
 When the source file changes, LabelLens diffs the new ingest against the existing `state.db` keyed on the content-hash IDs from ADR 0001 and offers three paths:
 
 1. **All IDs match, only `predictions[]` changed** → refresh predictions in place; reviews and annotations are kept untouched.

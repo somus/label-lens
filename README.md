@@ -1,6 +1,16 @@
 # LabelLens
 
-Terminal-first review tool for cleaning noisy text training datasets produced by rules, LLMs, weak supervision, or early model predictions. Local-first; runs over SSH; ships as a single Bun-compiled binary.
+**Review noisy text labels from your terminal.**
+
+Your LLM, rules, or weak model labeled the dataset. Some fraction is wrong in ways you only catch by reading the rows. Options today:
+
+- **Spreadsheet** — no record context, no prediction metadata, no real keyboard flow.
+- **Label Studio / Doccano / Prodigy** — server, browser, accounts. Heavy for a 30-minute job over SSH, and overkill when you already have predictions and just need to review them.
+- **A one-off CLI you vibe-code per dataset** — works once, then you rewrite it next time.
+
+LabelLens is the missing keyboard reviewer in the middle. Accept, reject, relabel, ask an assistant, export.
+
+Local-first, runs over SSH, ships as a single Bun-compiled binary. State lives next to the source JSONL; the dataset never leaves the box unless you turn on the LLM assistant.
 
 > **Status:** v0.1 release candidate. See [PRD.md](./PRD.md) and [docs/adr/](./docs/adr/) for design.
 
@@ -48,6 +58,7 @@ labellens export stats       # Markdown summary
 | **[How-to guides](./docs/how-to/)** | Configure the assistant, work with queues, bulk-relabel, export, migrate labels, run over SSH, use Ollama locally. |
 | **[Reference](./docs/reference/)** | Config schema, keybindings, queue grammar, CLI flags, output formats. |
 | **[Explanation](./docs/explanation/)** | Domain model, why skipped is its own state, audit semantics. |
+| **[Roadmap](./ROADMAP.md)** | What's deferred past v0.1. |
 | **[`labellens guide`](./src/cli/guide.ts)** | Print the tutorial offline (SSH-friendly). |
 | **`labellens --help`** | Quick reference printed to stdout. |
 | **`man labellens`** | Man page (installed by curl-installer). |
