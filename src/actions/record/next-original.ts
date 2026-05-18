@@ -19,7 +19,15 @@ function stepOriginal(ctx: import("../../app/context.ts").AppContext, direction:
   if (direction === 1) pending.next();
   else pending.prev();
   const target = pending.current();
-  if (target) ctx.cursor.seek(target.id);
+  if (target && target.id !== current.id) {
+    ctx.cursor.seek(target.id);
+    // ADR 0004: assistant exposure is per-focus-session. Only clear when the
+    // cursor actually moved — pressing shift+j/shift+k at the boundary
+    // clamps to the same record (pending.next/prev clamp) and must preserve
+    // the assistant tag. cursor.seek() is synchronous today; any future
+    // async navigation must clear the Set before yielding.
+    ctx.clearViewedAssistant();
+  }
 }
 
 export const nextOriginal: Command = {

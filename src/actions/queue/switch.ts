@@ -20,6 +20,7 @@ export function switchQueue(ctx: AppContext, queueId: QueueId): void {
   if (cached) cursor.refresh();
   ctx.cursor = cursor;
   ctx.queueId = queueId;
+  ctx.clearViewedAssistant();
   ctx.motion.play("status.queue", flash(120, "info"));
   ctx.setFlash(`Queue: ${def.label}`, "info", 1500);
   ctx.requestRender();

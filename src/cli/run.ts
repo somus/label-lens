@@ -7,7 +7,7 @@ import { switchQueue } from "../actions/queue/switch.ts";
 import { relabelByKeyCommand } from "../actions/record/decisions.ts";
 import { ALL_COMMANDS, reservedReviewKeys } from "../actions/registry.ts";
 import { createAppContext } from "../app/context.ts";
-import { type LabellensConfig, validateLabelKeys } from "../config/config.ts";
+import { type LabellensConfig, validateLabelKeys, validateLocalOnly } from "../config/config.ts";
 import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
 import { ingestFile } from "../ingest/ingest.ts";
 import { applyDiff, type DiffResult, diffIngest } from "../ingest/reingest.ts";
@@ -32,7 +32,8 @@ export function shouldShowMissingConfigSplash(args: {
   return args.stdinIsTTY === true && args.stdoutIsTTY === true;
 }
 
-export async function runReview(): Promise<void> {
+export async function runReview(args: { localOnly?: boolean } = {}): Promise<void> {
+  const localOnly = args.localOnly ?? false;
   const configPath = resolve("./labellens.config.json");
   if (!existsSync(configPath)) {
     if (
@@ -54,6 +55,12 @@ export async function runReview(): Promise<void> {
   if (keyError) {
     console.error("labellens: invalid config.labels[].key");
     for (const line of keyError.split("\n")) console.error(`  ${line}`);
+    process.exit(2);
+  }
+
+  const localOnlyError = validateLocalOnly(config, localOnly);
+  if (localOnlyError) {
+    console.error(`labellens: ${localOnlyError}`);
     process.exit(2);
   }
 
@@ -160,6 +167,7 @@ export async function runReview(): Promise<void> {
     db,
     config,
     display,
+    localOnly,
     requestRender: () => {},
     onQuit: () => {
       r.destroy();

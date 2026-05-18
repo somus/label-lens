@@ -47,7 +47,7 @@ function decisionCommand(spec: DecisionSpec): Command {
         status: spec.status,
         finalLabel: spec.finalLabel(record),
         prevLabel: spec.prevLabel(record),
-        sourceOfTruth: "human",
+        sourceOfTruth: ctx.viewedAssistant.has(record.id) ? "human+assistant" : "human",
       };
       applyEffects(ctx, ctx.queueId, [effect]);
     },
@@ -116,7 +116,7 @@ export function relabelByIndexCommand(n: number): Command {
         status,
         finalLabel: label,
         prevLabel: status === "relabeled" ? predicted : null,
-        sourceOfTruth: "human",
+        sourceOfTruth: ctx.viewedAssistant.has(record.id) ? "human+assistant" : "human",
       };
       applyEffects(ctx, ctx.queueId, [effect]);
     },
@@ -154,7 +154,7 @@ export function relabelByKeyCommand(entry: LabelConfigEntry): Command | null {
         status,
         finalLabel: label,
         prevLabel: status === "relabeled" ? predicted : null,
-        sourceOfTruth: "human",
+        sourceOfTruth: ctx.viewedAssistant.has(record.id) ? "human+assistant" : "human",
       };
       applyEffects(ctx, ctx.queueId, [effect]);
     },

@@ -68,12 +68,11 @@ describe("applyEffects", () => {
     expect(app.overlay).toBeNull();
   });
 
-  test("markAssistantViewed is a no-op until slice 11", async () => {
+  test("markAssistantViewed adds recordId to viewedAssistant set (ADR 0004)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const app = ctx(store.db);
-    expect(() =>
-      applyEffects(app, "pending", [{ kind: "markAssistantViewed", recordId: "x" }]),
-    ).not.toThrow();
+    applyEffects(app, "pending", [{ kind: "markAssistantViewed", recordId: "x" }]);
+    expect(app.viewedAssistant.has("x")).toBe(true);
   });
 
   test("pushPaletteHistory appends to AppContext.paletteHistory", async () => {

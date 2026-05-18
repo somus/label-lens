@@ -10,7 +10,11 @@ declare const LABELLENS_VERSION: string | undefined;
 const VERSION = typeof LABELLENS_VERSION !== "undefined" ? LABELLENS_VERSION : "dev";
 
 async function main(): Promise<void> {
-  const [, , cmd, ...rest] = process.argv;
+  // Strip global flags before positional parsing so `labellens --local-only`
+  // doesn't read `--local-only` as the subcommand.
+  const argv = process.argv.slice(2).filter((a) => a !== "--local-only");
+  const localOnly = process.argv.includes("--local-only");
+  const [cmd, ...rest] = argv;
 
   if (cmd === "--version" || cmd === "-v") {
     console.log(`labellens ${VERSION}`);
@@ -54,7 +58,7 @@ async function main(): Promise<void> {
   }
 
   if (cmd === undefined) {
-    await runReview();
+    await runReview({ localOnly });
     return;
   }
 

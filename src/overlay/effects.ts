@@ -83,8 +83,10 @@ export function applyEffects(
         refreshQueue(app, queueId);
         break;
       case "markAssistantViewed":
-        // Slice 11 plumbing — flag the record's source-of-truth as 'human+assistant'
-        // for the next decision. No-op until then.
+        // ADR 0004: any decision committed for this record during the current
+        // focus session is tagged `human+assistant`. Set is cleared on
+        // record.next / record.prev so the next record starts fresh.
+        app.viewedAssistant.add(effect.recordId);
         break;
       case "runCommand":
         if (!dispatchCommand) {
