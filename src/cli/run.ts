@@ -3,7 +3,6 @@ import { dirname, join, resolve } from "node:path";
 import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { sql } from "drizzle-orm";
 import { applyKeyOverrides, buildRegistry, type Command } from "../actions/command.ts";
-import { switchQueue } from "../actions/queue/switch.ts";
 import { relabelByKeyCommand } from "../actions/record/decisions.ts";
 import { ALL_COMMANDS, reservedReviewKeys } from "../actions/registry.ts";
 import { createAppContext } from "../app/context.ts";
@@ -22,7 +21,6 @@ import { bootstrapDisplay } from "../render/capability.ts";
 import { mountReingestPrompt, type ReingestChoice } from "../screens/reingest-prompt.ts";
 import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts";
 import { mountSplash } from "../screens/splash.ts";
-import { mountStatsScreen } from "../screens/stats.ts";
 import { runSignals } from "../signals/run.ts";
 import { type Db, openDb } from "../store/db.ts";
 import { findUnknownLabels } from "../store/labels.ts";
@@ -252,24 +250,6 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
   app.openQueueScreen = () => {
     if (!reviewHandle) mountReview(app.queueId ?? "pending");
     app.openOverlay({ kind: "queue", state: openQueue(app) });
-  };
-
-  app.openStatsScreen = () => {
-    reviewHandle?.destroy();
-    reviewHandle = null;
-    const statsHandle = mountStatsScreen({
-      renderer: r,
-      app,
-      onDrill: (id) => {
-        statsHandle.destroy();
-        switchQueue(app, id);
-        mountReview(id);
-      },
-      onCancel: () => {
-        statsHandle.destroy();
-        mountReview(app.queueId ?? "pending");
-      },
-    });
   };
 
   if (chooseInitialScreen(db) === "queue") {

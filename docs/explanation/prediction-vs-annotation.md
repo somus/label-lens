@@ -25,7 +25,7 @@ If you ever feel like a doc page is unclear, it's probably because someone said 
 This model lets you:
 
 - **Audit provenance**: every annotation knows which prediction it overrode (`prev_label`).
-- **Measure model quality**: stats screen's "By source" rows compute per-source accept rates because the prediction's `source` survives.
+- **Measure model quality**: stats surface's "By source" rows compute per-source accept rates because the prediction's `source` survives.
 - **Reproduce decisions**: the audit log (`labellens export log`) records every annotation including the ones you undid.
 - **Avoid contamination**: ADR 0004's `human+assistant` audit tag exists because reading an LLM's suggestion is influence even when you reject it.
 

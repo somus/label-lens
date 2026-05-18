@@ -9,6 +9,7 @@ export type HelpEntry = {
   binding: string;
   palette?: string;
   name: string;
+  order?: number;
 };
 
 export type HelpState = {
@@ -36,7 +37,12 @@ export function openHelp(args: OpenHelpArgs): HelpState {
       name: c.name,
     });
   }
+  entries.push(...overlayHelpEntries(args.scope));
   entries.sort((a, b) => {
+    const rankDelta = helpEntryRank(a, args.scope) - helpEntryRank(b, args.scope);
+    if (rankDelta !== 0) return rankDelta;
+    const orderDelta = (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER);
+    if (orderDelta !== 0) return orderDelta;
     if (a.category !== b.category) return a.category.localeCompare(b.category);
     const aBound = a.binding === "—" ? 1 : 0;
     const bBound = b.binding === "—" ? 1 : 0;
@@ -44,6 +50,16 @@ export function openHelp(args: OpenHelpArgs): HelpState {
     return a.name.localeCompare(b.name);
   });
   return { scope: args.scope, entries, scroll: 0 };
+}
+
+function helpEntryRank(entry: HelpEntry, scope: Scope): number {
+  if (entry.category === scope) return 0;
+  return 1;
+}
+
+function overlayHelpEntries(scope: Scope): HelpEntry[] {
+  if (scope !== "stats") return [];
+  return [{ category: "stats", binding: "j/k enter esc", name: "stats.controls", order: 0 }];
 }
 
 function packed(state: HelpState): Overlay {
@@ -81,5 +97,5 @@ export function reduceHelp(state: HelpState, event: OverlayEvent): ReduceResult 
   if (name === "up") {
     return { overlay: packed({ ...state, scroll: Math.max(state.scroll - 1, 0) }), effects: [] };
   }
-  return { overlay: packed(state), effects: [] };
+  return { overlay: packed(state), effects: [], propagated: true };
 }

@@ -160,7 +160,7 @@ NER / span review is **not** a v1 use case. See Section 19.
 5. Tool opens the review screen with the most-uncertain record first.
 6. User accepts, rejects, relabels, skips, or asks the assistant — keyboard only.
 7. User can switch queues (low-confidence, disagreements, label-issues, by source, by reason).
-8. User views stats screen for review progress and dataset quality.
+8. User views stats surface for review progress and dataset quality.
 9. User exports clean training data to JSONL or CSV.
 ```
 
@@ -316,9 +316,9 @@ Task-level instructions and per-label definitions are visible during review. Sto
 | Pairwise / preference       | P2       | LLM output comparison, eval workflows                     |
 | NER / span review           | V2       | Deferred — see Section 19                                 |
 
-### 10.8 Stats screen
+### 10.8 Stats surface
 
-LabelLens is not just a label editor — it is a **dataset debugger**. The stats screen is treated as a first-class surface, not an afterthought.
+LabelLens is not just a label editor — it is a **dataset debugger**. The stats surface is treated as first-class, not an afterthought.
 
 Required:
 
@@ -333,7 +333,7 @@ Required:
 - Imported issue counts (when present in input)
 - Suggested next review queue
 
-**Every aggregation is a navigable filter.** Highlight any row on the stats screen and press `Enter` to jump into a review queue filtered to exactly the records behind that number. The mapping is mechanical: each stat row compiles to one of the queue forms in §10.3.
+**Every aggregation is a navigable filter.** Highlight any row on the stats surface and press `Enter` to jump into a review queue filtered to exactly the records behind that number. The mapping is mechanical: each stat row compiles to one of the queue forms in §10.3.
 
 | Stat row example                                  | Queue form                                          |
 | ------------------------------------------------- | --------------------------------------------------- |
@@ -487,7 +487,7 @@ A few product-visible data-model questions need explicit answers so behavior is 
 
 - **Multiple predictions per record.** When a record has more than one `Prediction`, LabelLens picks the one with the highest `confidence` as the **primary**. Missing confidence loses to any numeric value. Ties fall back to array order. The review screen shows the primary prominently on the label list (with `▸` and confidence %); alternatives render in a one-line strip immediately below the focus box (e.g. `also: regex.tx → utility (no conf) · model_v1 → food (0.31)`). The strip is keyboard-navigable so the reviewer can swap which prediction the primary view tracks without changing data.
 - **Rejected records on export.** Records with state `rejected` are **excluded** from the default JSONL export. They remain in the review log. A separate `--include-rejected` flag emits them with `label: null` for callers who need them.
-- **Skipped records — distinct state.** `skipped` is its **own** review state. It is **not** counted as `pending` and does **not** appear in the `pending` queue. Skipped records live in a dedicated `skipped` queue and are surfaced separately on the stats screen. Progress display reads `Reviewed: A+R+J / Total · Skipped: K · Pending: P`. Default JSONL export still excludes skipped records. See ADR 0003.
+- **Skipped records — distinct state.** `skipped` is its **own** review state. It is **not** counted as `pending` and does **not** appear in the `pending` queue. Skipped records live in a dedicated `skipped` queue and are surfaced separately on the stats surface. Progress display reads `Reviewed: A+R+J / Total · Skipped: K · Pending: P`. Default JSONL export still excludes skipped records. See ADR 0003.
 - **Undo and accept-then-relabel.** The review log is insert-only (each action is a new row). The current state of a record is the most recent non-undone entry. `u` (undo) inserts a compensating entry rather than deleting; the prior state is recoverable.
 - **Label set changes mid-review.** If the user adds a label to the config after reviews already exist, existing reviews remain valid. If the user **removes or renames** a label that has been used, LabelLens refuses to start and prints which records reference the missing label. The error message points at `labellens migrate --rename <old>:<new>` for renames — that command updates predictions, annotations, and the review log atomically, with a `.labellens.bak/` backup before commit. Removes still require a manual decision (re-ingest fresh, or remap to another label via `migrate --rename`). No silent migrations.
 
@@ -704,7 +704,7 @@ For the **boundary task**, see §14.5 — the rendering strategy preserves verti
 
 Switch active queue without leaving Review. `Shift+Q` and bare `:queue` open a modal overlay on top of the current Review screen; `j`/`k` move through built-in queues, `Enter` selects a non-empty queue and closes the overlay, and `Esc`/`q` cancel back to Review. Empty queues stay open on `Enter` so the reviewer can pick another queue. The overlay shows queue counts, progress bars, and a first-record preview for the highlighted queue.
 
-### 14.3 Stats screen
+### 14.3 Stats overlay
 
 See Section 10.8.
 
@@ -810,7 +810,7 @@ Each screen registers its own commands at mount; the palette is the filtered sub
 | `:by-label <l>`            | Filter to records carrying one label                   |
 | `:by-issue <type>`         | Filter to records with a specific issue type           |
 | `:marked`                  | Show records the reviewer has tagged                   |
-| `:stats`                   | Open the Stats screen                                  |
+| `:stats`                   | Open the Stats overlay                                 |
 | `:where`                   | Open the visual filter builder                         |
 | `:where <expr>`            | Switch to a raw `where:<expr>` queue                   |
 | `:export [format]`         | Export current queue or whole dataset                  |
@@ -894,7 +894,7 @@ Screens call `resolve(bindings, currentScope, keyEvent)` and dispatch the return
 | `i`       | `assistant.inquire`  | Ask LLM assistant                                        |
 | `g`       | `guidelines.show`    | Show guidelines                                          |
 | `q`       | `queue.switch`       | Switch queue                                             |
-| `t`       | `stats.show`         | Stats screen                                             |
+| `t`       | `stats.show`         | Stats overlay                                            |
 | `u`       | `record.undo`        | Undo last action                                         |
 | `/`       | `search.open`        | Search records                                           |
 | `j` / `k` | `record.next/prev`   | Next / previous record                                   |
@@ -1041,7 +1041,7 @@ The smallest version that proves the review-loop wedge while preserving the pers
 
 - Review screen with rendering strategy (§14.5)
 - Queue overlay
-- Stats screen with corrections, source-quality, reason breakdown, imported-issue counts
+- Stats surface with corrections, source-quality, reason breakdown, imported-issue counts
 - Guidelines viewer
 
 **LLM assistant**

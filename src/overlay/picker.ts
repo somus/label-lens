@@ -153,5 +153,5 @@ function reduceKey(state: PickerState, name: string): ReduceResult {
   if (ch.length === 1 && /^[\w \-_]$/.test(ch)) {
     return { overlay: packed(withFilter(state, state.filter + ch)), effects: [] };
   }
-  return { overlay: packed(state), effects: [] };
+  return { overlay: packed(state), effects: [], propagated: true };
 }

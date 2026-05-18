@@ -72,7 +72,7 @@ Read-only full-document view entered via `g d` chord on the review screen. Shows
 _Avoid_: Source view, raw view, file view.
 
 **Overlay**:
-A modal sub-surface that captures keypresses while open and commits an action when it closes. Three adapters: relabel **Picker** (`r`), **Note** prompt (`n`), **Assistant** panel (`i`, slice 11). Each Overlay owns its state, accepts a uniform `OverlayEvent` (key, stream token, cancel, commit), and emits data **Effects** (`close`, `commitDecision`, `updateNote`, `markAssistantViewed`) the screen interprets against the AppContext. While an Overlay is open the review-scope keymap is dormant — raw key events flow to the Overlay reducer.
+A modal sub-surface that captures keypresses while open and commits an action when it closes. Relabel **Picker** (`r`), **Note** prompt (`n`), **Assistant** panel (`i`, slice 11), Queue, Help, Guidelines, and Stats all use this seam. Each Overlay owns its state, accepts a uniform `OverlayEvent` (key, stream token, cancel, commit), and emits data **Effects** (`close`, `commitDecision`, `updateNote`, `markAssistantViewed`) the screen interprets against the AppContext. Text-input Overlays capture all keys; read-only and picker-style Overlays may explicitly propagate unclaimed keys back to the active command path.
 _Avoid_: Modal, dialog, popup. "Panel" is reserved for the assistant's internal panel structure.
 
 ## Relationships
@@ -82,8 +82,8 @@ _Avoid_: Modal, dialog, popup. "Panel" is reserved for the assistant's internal 
 - Each **Review entry** has exactly one **Review state** and a **Source of truth** tag.
 - A **Record** may carry zero or more **Tags**, independently of its **Review state**.
 - A **Queue** is a filter over **Records** (sometimes joined to **Review entries** for correction queries).
-- An open **Overlay** suspends the review-scope keymap; raw key events flow to the Overlay reducer until it closes. Opening the **Assistant** Overlay marks the current Record's **Source of truth** as `human+assistant` (ADR 0004).
-- **Stats screen** rows are navigable filters: every aggregation compiles to a **Queue**.
+- An open **Overlay** receives raw key events first. Claimed keys stay local; explicitly propagated keys continue through the active command path. Opening the **Assistant** Overlay marks the current Record's **Source of truth** as `human+assistant` (ADR 0004).
+- **Stats surface** rows are navigable filters: every aggregation compiles to a **Queue**.
 
 ## Example dialogue
 

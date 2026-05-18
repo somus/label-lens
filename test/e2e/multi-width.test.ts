@@ -5,7 +5,6 @@ import type { LabellensConfig } from "../../src/config/config.ts";
 import type { ResolvedDisplay } from "../../src/render/capability.ts";
 import { mountReviewScreen } from "../../src/screens/review.ts";
 import { mountSplash } from "../../src/screens/splash.ts";
-import { mountStatsScreen } from "../../src/screens/stats.ts";
 import { displayFor } from "../util/display.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
@@ -60,7 +59,7 @@ async function setupStats(
   display: ResolvedDisplay,
   size: { width: number; height: number },
 ) {
-  const { renderer, renderOnce, captureCharFrame } = await createTestRenderer(size);
+  const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer(size);
   const app = createAppContext({
     db: store.db,
     config: makeConfig(),
@@ -68,12 +67,9 @@ async function setupStats(
     requestRender: () => {},
     onQuit: () => {},
   });
-  mountStatsScreen({
-    renderer,
-    app,
-    onDrill: () => {},
-    onCancel: () => {},
-  });
+  mountReviewScreen({ renderer, app });
+  await renderOnce();
+  mockInput.pressKey("t");
   await renderOnce();
   return { captureCharFrame };
 }
@@ -106,16 +102,14 @@ describe("multi-width snapshot sweep (plan A16)", () => {
       expect(frame).toMatchSnapshot();
     });
 
-    test(`stats screen @ ${width}x${HEIGHT}`, async () => {
+    test(`stats overlay @ ${width}x${HEIGHT}`, async () => {
       using store = await openTmpStore({ ingest: "tiny.jsonl" });
       const { captureCharFrame } = await setupStats(store, TRUECOLOR_AUTO, {
         width,
         height: HEIGHT,
       });
       const frame = captureCharFrame();
-      if (width >= 120) {
-        expect(frame).toContain("Totals");
-      }
+      expect(frame).toContain("Stats");
       expect(frame).toMatchSnapshot();
     });
 

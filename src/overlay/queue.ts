@@ -113,7 +113,7 @@ export function reduceQueue(state: QueueState, event: OverlayEvent): ReduceResul
       effects: [],
     };
   }
-  return { overlay: packed(state), effects: [] };
+  return { overlay: packed(state), effects: [], propagated: true };
 }
 
 function commit(state: QueueState): ReduceResult {

@@ -57,7 +57,7 @@ export function reduceGuidelines(state: GuidelinesState, event: OverlayEvent): R
   if (name === "up") return scrolled(state, -1);
   if (name === "pagedown") return scrolled(state, GUIDELINES_PAGE);
   if (name === "pageup") return scrolled(state, -GUIDELINES_PAGE);
-  return { overlay: packed(state), effects: [] };
+  return { overlay: packed(state), effects: [], propagated: true };
 }
 
 function scrolled(state: GuidelinesState, delta: number): ReduceResult {

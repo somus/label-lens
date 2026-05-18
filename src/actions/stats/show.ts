@@ -3,11 +3,6 @@ import { allStats } from "../../store/stats.ts";
 import type { Command } from "../command.ts";
 
 export function openStats(ctx: import("../../app/context.ts").AppContext): void {
-  if (ctx.openStatsScreen) {
-    ctx.openStatsScreen();
-    return;
-  }
-
   const { sections } = allStats(ctx.db);
   ctx.openOverlay({ kind: "stats", state: openStatsOverlay(sections) });
 }

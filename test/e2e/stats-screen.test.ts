@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { createAppContext } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
 import { defaultDisplay } from "../../src/render/capability.ts";
-import { mountStatsScreen } from "../../src/screens/stats.ts";
+import { mountReviewScreen } from "../../src/screens/review.ts";
 import { insertReview } from "../../src/store/records.ts";
 import { DEFAULT_FIELDS, openTmpStore, type TmpStore } from "../util/tmp.ts";
 
@@ -17,10 +17,13 @@ function makeConfig(): LabellensConfig {
   };
 }
 
-async function setup(store: TmpStore) {
+async function setup(
+  store: TmpStore,
+  size: { width: number; height: number } = { width: 100, height: 40 },
+) {
   const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
-    width: 100,
-    height: 40,
+    width: size.width,
+    height: size.height,
   });
   const app = createAppContext({
     db: store.db,
@@ -29,31 +32,14 @@ async function setup(store: TmpStore) {
     requestRender: () => {},
     onQuit: () => {},
   });
-  let drilled: string | null = null;
-  let cancelled = false;
-  const handle = mountStatsScreen({
-    renderer,
-    app,
-    onDrill: (id) => {
-      drilled = id;
-    },
-    onCancel: () => {
-      cancelled = true;
-    },
-  });
+  mountReviewScreen({ renderer, app });
   await renderOnce();
-  return {
-    app,
-    mockInput,
-    renderOnce,
-    captureCharFrame,
-    drilled: () => drilled,
-    cancelled: () => cancelled,
-    destroy: handle.destroy,
-  };
+  mockInput.pressKey("t");
+  await renderOnce();
+  return { app, mockInput, renderOnce, captureCharFrame };
 }
 
-function seedCorrection(store: TmpStore): string {
+function seedCorrection(store: TmpStore): void {
   const id = store.db.all<{ id: string }>(
     sql`SELECT id FROM records ORDER BY row_index LIMIT 1`,
   )[0]!.id;
@@ -64,23 +50,60 @@ function seedCorrection(store: TmpStore): string {
     prev_label: "food",
     source_of_truth: "human",
   });
-  return id;
 }
 
-describe("stats screen e2e", () => {
+function seedDecisionBuckets(store: TmpStore): void {
+  const ids = store.db.all<{ id: string }>(sql`SELECT id FROM records ORDER BY row_index`);
+  insertReview(store.db, {
+    record_id: ids[0]!.id,
+    status: "accepted",
+    final_label: "food",
+    prev_label: "food",
+    source_of_truth: "human",
+  });
+  insertReview(store.db, {
+    record_id: ids[1]!.id,
+    status: "relabeled",
+    final_label: "travel",
+    prev_label: "food",
+    source_of_truth: "human",
+  });
+  insertReview(store.db, {
+    record_id: ids[2]!.id,
+    status: "rejected",
+    final_label: null,
+    prev_label: "shopping",
+    source_of_truth: "human",
+  });
+  insertReview(store.db, {
+    record_id: ids[3]!.id,
+    status: "skipped",
+    final_label: null,
+    prev_label: null,
+    source_of_truth: "human",
+  });
+}
+
+describe("stats overlay e2e", () => {
   test("renders core sections + first-drillable highlight + footer", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    seedCorrection(store);
+    seedDecisionBuckets(store);
     const { captureCharFrame } = await setup(store);
     const frame = captureCharFrame();
     expect(frame).toContain("Stats");
-    // Progress + Decisions sections moved to the sidebar's Totals block.
-    // Main pane keeps only navigable / drillable sections.
+    expect(frame).toContain("Progress:");
+    expect(frame).toContain("Total 10");
+    expect(frame).toContain("Reviewed 3");
+    expect(frame).toContain("Pending 6");
+    expect(frame).toContain("Decisions:");
+    expect(frame).toContain("Accepted 1");
+    expect(frame).toContain("Relabeled 1");
+    expect(frame).toContain("Rejected 1");
+    expect(frame).toContain("Skipped 1");
     expect(frame).toContain("Top corrections");
     expect(frame).toContain("food → travel");
     expect(frame).toContain("Suggested next queue");
     expect(frame).toContain("[j/k] navigate");
-    // Highlight marker (>) must appear on at least one drillable row.
     expect(frame).toMatch(/^.*>\s+/m);
     expect(frame).toMatchSnapshot();
   });
@@ -88,96 +111,86 @@ describe("stats screen e2e", () => {
   test("can drill to by-correction by stepping to the corrections section", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     seedCorrection(store);
-    const { mockInput, renderOnce, drilled, captureCharFrame } = await setup(store);
-    // Walk j until the highlight marker sits on `food → travel`, then RETURN.
+    const { app, mockInput, renderOnce } = await setup(store);
     for (let i = 0; i < 40; i++) {
-      const frame = captureCharFrame();
-      const hitLine = frame
-        .split("\n")
-        .find((ln) => ln.includes(">") && ln.includes("food → travel"));
-      if (hitLine) break;
+      const overlay = app.overlay;
+      if (overlay?.kind !== "stats") throw new Error("expected stats overlay");
+      const line = overlay.state.lines[overlay.state.highlight];
+      if (line?.kind === "row" && line.drillTo === "by-correction:food:travel") break;
       mockInput.pressKey("j");
       await renderOnce();
     }
     mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(drilled()).toBe("by-correction:food:travel");
+    expect(app.overlay).toBeNull();
+    expect(app.queueId).toBe("by-correction:food:travel");
   });
 
-  test("escape calls onCancel; q calls onCancel", async () => {
+  test("escape and q close the overlay", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const a = await setup(store);
     a.mockInput.pressEscape();
     await new Promise((r) => setTimeout(r, 30));
     await a.renderOnce();
-    expect(a.cancelled()).toBe(true);
-    a.destroy();
+    expect(a.app.overlay).toBeNull();
 
     const b = await setup(store);
     b.mockInput.pressKey("q");
     await b.renderOnce();
-    expect(b.cancelled()).toBe(true);
-    b.destroy();
+    expect(b.app.overlay).toBeNull();
   });
 
-  test("Enter on the initial highlight drills to a real queue id (no crash on first-line)", async () => {
+  test("Enter on the initial highlight drills to a real queue id", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { mockInput, renderOnce, drilled } = await setup(store);
+    const { app, mockInput, renderOnce } = await setup(store);
     mockInput.pressKey("RETURN");
+    await new Promise((r) => setTimeout(r, 30));
     await renderOnce();
-    expect(drilled()).toBeTruthy();
+    expect(app.overlay).toBeNull();
+    expect(app.queueId).not.toBe("pending");
   });
 
   test("j past the last drillable row clamps; k past the first clamps", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     seedCorrection(store);
-    const { mockInput, renderOnce, captureCharFrame } = await setup(store);
-    // Bash j 60 times; should park at the last drillable row.
+    const { app, mockInput, renderOnce } = await setup(store);
+    if (app.overlay?.kind !== "stats") throw new Error("expected stats overlay");
     for (let i = 0; i < 60; i++) {
       mockInput.pressKey("j");
       await renderOnce();
     }
-    const tail = captureCharFrame();
-    expect(tail).toContain(">");
-    // Bash k 60 times; should park at the first drillable row.
+    const tail = app.overlay.state.highlight;
+    mockInput.pressKey("j");
+    await renderOnce();
+    expect(app.overlay.state.highlight).toBe(tail);
+
     for (let i = 0; i < 60; i++) {
       mockInput.pressKey("k");
       await renderOnce();
     }
-    const head = captureCharFrame();
-    expect(head).toContain(">");
-  });
-
-  test("renderState sets activeScope to 'stats'", async () => {
-    // Scope is set on every render rather than at mount/destroy. After destroy
-    // it stays as 'stats' until the next screen's first render takes over —
-    // the orchestrator (cli/run.ts) guarantees a subsequent mountReview which
-    // sets scope to 'review' immediately. Tests must not rely on destroy
-    // performing scope cleanup; that would require try/finally bookkeeping
-    // that exception-safe per-render avoids.
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { app } = await setup(store);
-    expect(app.activeScope).toBe("stats");
-  });
-
-  test("opening stats from review overwrites scope on first render", async () => {
-    using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    const { renderer, renderOnce } = await createTestRenderer({ width: 100, height: 40 });
-    const app = createAppContext({
-      db: store.db,
-      config: makeConfig(),
-      display: defaultDisplay(),
-      requestRender: () => {},
-      onQuit: () => {},
-    });
-    app.activeScope = "review";
-    mountStatsScreen({
-      renderer,
-      app,
-      onDrill: () => {},
-      onCancel: () => {},
-    });
+    const head = app.overlay.state.highlight;
+    mockInput.pressKey("k");
     await renderOnce();
-    expect(app.activeScope as string).toBe("stats");
+    expect(app.overlay.state.highlight).toBe(head);
+  });
+
+  test("small terminals keep the highlighted stat row visible while scrolling", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    seedCorrection(store);
+    const { app, mockInput, renderOnce, captureCharFrame } = await setup(store, {
+      width: 80,
+      height: 16,
+    });
+
+    for (let i = 0; i < 8; i++) {
+      mockInput.pressKey("j");
+      await renderOnce();
+      if (app.overlay?.kind !== "stats") throw new Error("expected stats overlay");
+      const highlighted = app.overlay.state.lines[app.overlay.state.highlight];
+      if (highlighted?.kind !== "row") throw new Error("expected highlighted row");
+      const frame = captureCharFrame();
+      expect(frame).toContain(highlighted.display.trim().split(/\s{2,}/)[0]!);
+    }
   });
 });

@@ -1,15 +1,26 @@
-import type { Section, StatRow } from "../store/stats.ts";
+import type { QueueId } from "../store/queues/registry.ts";
+import { drillToQueue, type Section, type StatRow } from "../store/stats.ts";
 import type { OverlayEvent, ReduceResult } from "./types.ts";
 
-export type StatsLine = {
-  display: string;
-  isHeader: boolean;
+export type StatsLine =
+  | { kind: "section-header"; label: string }
+  | { kind: "row"; display: string; row: StatRow; drillTo: QueueId | null };
+
+export type StatsSummaryGroup = {
+  label: string;
+  items: { label: string; count: number }[];
 };
 
 export type StatsOverlayState = {
+  summary: StatsSummaryGroup[];
   lines: StatsLine[];
+  highlight: number;
   scroll: number;
+  pageSize: number;
 };
+
+export const DEFAULT_STATS_PAGE_SIZE = 20;
+const SUMMARY_SECTIONS = new Set(["Progress", "Decisions"]);
 
 function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
@@ -45,15 +56,46 @@ function formatRow(row: StatRow): string {
 }
 
 export function openStatsOverlay(sections: Section[]): StatsOverlayState {
+  const summary: StatsSummaryGroup[] = [];
   const lines: StatsLine[] = [];
   for (const s of sections) {
-    lines.push({ display: s.label, isHeader: true });
-    for (const row of s.rows) {
-      lines.push({ display: formatRow(row), isHeader: false });
+    if (SUMMARY_SECTIONS.has(s.label)) {
+      const items: StatsSummaryGroup["items"] = [];
+      for (const row of s.rows) {
+        if (row.kind === "progress") {
+          items.push({ label: row.bucket, count: row.count });
+        } else if (row.kind === "decision") {
+          items.push({ label: row.status, count: row.count });
+        }
+      }
+      summary.push({
+        label: s.label,
+        items,
+      });
+      continue;
     }
-    lines.push({ display: "", isHeader: false });
+    lines.push({ kind: "section-header", label: s.label });
+    for (const row of s.rows) {
+      lines.push({ kind: "row", display: formatRow(row), row, drillTo: drillToQueue(row) });
+    }
   }
-  return { lines, scroll: 0 };
+  return {
+    summary,
+    lines,
+    highlight: firstDrillable(lines),
+    scroll: 0,
+    pageSize: DEFAULT_STATS_PAGE_SIZE,
+  };
+}
+
+export function withStatsPageSize(state: StatsOverlayState, pageSize: number): StatsOverlayState {
+  const nextPageSize = Math.max(1, Math.floor(pageSize));
+  if (state.pageSize === nextPageSize) return state;
+  return {
+    ...state,
+    pageSize: nextPageSize,
+    scroll: scrollForHighlight(state.scroll, state.highlight, nextPageSize),
+  };
 }
 
 function packed(state: StatsOverlayState): { kind: "stats"; state: StatsOverlayState } {
@@ -68,19 +110,60 @@ export function reduceStatsOverlay(state: StatsOverlayState, event: OverlayEvent
   if (name === "escape" || name === "q") return { overlay: null, effects: [{ kind: "close" }] };
 
   if (name === "down" || name === "j") {
+    const highlight =
+      state.highlight >= 0 ? clampedDrillable(state.lines, state.highlight, 1) : state.highlight;
     return {
       overlay: packed({
         ...state,
-        scroll: Math.min(state.scroll + 1, Math.max(0, state.lines.length - 5)),
+        highlight,
+        scroll: scrollForHighlight(state.scroll, highlight, state.pageSize),
       }),
       effects: [],
     };
   }
   if (name === "up" || name === "k") {
+    const highlight =
+      state.highlight >= 0 ? clampedDrillable(state.lines, state.highlight, -1) : state.highlight;
     return {
-      overlay: packed({ ...state, scroll: Math.max(state.scroll - 1, 0) }),
+      overlay: packed({
+        ...state,
+        highlight,
+        scroll: scrollForHighlight(state.scroll, highlight, state.pageSize),
+      }),
       effects: [],
     };
   }
-  return { overlay: packed(state), effects: [] };
+  if (name === "return" || name === "enter") {
+    const line = state.highlight >= 0 ? state.lines[state.highlight] : undefined;
+    if (line?.kind === "row" && line.drillTo !== null) {
+      return { overlay: null, effects: [{ kind: "drill", queueId: line.drillTo }] };
+    }
+    return { overlay: packed(state), effects: [] };
+  }
+  return { overlay: packed(state), effects: [], propagated: true };
+}
+
+function firstDrillable(lines: StatsLine[]): number {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line.kind === "row" && line.drillTo !== null) return i;
+  }
+  return -1;
+}
+
+function clampedDrillable(lines: StatsLine[], from: number, dir: 1 | -1): number {
+  let i = from + dir;
+  while (i >= 0 && i < lines.length) {
+    const line = lines[i]!;
+    if (line.kind === "row" && line.drillTo !== null) return i;
+    i += dir;
+  }
+  return from;
+}
+
+function scrollForHighlight(scroll: number, highlight: number, pageSize: number): number {
+  if (highlight < 0) return scroll;
+  if (highlight < scroll) return highlight;
+  if (highlight >= scroll + pageSize) return highlight - pageSize + 1;
+  return scroll;
 }

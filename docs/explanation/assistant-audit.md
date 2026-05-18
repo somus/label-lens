@@ -34,7 +34,7 @@ When you navigate to a new record, the set is cleared. Each focus session starts
 
 - **Provenance audits**: `jq 'select(.source_of_truth == "human+assistant")' audit.jsonl` finds every record the LLM touched.
 - **Contamination claims**: if a downstream model trained on this dataset is suspected of LLM-leakage, you can quantify the exposure.
-- **Quality dashboards**: future stats screen rows could compare per-source rates between `human` and `human+assistant` annotations to detect anchoring bias.
+- **Quality dashboards**: future stats surface rows could compare per-source rates between `human` and `human+assistant` annotations to detect anchoring bias.
 
 ## What this does not record
 

@@ -4,6 +4,7 @@ import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/r
 import { type AppContext, enterReview } from "../app/context.ts";
 import { ASSISTANT_PRIVACY_NOTICE } from "../assistant/privacy_notice.ts";
 import { createChordResolver } from "../keymap/chord.ts";
+import type { Scope } from "../keymap/engine.ts";
 import { CONFIGURE_PROVIDERS, envVarFor } from "../overlay/configure-assistant.ts";
 import { applyEffects } from "../overlay/effects.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
@@ -11,6 +12,7 @@ import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint } from "../overlay/hints.ts";
 import type { QueueState } from "../overlay/queue.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
+import { withStatsPageSize } from "../overlay/stats-overlay.ts";
 import type {
   AssistantState,
   ConfigureAssistantState,
@@ -43,6 +45,7 @@ import { progressSegments } from "../render/progress-segments.ts";
 import { sanitizeStatusText } from "../render/sanitize.ts";
 import { Scrollbar } from "../render/scrollbar.ts";
 import { clampContentWidth, SectionHeader } from "../render/section-header.ts";
+import { renderStatsOverlay, statsVisibleRows } from "../render/stats-view.ts";
 import { Text, TextAttributes } from "../render/text.ts";
 import { borderForRole, resolveTheme } from "../render/theme.ts";
 import { issuesForRecord } from "../store/issues.ts";
@@ -324,17 +327,11 @@ export function mountReviewScreen(args: {
 
   app.requestRender = renderState;
 
-  const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
-    app.noteInput();
-    if (app.overlay) {
-      const result = reduceOverlay(app.overlay, { kind: "key", event });
-      app.overlay = result.overlay;
-      const queueId = app.queueId ?? initialQueueId;
-      applyEffects(app, queueId, result.effects, dispatchCommand);
-      if (mounted) renderState();
-      return;
-    }
-    const scope = app.docView ? "doc-view" : "review";
+  const dispatchKey = (
+    event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
+    scopeOverride?: Scope,
+  ) => {
+    const scope = scopeOverride ?? (app.docView ? "doc-view" : "review");
     app.activeScope = scope;
     const action = chord.feed(scope, {
       name: event.name,
@@ -344,6 +341,45 @@ export function mountReviewScreen(args: {
     });
     if (!action) return;
     void dispatch(registry, scope, app, action);
+  };
+
+  const dispatchPropagatedKey = (
+    event: { name: string; ctrl: boolean; shift: boolean; meta: boolean },
+    contextScope: Scope,
+  ) => {
+    app.activeScope = contextScope;
+    const action = chord.feed("global", {
+      name: event.name,
+      ctrl: event.ctrl,
+      shift: event.shift,
+      meta: event.meta,
+    });
+    if (!action) return;
+    void dispatch(registry, contextScope, app, action);
+  };
+
+  const onKey = (event: { name: string; ctrl: boolean; shift: boolean; meta: boolean }) => {
+    app.noteInput();
+    if (app.overlay) {
+      const sourceOverlay = app.overlay;
+      const result = reduceOverlay(
+        normalizeOverlayForTerminal(sourceOverlay, renderer.terminalHeight),
+        {
+          kind: "key",
+          event,
+        },
+      );
+      app.overlay = result.overlay;
+      const queueId = app.queueId ?? initialQueueId;
+      applyEffects(app, queueId, result.effects, dispatchCommand);
+      if (result.propagated) {
+        dispatchPropagatedKey(event, propagatedScope(sourceOverlay, app));
+      } else if (mounted) {
+        renderState();
+      }
+      return;
+    }
+    dispatchKey(event);
   };
 
   /**
@@ -378,6 +414,24 @@ export function mountReviewScreen(args: {
       renderer.off("resize", onResize);
     },
   };
+}
+
+function normalizeOverlayForTerminal(overlay: Overlay, termHeight: number): Overlay {
+  if (overlay.kind !== "stats") return overlay;
+  return {
+    kind: "stats",
+    state: withStatsPageSize(
+      overlay.state,
+      statsVisibleRows(overlay.state.summary.length, termHeight),
+    ),
+  };
+}
+
+function propagatedScope(overlay: Overlay, app: AppContext): Scope {
+  if (overlay.kind === "stats") return "stats";
+  if (overlay.kind === "queue") return "queue";
+  if (overlay.kind === "help") return overlay.state.scope;
+  return app.docView ? "doc-view" : "review";
 }
 
 function contextStripFor(
@@ -1028,44 +1082,6 @@ function truncateEnd(s: string, max: number): string {
   if (s.length <= max) return s;
   if (max === 1) return "…";
   return `${s.slice(0, max - 1)}…`;
-}
-
-function renderStatsOverlay(
-  state: import("../overlay/stats-overlay.ts").StatsOverlayState,
-  display: ResolvedDisplay,
-  termWidth: number,
-  termHeight: number,
-): ReturnType<typeof Box> {
-  const PAGE = 20;
-  const visible = state.lines.slice(state.scroll, state.scroll + PAGE);
-  const more = state.lines.length - state.scroll - visible.length;
-  return modalBox(
-    display,
-    termWidth,
-    termHeight,
-    0.7,
-    `Stats${more > 0 ? `   (+${more} more)` : ""}`,
-    Box(
-      { flexDirection: "row", flexGrow: 1, overflow: "hidden" },
-      Box(
-        { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
-        ...visible.map((line) =>
-          Text({
-            content: line.display,
-            attributes: line.isHeader ? TextAttributes.BOLD : TextAttributes.DIM,
-          }),
-        ),
-      ),
-      Scrollbar({
-        display,
-        total: state.lines.length,
-        visible: PAGE,
-        scrollTop: state.scroll,
-        caps: true,
-      }),
-    ),
-    Text({ content: " ↑/↓ scroll · esc close", attributes: TextAttributes.DIM }),
-  );
 }
 
 function pickerRow(

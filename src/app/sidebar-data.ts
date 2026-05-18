@@ -10,7 +10,7 @@ import type { StoredReview } from "../types.ts";
  * Two modes:
  *   - `queue` — for the review screen. Carries current queue position +
  *     session counters + queue progress + per-type signal counts.
- *   - `stats` — for the stats screen. Replaces counters/progress/signals with
+ *   - `stats` — for the stats surface. Replaces counters/progress/signals with
  *     a totals block (Total / Reviewed / Pending / Accepted / Relabeled /
  *     Rejected / Skipped).
  */
