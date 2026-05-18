@@ -419,10 +419,7 @@ function modalBox(
   const border = borderForRole(display, "overlay");
   const t = resolveTheme(display);
   const overlayBg = t.bg.overlay !== "transparent" ? t.bg.overlay : "black";
-  // Cap at the same 160ch ceiling clampContentWidth uses for main-column
-  // sections — keeps modals readable on 200+ col terminals without
-  // stretching to the full screen width.
-  const modalWidth = Math.max(50, Math.min(160, Math.floor(termWidth * widthFraction)));
+  const modalWidth = Math.max(50, Math.min(80, Math.floor(termWidth * widthFraction)));
   const leftOffset = Math.max(0, Math.floor((termWidth - modalWidth - 2) / 2));
   const topOffset = Math.max(1, Math.floor(termHeight * 0.12));
   const modalHeight = Math.max(12, termHeight - topOffset * 2 - 2);
@@ -689,9 +686,11 @@ function renderGuidelines(
   const dashed = applyQuadrantHeaders(lines.slice(start).join("\n"));
   const moreAbove = start > 0;
   const titleSuffix = total > 1 ? `   line ${start + 1}/${total}` : "";
-  // Approximation for the scrollbar's visible window — markdown render
-  // height varies per node, so the reducer's page constant is a hint, not
-  // a pixel-perfect viewport mapping.
+  // Scrollbar visible window scales with modal height so the thumb is
+  // proportional on tall terminals instead of pinned to GUIDELINES_PAGE
+  // (10) which made the bar look wedged near the top on 60+ row screens.
+  const modalHeight = Math.max(12, termHeight - Math.floor(termHeight * 0.12) * 2 - 2);
+  const visiblePage = Math.max(GUIDELINES_PAGE, modalHeight - 6);
   return modalBox(
     display,
     termWidth,
@@ -707,7 +706,7 @@ function renderGuidelines(
       Scrollbar({
         display,
         total,
-        visible: GUIDELINES_PAGE,
+        visible: visiblePage,
         scrollTop: start,
         caps: true,
       }),
@@ -746,7 +745,12 @@ function renderHelp(
   termHeight: number,
 ): ReturnType<typeof Box> {
   const rich = display.color === "truecolor" || display.color === "256";
-  const visible = state.entries.slice(state.scroll, state.scroll + HELP_PAGE);
+  // Dynamic page = modal inner height (modalHeight ≈ 0.76 * termHeight - 2,
+  // minus header + footer + padding ≈ 6 rows). Fall back to HELP_PAGE when
+  // termHeight is tiny so the visible slice is never negative.
+  const modalHeight = Math.max(12, termHeight - Math.floor(termHeight * 0.12) * 2 - 2);
+  const pageSize = Math.max(HELP_PAGE, modalHeight - 6);
+  const visible = state.entries.slice(state.scroll, state.scroll + pageSize);
   const more = state.entries.length - state.scroll - visible.length;
   // Plan G3: insert section sub-headers when the entry's category flips.
   // Categories come from command-name prefix (`palette`, `queue`, `record`,
@@ -805,7 +809,7 @@ function renderHelp(
       Scrollbar({
         display,
         total: state.entries.length,
-        visible: HELP_PAGE,
+        visible: pageSize,
         scrollTop: state.scroll,
         caps: true,
       }),
