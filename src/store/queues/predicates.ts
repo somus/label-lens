@@ -30,7 +30,8 @@ export function latestEffectiveStatus(status: string): SQL {
 }
 
 // Latest non-undone, non-compensated review's `final_label` equals `label`.
-// NULL final_label (rejected) intentionally does not match.
+// Rejected reviews carry NULL `final_label`; SQL's `NULL = <literal>` is NULL
+// (not true), so rejected records correctly fail to match.
 export function latestEffectiveFinalLabel(label: string): SQL {
   return sql`(
     SELECT er.final_label FROM effective_reviews er

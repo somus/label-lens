@@ -28,5 +28,4 @@ The prefix is detected before tokenization (regex `^\s*include-orphans:\s*`), st
 
 - The `orphan` column remains exposed in the DSL but is now a dead letter without `include-orphans:` — `where:orphan = 1` returns empty because `orphan = 1 AND orphan = 0` is unsatisfiable.
 - `where-parser.test.ts` test for `orphan = 1` was rewritten to use the prefix. No other built-in test was affected (none asserted orphan-inclusive `where:` semantics).
-- `CHANGELOG.md` notes the behavioural change.
 - The `predicateQueue(...)` builder API (used by the visual predicate builder) does **not** wrap — only the DSL boundary `parseWhere` does. The builder explicitly hides `orphan` (`BUILDER_COLUMNS`), so it can't produce orphan-bearing predicates anyway.

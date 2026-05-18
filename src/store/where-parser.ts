@@ -256,7 +256,7 @@ export function parseWhere(expr: string): QueueDefinition {
   const compiled = compilePredicate(predicate);
   return {
     id: `where:${expr}`,
-    label: `Where: ${serializePredicate(predicate)}`,
+    label: `Where: ${serializePredicate(predicate)}${includeOrphans ? " (with orphans)" : ""}`,
     query: { where: includeOrphans ? compiled : and(nonOrphan(), compiled) },
   };
 }

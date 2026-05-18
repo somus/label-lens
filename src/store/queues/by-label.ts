@@ -13,6 +13,9 @@ import type { QueueDefinition } from "./registry.ts";
  * its predicted label. A naive `COALESCE(final_label, primary_label)` would
  * fall through to the prediction on rejection, which is the opposite of the
  * intended semantics.
+ *
+ * The LIMIT 1 / latest-effective semantics are encapsulated in
+ * `latestEffectiveFinalLabel()`; see ADR 0007.
  */
 export function byLabel(value: string): QueueDefinition {
   if (value.length === 0) throw new Error("by-label needs <label>");

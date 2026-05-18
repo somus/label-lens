@@ -1,6 +1,7 @@
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { Db } from "../db.ts";
 import { recordsWithPrimary } from "../schema.ts";
+import { nonOrphan } from "./predicates.ts";
 import type { QueueDefinition } from "./registry.ts";
 
 export function queueCount(db: Db, def: QueueDefinition): number {
@@ -11,10 +12,7 @@ export function queueCount(db: Db, def: QueueDefinition): number {
 
 export function nonOrphanRecordCount(db: Db): number {
   return (
-    db
-      .select({ n: sql<number>`COUNT(*)` })
-      .from(recordsWithPrimary)
-      .where(eq(recordsWithPrimary.orphan, false))
-      .get()?.n ?? 0
+    db.select({ n: sql<number>`COUNT(*)` }).from(recordsWithPrimary).where(nonOrphan()).get()?.n ??
+    0
   );
 }
