@@ -1,7 +1,7 @@
 /**
  * Pure fixture generator. Consumed by:
- *   - scripts/gen-fixtures.ts (writes committed fixtures under test/fixtures/)
- *   - scripts/seed-dev.ts     (writes dev playground at /tmp/llens-dev)
+ *   - dev/gen-fixtures.ts (writes committed fixtures under test/fixtures/)
+ *   - dev/seed-dev.ts     (writes dev playground at /tmp/llens-dev)
  *
  * Determinism: mulberry32 PRNG over 32-bit integer math. Same seed → same
  * record sequence across Bun versions. Output predictions/issues carry no
@@ -181,7 +181,7 @@ export type BoundaryDoc = { id: string; lines: { text: string; truth: BoundaryLa
 
 /**
  * Hand-crafted documents used by both the fixture and dev playground.
- * Templates live in scripts/fixtures/boundary-docs.ts so the long literal
+ * Templates live in dev/fixtures/boundary-docs.ts so the long literal
  * data does not bloat the generator module.
  */
 import { DOC_TEMPLATES_LARGE, DOC_TEMPLATES_SMALL } from "./boundary-docs.ts";
@@ -194,6 +194,14 @@ export type BoundaryOptions = {
    */
   size: "small" | "large";
   seed: number;
+  /**
+   * Inject a second prediction source (`model_v1`) on ~30% of records so
+   * the agreement + alternatives rows in the signals region exercise
+   * under the boundary task. Off by default — committed fixtures keep
+   * the single-source `rule.entry_boundary` baseline for byte
+   * reproducibility.
+   */
+  withMultiSource?: boolean;
 };
 
 export function generateBoundary(opts: BoundaryOptions): GeneratedSet {
@@ -217,11 +225,28 @@ export function generateBoundary(opts: BoundaryOptions): GeneratedSet {
       const predLabel = correct ? line.truth : pick(rand, BOUNDARY_LABELS);
       const conf = clamp(0.5 + (correct ? rand() * 0.5 : -rand() * 0.3));
 
-      const pred: GeneratedPrediction = {
-        label: predLabel,
-        confidence: round(conf, 2),
-        source: "rule.entry_boundary",
-      };
+      const predictions: GeneratedPrediction[] = [
+        {
+          label: predLabel,
+          confidence: round(conf, 2),
+          source: "rule.entry_boundary",
+        },
+      ];
+
+      // Optional second source so the agreement + alternatives rows
+      // exercise under the boundary task. Roughly 30% of records carry
+      // it; the source agrees ~60% of the time to make disagreement a
+      // realistic minority signal.
+      if (opts.withMultiSource && rand() < 0.3) {
+        const secondCorrect = rand() < 0.6;
+        const secondLabel = secondCorrect ? line.truth : pick(rand, BOUNDARY_LABELS);
+        predictions.push({
+          label: secondLabel,
+          confidence: round(0.4 + rand() * 0.4, 2),
+          source: "model_v1",
+        });
+      }
+
       // context_before / context_after omitted at doc boundaries so the JSONL
       // matches the "undefined means absent" convention in InputRecord and
       // `if (rec.context_before)` consumers cleanly skip first/last lines.
@@ -230,7 +255,7 @@ export function generateBoundary(opts: BoundaryOptions): GeneratedSet {
         text: line.text,
         ...(before.length > 0 ? { context_before: before } : {}),
         ...(after.length > 0 ? { context_after: after } : {}),
-        predictions: [pred],
+        predictions,
         meta: { document_id: doc.id },
       };
       records.push(record);
@@ -239,6 +264,16 @@ export function generateBoundary(opts: BoundaryOptions): GeneratedSet {
   }
   return { records, truth };
 }
+
+/**
+ * Extra classification labels used by seed-dev's `--with-many-labels` flag.
+ * Bumps the configured label set past 9 so the `+N more (r)` chip-rail
+ * hint exercises. Templates don't target these labels, so they appear
+ * only as occasional `regex.simple`/`model_v1` mis-predictions if at
+ * all — usually they sit unused in the config and surface only via the
+ * picker overlay's `r` flow.
+ */
+export const EXTRA_LABELS = ["entertainment", "healthcare", "education", "fitness"] as const;
 
 export function serializeJsonl(rows: ReadonlyArray<unknown>): string {
   return `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`;

@@ -11,6 +11,7 @@
       "src/**/*.ts",
       "test/**/*.ts",
       "scripts/**/*.ts",
+      "dev/**/*.ts",
       "*.json",
       "*.md",
       "!**/node_modules",
@@ -39,6 +40,27 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "../dev": "Dev-only tooling (seeding, fixtures, perf baselines) cannot ship in the production binary. Move the shared helper into src/ if you need it at runtime.",
+                  "../../dev": "Dev-only tooling cannot ship in the production binary.",
+                  "../../../dev": "Dev-only tooling cannot ship in the production binary."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double",

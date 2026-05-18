@@ -42,7 +42,7 @@ For tests that don't need a db, `tmpdir({ prefix })` returns just `{ path }` wit
 Need an in-memory dataset of N records without writing a new fixture file? Import the deterministic generator directly:
 
 ```ts
-import { generateClassification, generateBoundary } from "../../scripts/fixtures/generator.ts";
+import { generateClassification, generateBoundary } from "../../dev/fixtures/generator.ts";
 
 const { records, truth } = generateClassification({ seed: 7, count: 250 });
 const boundary = generateBoundary({ size: "large", seed: 1 });

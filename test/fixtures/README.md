@@ -1,6 +1,6 @@
 # Test fixtures
 
-Five JSONL files shared by unit, integration, and perf tests. All five are committed; the four generated fixtures are byte-reproducible from `scripts/gen-fixtures.ts` against fixed seeds.
+Five JSONL files shared by unit, integration, and perf tests. All five are committed; the four generated fixtures are byte-reproducible from `dev/gen-fixtures.ts` against fixed seeds.
 
 | File | Records | Source | Seed | Purpose |
 | --- | ---: | --- | ---: | --- |
@@ -21,12 +21,12 @@ Five JSONL files shared by unit, integration, and perf tests. All five are commi
 ## Generator
 
 ```
-bun scripts/gen-fixtures.ts small         # one target
-bun scripts/gen-fixtures.ts --all         # all four generated fixtures
-bun scripts/gen-fixtures.ts boundary --out /tmp/out.jsonl
+bun dev/gen-fixtures.ts small         # one target
+bun dev/gen-fixtures.ts --all         # all four generated fixtures
+bun dev/gen-fixtures.ts boundary --out /tmp/out.jsonl
 ```
 
-The generator lives in `scripts/fixtures/generator.ts` and is shared with `scripts/seed-dev.ts` (dev playground). Deterministic mulberry32 PRNG; bit-stable across Bun versions.
+The generator lives in `dev/fixtures/generator.ts` and is shared with `dev/seed-dev.ts` (dev playground). Deterministic mulberry32 PRNG; bit-stable across Bun versions.
 
 ## Source-accuracy distribution (small/medium/large)
 

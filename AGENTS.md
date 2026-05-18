@@ -106,8 +106,11 @@ bun run dev:up -- --reset                    # wipe + reseed before launching
 bun run dev:up -- --count 1000 --seed 42     # bigger / different dataset (only on first init or --reset)
 bun run dev:up -- --with-marks 5             # pre-tag N records as marked (default 5)
 bun run dev:up -- --with-reviews 8           # pre-insert N reviews — half accepted, half relabeled (default 8)
+bun run dev:up -- --with-notes 4             # attach a short note to N random records (default 4; exercises the prediction-block `note` row)
 bun run dev:up -- --with-duplicates 3        # inject an exact-duplicate cluster of N records (default 3, 0 disables; needs --count >= 50)
-bun run dev:up -- --no-prefill               # skip the marks + reviews prefill entirely
+bun run dev:up -- --with-many-labels         # extend classification `config.labels` past 9 so the chip rail `+N more (r)` hint exercises
+bun run dev:up -- --with-boundary-multi-source --task boundary  # add a second source (model_v1) to ~30% of boundary records so agreement / alternatives rows render
+bun run dev:up -- --no-prefill               # skip the marks + reviews + notes prefill entirely
 LL_DEV_DIR=/tmp/foo bun run dev:up           # alternate dir
 ```
 
@@ -117,7 +120,7 @@ Signals (`flagged`, `by-issue:low_confidence`, `by-issue:source_disagreement`, `
 
 Underlying primitive is `bun run seed` (wipes + generates without launching the TUI). Use that when you want to regenerate data without entering the TUI.
 
-Record generation (vendor templates + mulberry32 PRNG) lives in `scripts/fixtures/generator.ts` and is shared between `seed-dev` (dev playground) and `scripts/gen-fixtures.ts` (committed `test/fixtures/{small,medium,large,boundary}.jsonl`). Both paths use the same deterministic source so dev data and test fixtures stay aligned. To regenerate the committed fixtures: `bun scripts/gen-fixtures.ts --all`.
+Record generation (vendor templates + mulberry32 PRNG) lives in `dev/fixtures/generator.ts` and is shared between `seed-dev` (dev playground) and `dev/gen-fixtures.ts` (committed `test/fixtures/{small,medium,large,boundary}.jsonl`). Both paths use the same deterministic source so dev data and test fixtures stay aligned. To regenerate the committed fixtures: `bun dev/gen-fixtures.ts --all`.
 
 To exercise the compiled binary path (parser.worker bundling, real install layout) instead of source:
 
