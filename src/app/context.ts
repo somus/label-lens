@@ -62,13 +62,6 @@ export type AppContext = {
    * `switchQueue` so the <200ms target (PRD §16.1) holds at 50K records.
    */
   hasCursor(queueId: QueueId): boolean;
-  /**
-   * Re-runs the underlying query for every cursor opened so far. Called after
-   * background work (e.g. the signals worker) writes rows that affect queue
-   * membership — the `flagged` and `by-issue:*` cursors otherwise hold stale
-   * row sets until the user navigates away and back.
-   */
-  refreshAllCursors(): void;
   flash: FlashMessage | null;
   setFlash(message: string, kind: FlashKind, ttlMs?: number): void;
   clearFlash(): void;
@@ -264,9 +257,6 @@ export function createAppContext(args: {
     },
     hasCursor(queueId) {
       return cursors.has(queueId);
-    },
-    refreshAllCursors() {
-      for (const cursor of cursors.values()) cursor.refresh();
     },
     setFlash(message, kind, ttlMs) {
       const duration = ttlMs ?? DEFAULT_FLASH_TTL[kind];

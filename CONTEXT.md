@@ -54,7 +54,7 @@ A record whose content-hash id no longer matches anything in the current ingest 
 A SQL-backed filter over records. Built-in: `pending`, `low-confidence`, `disagreements`, `flagged`, `marked`, `skipped`, `orphans`, `by-source:<s>`, `by-reason:<r>`, `by-label:<l>`, `by-issue:<t>`, `by-correction:<from>:<to>`. Power users compose with `:where`. Every built-in queue except `orphans` excludes orphan records.
 
 **Cursor**:
-The reviewer's position within a **Queue** — index into the ordered list of pending records the queue resolves to. One Cursor per Queue, persisted at app scope so screen switches and queue switches preserve focus. Reset when the queue is invalidated (re-ingest, re-prioritize, label set change).
+The reviewer's position within a **Queue** — index into the ordered list of pending records the queue resolves to. One Cursor per Queue, persisted at app scope so screen switches and queue switches preserve focus. Refreshed lazily on next access — fresh cursors re-query from scratch; focused-cursor refreshes after a decision/undo go through `cursor.refresh()` at the call site.
 _Avoid_: Position, pointer, head (overloaded with linked-list pointers).
 
 **Document**:
