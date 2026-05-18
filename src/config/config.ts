@@ -63,6 +63,34 @@ export type ClassificationConfig = {
   previewLines: number;
 };
 
+/**
+ * Optional LLM assistant (PRD §10.5). Off by default. First press of `i` over
+ * a session with `enabled: false` opens the configure overlay; choice is then
+ * persisted back here. `apiKeyEnvVar` is the name of an env var the runtime
+ * reads at query time — the key itself is never stored in the config file.
+ */
+export type AssistantConfig = {
+  enabled: boolean;
+  provider?: string;
+  model?: string;
+  apiKeyEnvVar?: string;
+  ollamaUrl?: string;
+  privacyAcknowledged?: boolean;
+};
+
+/**
+ * Returns null when the (`--local-only`, `assistant.provider`) combination is
+ * valid, else a short error message. Caller logs + exits. Ollama is the only
+ * provider that doesn't leave the machine.
+ */
+export function validateLocalOnly(config: LabellensConfig, localOnly: boolean): string | null {
+  if (!localOnly) return null;
+  const provider = config.assistant?.provider;
+  if (!provider) return null;
+  if (provider === "ollama") return null;
+  return `--local-only set but assistant.provider is '${provider}' (remote). Use 'ollama' or omit assistant config.`;
+}
+
 export type LabellensConfig = {
   task: "classification" | "boundary";
   labels: LabelConfigEntry[];
@@ -80,6 +108,7 @@ export type LabellensConfig = {
   };
   display?: DisplayConfig;
   navigation?: NavigationConfig;
+  assistant?: AssistantConfig;
 };
 
 export function defaultConfig(args: {
@@ -120,6 +149,7 @@ export function defaultConfig(args: {
     navigation: {
       smartNext: false,
     },
+    assistant: { enabled: false },
   };
 }
 

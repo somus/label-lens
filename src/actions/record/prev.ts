@@ -5,5 +5,8 @@ export const prev: Command = {
   scope: "review",
   binding: "k",
   enabled: (ctx) => ctx.cursor !== null,
-  run: (ctx) => ctx.cursor?.prev(),
+  run: (ctx) => {
+    ctx.cursor?.prev();
+    ctx.clearViewedAssistant();
+  },
 };

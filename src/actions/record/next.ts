@@ -5,5 +5,10 @@ export const next: Command = {
   scope: "review",
   binding: "j",
   enabled: (ctx) => ctx.cursor !== null,
-  run: (ctx) => ctx.cursor?.next(),
+  run: (ctx) => {
+    ctx.cursor?.next();
+    // ADR 0004: assistant exposure is per-focus-session. Moving to a new
+    // record discards prior viewing.
+    ctx.clearViewedAssistant();
+  },
 };

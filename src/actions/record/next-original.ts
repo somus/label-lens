@@ -19,7 +19,10 @@ function stepOriginal(ctx: import("../../app/context.ts").AppContext, direction:
   if (direction === 1) pending.next();
   else pending.prev();
   const target = pending.current();
-  if (target) ctx.cursor.seek(target.id);
+  if (target) {
+    ctx.cursor.seek(target.id);
+    ctx.clearViewedAssistant();
+  }
 }
 
 export const nextOriginal: Command = {

@@ -103,6 +103,28 @@ export const reviews = sqliteTable(
   ],
 );
 
+/**
+ * Cached LLM assistant responses keyed by (record_id, prompt_hash) per
+ * PRD §10.5. `prompt_hash` includes provider/model/template version so
+ * swapping any of those invalidates stale entries automatically.
+ */
+export const assistantQueries = sqliteTable(
+  "assistant_queries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    recordId: text("record_id")
+      .notNull()
+      .references(() => records.id, { onDelete: "cascade" }),
+    promptHash: text("prompt_hash").notNull(),
+    responseJson: text("response_json").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [
+    index("idx_assistant_queries_record_hash").on(t.recordId, t.promptHash),
+    index("idx_assistant_queries_created").on(t.createdAt),
+  ],
+);
+
 export const recordTags = sqliteTable(
   "record_tags",
   {

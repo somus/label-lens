@@ -125,6 +125,20 @@ export type AppContext = {
   paletteHistory: string[];
   pushPaletteHistory(entry: string): void;
   /**
+   * Per-focus-session tracking: record ids whose assistant panel has been
+   * opened. Cleared on cursor navigation (`record.next` / `record.prev`).
+   * Read at decision-commit time to tag `source_of_truth = 'human+assistant'`
+   * for any record that saw the assistant during this focus session (ADR 0004).
+   */
+  viewedAssistant: Set<string>;
+  clearViewedAssistant(): void;
+  /**
+   * True when `--local-only` was set on the CLI. Threaded into provider
+   * validation so a misconfigured remote provider aborts before any network
+   * call.
+   */
+  localOnly: boolean;
+  /**
    * Set by the screen at mount so palette/help commands can read the active
    * registry without each command importing the global one. Unset in unit
    * tests that drive a single Command directly.
@@ -143,6 +157,7 @@ export function createAppContext(args: {
   requestRender: () => void;
   onQuit: () => void;
   motionOptions?: Pick<MotionSchedulerOptions, "now" | "setInterval" | "clearInterval">;
+  localOnly?: boolean;
 }): AppContext {
   const cursors = new Map<QueueId, Cursor>();
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -280,6 +295,11 @@ export function createAppContext(args: {
       ctx.requestRender();
     },
     paletteHistory: [],
+    viewedAssistant: new Set<string>(),
+    clearViewedAssistant() {
+      ctx.viewedAssistant.clear();
+    },
+    localOnly: args.localOnly ?? false,
     pushPaletteHistory(entry) {
       const trimmed = entry.trim();
       if (trimmed.length === 0) return;
