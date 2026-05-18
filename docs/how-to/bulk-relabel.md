@@ -2,6 +2,10 @@
 
 You realised that everything tagged `shopping` should actually be `utility`. Three paths depending on scale.
 
+<a href="../media/bulk-relabel.webm">
+  <img src="../media/bulk-relabel.gif" alt="Filtering to a label queue and relabeling each matching record" width="800">
+</a>
+
 ## Path A — visual sweep via queue
 
 Best when the rename is judgment-dependent (some `shopping` records really are shopping).
@@ -40,10 +44,10 @@ labellens migrate --rename shopping:utility
 This:
 
 1. Backs up `.labellens/state.db` to `.labellens/.bak`.
-2. Rewrites every `reviews.final_label = 'shopping'` to `'utility'` and every `prev_label = 'shopping'` to `'utility'`.
+2. Rewrites stored parsed label columns from `shopping` to `utility` across predictions and reviews.
 3. Prints the row count it rewrote.
 
-The source JSONL is never touched. Predictions stay as-is — only your reviews are remapped.
+The source JSONL is never touched. Parsed prediction and review label columns in `.labellens/state.db` are remapped together so queues, stats, and validation agree after the rename.
 
 Use migrate when the label is being **renamed**, not when individual records need a different decision. Once you've migrated, remove `shopping` from `config.labels` and re-launch — LabelLens validates that every label referenced in stored reviews is still configured (exits 2 otherwise).
 

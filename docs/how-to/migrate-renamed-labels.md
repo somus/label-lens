@@ -4,6 +4,10 @@ You decided `shopping` should be `utility` (or `policy:spam` should be `ham`). Y
 
 `labellens migrate --rename` rewrites the DB in place. Source JSONL untouched.
 
+<a href="../media/migrate.webm">
+  <img src="../media/migrate.gif" alt="Renaming a label with migrate and checking the stats report" width="800">
+</a>
+
 ## One command
 
 ```sh
@@ -71,7 +75,7 @@ The file is a single SQLite DB. Atomic copy is safe between sessions.
 
 ## What migrate does not do
 
-- **Doesn't touch predictions.** Only `reviews.final_label` and `reviews.prev_label` are remapped. The original prediction sources are preserved.
+- **Doesn't touch source JSONL.** Parsed prediction and review label columns in `.labellens/state.db` are remapped together; raw input rows and prediction source metadata are preserved.
 - **Doesn't merge two labels.** If both `shopping` and `clothing` should become `apparel`, run two migrations:
 
   ```sh

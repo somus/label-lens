@@ -43,9 +43,9 @@ Each tape includes a `Hide` block at the top that:
 
 After `Show`, the visible portion of the recording begins. Sleep durations are tuned for clarity — bump them if a future change makes the TUI take longer to settle.
 
-## Assistant tape (mocked provider)
+## Assistant tapes (mocked provider)
 
-`assistant.tape` relies on the env-gated mock seam in `src/assistant/mock-bootstrap.ts`. Setting `LABELLENS_ASSISTANT_MOCK_FILE` to a JSON file replaces the real `queryAssistant` call with a canned response, so the recording stays offline and deterministic. The seam is dev-only — it is *not* invoked in the compiled release binary unless the env var is set.
+Assistant-focused tapes rely on the env-gated mock seam in `src/assistant/mock-bootstrap.ts`. Setting `LABELLENS_ASSISTANT_MOCK_FILE` to a JSON file replaces the real `queryAssistant` call with a canned response, so recordings stay offline and deterministic. The seam is dev-only — it is *not* invoked in the compiled release binary unless the env var is set.
 
 ## When to re-record
 
