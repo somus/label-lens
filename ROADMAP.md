@@ -1,165 +1,69 @@
 # LabelLens roadmap
 
-Features deferred past v0.1. Listed by pre-v1 release bucket (`v0.2`, `v0.3`, etc.), not by date. The goal is to ship major features as separate 0.x releases before v1.0. Items move out of this file when they ship.
+Features deferred past v0.1. Listed by pre-v1 release bucket (`v0.2`, `v0.3`, etc.), not by date. The goal is to ship coherent minor-version bundles before v1.0. Items move out of this file when they ship.
 
 For shipped behaviour, see [PRD.md](./PRD.md). For load-bearing design decisions, see [docs/adr/](./docs/adr/).
 
 ## Pre-v1 0.x releases
 
-Larger features deferred until the MVP loop is polished. Each item below was grilled in a v2.9 design pass — scope, design choices, and open questions are captured.
+Larger features deferred until the MVP loop is polished. Each bucket below matches the GitHub milestone with the same name.
 
-### v0.2 Active learning / prioritization (phased: heuristic first, model later)
+### v0.2 Reviewer ergonomics and smart prioritization
 
-**Scope.** As reviewers commit decisions, re-weight the built-in prioritization signals (`low_confidence`, `source_disagreement`, `exact_duplicate`) based on how strongly each signal correlates with relabels in the current session. Updates feed the `smart-pending` cursor's composite score so the next-record order reflects what's been learned.
+- **Keybinding presets (#117).** Add built-in `simple` and `vim` keybinding presets, make `simple` the default for missing `keys.preset`, and let projects define config-local custom presets. The current vim-inspired keymap remains available as `vim`.
+- **Active learning and smart prioritization (#93).** As reviewers commit decisions, re-weight built-in prioritization signals (`low_confidence`, `source_disagreement`, `exact_duplicate`) based on current-session relabel lift. Imported issue scores stay fixed, learned weights stay session-local, and reranking must not jump current focus.
+- **Confidence threshold tuning (#103).** Let reviewers configure `signals.lowConfidence.default` plus per-source overrides. Threshold changes recompute computed `low_confidence` Issues and feed both the `low-confidence` Queue and smart-pending score.
 
-**Design.**
-- Recompute weights every `navigation.rerankInterval` decisions (default 25; configurable).
-- Built-in signals only. Imported issue scores (Cleanlab, etc.) are honored at face value — never overridden.
-- Cold start: equal weights until the first `navigation.rerankColdStart` decisions land (default 50).
-- No UI surfacing of "why this record bumped up" — trust the order. Reviewer can fall back to deterministic queues (`low-confidence`, `disagreements`) if they want predictable sort.
+**Later.** Model-in-the-loop active learning remains v1.0+; it needs model selection, training cadence, calibration, and cold-start handling.
 
-**Phase 2 (v0.6 / v1.0+).** Model-in-the-loop: train a small classifier on accepted labels mid-session, re-rank by uncertainty. Out of v0.2 scope — needs model selection, training cadence, calibration, cold-start handling.
+### v0.3 Batch and similarity review
 
-**Open questions.** Sample-size floor before per-signal weight update is statistically meaningful; how to handle a session that flips heavy signal mid-way (reviewer changes mind).
+- **Bulk operations (#94).** Reviewer tags Records with `marked`, then runs `:bulk accept`, `:bulk relabel <label>`, `:bulk reject`, `:bulk skip`, or `:bulk unmark`. Batch Review entries share `reviews.batch_id`, write normal audit rows, and undo as one logical action.
+- **Embedding similarity view and cluster review (#95).** Store one active embedding per Record and expose `:similar` / `:similar-to <record-id>` Queues ranked by cosine similarity. Cluster review uses marked Records plus #94 bulk actions; no automatic Annotation propagation.
+- **Near-duplicate detection and conflicting cluster flagging (#107).** Add pure TypeScript 64-bit SimHash over normalized `record.text`, emit `near_duplicate` and `near_duplicate_conflict` computed Issues, and keep exact duplicates on the existing `exact_duplicate` path.
+- **Conflict queues (#108).** Add an aggregate `conflicts` Queue backed by explicit conflict-style Issue types such as `source_disagreement`, `near_duplicate_conflict`, `*_conflict`, and `conflict:*`. Producer issues compute conflicts; this issue only routes and surfaces them.
 
-### v0.3 Bulk operations (mark-and-batch)
+### v0.4 Prediction evidence and boundary UX
 
-**Scope.** Reviewer tags records with `m` (existing `marked` tag), then commits a bulk action across every marked record. Single batch action = single audit entry per record + a single logical undo.
+- **Inline highlights for prediction evidence (#98).** Accept upstream `predictions[i].highlights: [{ start, end, weight }]`, validate offsets into `record.text`, render capability-tiered evidence spans, and preserve highlights in exported Prediction objects.
+- **Multi-line entry primitive for boundary task (#99).** Support boundary Records whose `text` contains embedded newlines. A multi-line entry is still one Record, one candidate, one Review decision, and one cursor step; exports preserve the original text string.
+- **Block coloring for boundary task (#100).** Visually group predicted `ENTRY_START` / `CONTINUATION`-style runs in review and doc view using consistent Prediction-based block computation. This is visual only and does not alter Review or export semantics.
+- **Boundary sequence diagnostics (#104).** Analyze boundary documents after ingest/re-ingest, emit structural Issues such as continuation-before-start or repeated-header, and add boundary stats for document structure quality.
 
-**Design.**
-- Commands: `:bulk accept`, `:bulk relabel <label>`, `:bulk reject`, `:bulk skip`, `:bulk unmark`.
-- Confirmation modal: `Apply <action> to N records? [y/n]` before commit lands.
-- Undo: one `u` press reverses the entire batch (inserts N compensating review rows under one logical action group).
-- Auto-clear marks: reviewed records lose the `marked` tag on commit; un-reviewed marked records keep theirs.
-- Visual range select + filter-to-queue bulk are explicitly **out of v0.3** — mark-and-batch is the only mechanism.
+### v0.5 Calibration and rationale analytics
 
-**Open questions.** Batch-undo grouping in SQL (separate `review_batches` table, or `reviews.batch_id` column).
+- **Confidence calibration stats view (#96).** Add aggregate and per-Source confidence decile bins to Stats, using `accepted-as-predicted`, relabeled, and rejected outcomes from effective Reviews.
+- **Rationale capture on relabel and reject (#97).** Store optional or required `reviews.rationale` for relabel/reject decisions, distinct from Prediction Reason and Record Note. Review-log export includes rationale; current-state JSONL/CSV do not.
+- **Per-correction rationale aggregation (#102).** Aggregate exact trimmed rationales across effective relabel correction pairs and show top rationale counts beside existing Top corrections rows and Markdown stats export.
 
-### v0.4 Embedding / similarity view
+### v0.6 Re-ingestion and CSV data lifecycle
 
-**Scope.** Compute embeddings at ingest, store on the record, expose a `:similar` / `:similar-to <id>` queue that surfaces semantically similar records.
+- **Versioned diff after predictions-only re-ingest (#101).** Preserve Review state, store bounded Prediction history, and show added/removed/changed primary Prediction label diffs after predictions-only re-ingest.
+- **Smart re-ingestion merge follow-up (#106).** Preserve reviewer-owned state across source text/context edits only when the input provides stable explicit IDs; content-hash edits keep ADR 0001 orphan/new semantics.
+- **CSV import with inference rules (#111).** Add `input.format: "csv"` with a pure TypeScript streaming RFC4180 parser, header-based inference, one Prediction per row, metadata preservation, and clear malformed-row errors.
 
-**Design.**
-- Provider configurable: `embedding.provider: pi-ai | ollama | supplied`. `supplied` reads pre-computed embeddings from the JSONL.
-- Compute at ingest time (precompute all, store as SQLite BLOB on the record).
-- Embedding input field(s) configurable via `embedding.fields: ["text", "meta.merchant", ...]` (default `["text"]`).
-- New queue `:similar` (operates on the focused record) and `:similar-to <record-id>` (explicit id). Top-K = 10 by default (`embedding.topK`). Minimum cosine = 0.7 (`embedding.minCosine`); records below the cut-off don't surface even if in top-K.
+### v0.7 Additional review task types
 
-**Open questions.** Recompute trigger when records change post-ingest (re-ingest text-change path). Vector-index file vs SQLite BLOB scan at very large N (>100K) — v0.4 ships the BLOB-scan path; promotion to a separate index file (HNSW or similar) is a v1.0+ perf optimization.
+- **Multi-label classification task (#105).** Add `task: "multi-label"` through TaskRenderer, storing canonical JSON array text in existing Prediction and Review label fields while keeping one Review row per Record.
+- **Multi-label export shape (#110).** Export reviewed multi-label Annotations as JSON arrays in JSONL and joined CSV cells using `output.csvMultiLabelSeparator`, failing on malformed stored labels or ambiguous separator values.
+- **Extraction review task without spans (#112).** Add `task: "extraction"` as form-style structured field correction for configured string/null fields. This is object review, not NER/span editing or blank-data annotation.
+- **Pairwise / preference review task (#113).** Add `task: "preference"` for winner selection among pre-generated candidates, with stable candidate IDs, number-key accelerators, assistant recommendations, and object-shaped exports.
 
-### v0.5 Confidence calibration view
+### v0.8 Dataset and export adapters
 
-**Scope.** Bin predictions by confidence decile (0–10%, 10–20%, …), measure what the reviewer did (% accepted as-predicted vs relabeled vs rejected). Surfaces over- or under-confident models.
+- **Stratified train/dev/test split export (#109).** Extend existing JSONL/CSV exports with deterministic split flags/config, stable hash assignment, optional stratification by emitted final Annotation label, and sibling split files.
+- **Hugging Face and spaCy-friendly exports (#114).** Add `hf-jsonl` and `spacy-jsonl` adapter exports for supported classification-style tasks, excluding rejected/skipped rows and failing clearly for unsupported task types.
 
-**Design.**
-- Extends the existing stats screen — new section under totals + corrections.
-- Both aggregate (all predictions) and per-source breakdown rendered. Aggregate is the top block; expandable rows per source below.
-- Sample-size floor: bin renders only when ≥10 records have been reviewed in that confidence range. Smaller bins suppressed to avoid noise.
-- Bins drill into queues: clicking a bin opens `where:confidence >= 0.4 and confidence < 0.5` (or the per-source variant). Reviewer navigates as usual.
+### v0.9 Assistant polish and distribution
 
-**Open questions.** Decile vs custom bin boundaries (boundary-task labels may cluster around different confidence regions). Whether to render a calibration curve glyph (text-based bar) or just per-bin counts.
-
-### v0.6 Reason / rationale capture on relabel
-
-**Scope.** When the reviewer relabels or rejects a record, optionally capture a short "why." Aggregated under per-correction views (v0.11) to surface patterns.
-
-**Naming.** Stored as `reviews.rationale`. New word, picked to avoid overload with `prediction.reason` (queueing signal per CONTEXT.md). Distinct from `records.note` (free-form per-record annotation, orthogonal to review state).
-
-**Design.**
-- `reviews.requireRationale: true` in config makes the rationale required for relabel + reject (default off — optional, reviewer can blow past).
-- Prompt is inline (no modal): after the decision lands, a one-line input slides in. Esc commits without rationale.
-- Input format: pick from a configured list with free-form fallback. Config: `reviews.rationales: ["wrong label", "ambiguous", "model overconfident", ...]`. Number keys 1–9 commit a list item; typing falls into free-form mode; backspace clears.
-- Scope: relabel + reject only. Accept and skip don't carry a rationale (v0.6).
-
-**Open questions.** Whether `reviews.rationale` is its own column or a JSON-blob field on `reviews`. Column wins for query speed; JSON wins for future extensibility.
-
-### v0.7 Inline highlight of words driving prediction
-
-**Scope.** Render visual spans inside `record.text` showing which characters drove the prediction. BYO from upstream — LabelLens does not compute LIME/SHAP/attention.
-
-**Design.**
-- JSONL field: `predictions[i].highlights: [{start: int, end: int, weight: number}]`. Offsets into `record.text`. Weight ∈ [0,1].
-- Multi-source records: `[` / `]` (existing alternatives-cycling chord) also swaps which source's highlights render. Reviewer can see each source's salient spans.
-- Render style is capability-tiered. Truecolor / 256: tinted background scaled by `weight`. 16-color / mono: underline + bold for high-weight spans.
-- Per-record offsets only. Highlights never index into `context_before` / `context_after` — those are context, not the labeled record. When multi-line entries land (v0.8), `record.text` is just longer; the same offset model spans newlines naturally.
-
-**Open questions.** Whether to also tint corresponding label rows in the chip rail (link prediction → triggering span).
-
-### v0.8 Multi-line entry as primitive (boundary task)
-
-**Scope.** Boundary task accepts records whose `text` field spans multiple lines (e.g. one resume entry = one JSONL row with newline-separated lines). Reviewer labels the whole entry. No in-tool line-merging — entry boundaries are upstream's call.
-
-**Design.**
-- JSONL row's `text` carries `\n` characters. We render it across multiple visual rows inside the focus box.
-- Backwards compatible: existing line-by-line boundary JSONL still works. Same `task: boundary` config. Tasks-renderer treats single-line and multi-line records uniformly.
-- Labels fully user-configurable via existing `config.labels`. Reusing the line-level set (`SECTION_HEADER`, `ENTRY_START`, `CONTINUATION`, `NOISE`) is fine; users with entry-level data will likely configure a smaller set.
-- Focus box rendering: render the full entry; subject region auto-resizes downward. Cluster-at-top spacer below absorbs less. Doesn't soft-cap or scroll within the box — fidelity over neighbour visibility.
-
-**Open questions.** How `boundary.contextLines` interacts with multi-line entries — does ±N mean N entries or N raw lines? v0.8 should treat it as N entries (neighbours = other records).
-
-### v0.9 Block / entry coloring (boundary task)
-
-**Scope.** Color contiguous runs of `CONTINUATION` (and similar) under their `ENTRY_START` as a visual block, so reviewers see entries as units even when records remain line-by-line.
-
-**Design.**
-- Trigger: predicted boundaries (read from `predictions[].label`). Reviewer sees what the model grouped before committing.
-- Treatment: shared background tint per block. All lines in one block share the same band color; differs from neighbouring blocks (no even/odd alternation inside a block).
-- Scope: both review screen band region and doc-view (`g d`). Consistent across both surfaces.
-- Becomes less critical once v0.8 (multi-line entries) lands — entries are already blocks by definition. v0.9 still matters for legacy line-by-line boundary data and for use cases where upstream emits line-level predictions.
-
-**Open questions.** Whether to color blocks beyond `ENTRY_START` → `CONTINUATION` (e.g. group records by `meta.section_id` when present).
-
-### v0.10 Versioned diff after re-ingest
-
-**Scope.** After a predictions-only re-ingest ([ADR 0002](./docs/adr/0002-smart-reingest.md)), show the reviewer which predictions changed since the prior version.
-
-**Design.**
-- Diff covers prediction changes only. Text changes go through the existing re-ingest text-change flow; reviews never change on re-ingest ([ADR 0007](./docs/adr/0007-effective-review-entry.md)).
-- Persist the last N prior versions in a `prediction_history` SQLite table (default N=3, `signals.predictionHistoryDepth`). Bounded growth.
-- Auto-show a dedicated diff screen on re-ingest completion: `X predictions changed, Y added, Z removed`. Reviewer skims, dismisses, then enters review.
-- "Changed" = primary label flipped. Confidence delta alone doesn't count for v0.10 (avoids noise from re-runs that nudge confidences).
-
-**Open questions.** Diff screen layout — table per-record, or summary by source / by correction pair. Interaction with v0.11 per-correction rationale (changed-prediction queue is a natural rationale-aggregation surface).
-
-### v0.11 Per-correction rationale aggregation (depends on v0.6)
-
-**Scope.** Aggregate the rationales captured under v0.6 per `(from, to)` correction pair so the stats screen surfaces the dominant "why" patterns, not just the count.
-
-**Design.**
-- Lives in the stats screen. Each existing correction row (`food → utility, 14 records`) expands to show the top 3 rationales with counts: `12× wrong label · 2× ambiguous`.
-- No per-source breakdown in v0.11 — keeps the view compact. Reviewer drills into the `by-correction:<from>:<to>` queue for source detail.
-
-**Open questions.** Aggregation across sessions vs current-session-only. SQL view that pivots `reviews.rationale` by `(prev_label, final_label)`.
-
-### v0.12 Confidence threshold tuning
-
-**Scope.** Let the reviewer set the `low_confidence` cut-off, with optional per-source overrides, and have it flow into both the `low-confidence` queue and the `low_confidence` signal score that feeds `smart-pending`.
-
-**Design.**
-- Config-driven for v0.12: `signals.lowConfidence.default = 0.5`, `signals.lowConfidence.bySource: { "llm:gpt-4": 0.6, "regex.*": 0.3 }`. UI for in-app tuning is a follow-up.
-- Tuning affects: `low-confidence` queue membership (cut-off determines inclusion) and the `low_confidence` issue's severity score (rescored when threshold changes). Calibration view (v0.5) re-bins implicitly via its own decile model — not directly coupled.
-- Persisted to `labellens.config.json` on commit. Re-launch picks up the new value.
-
-**Open questions.** Whether the threshold change should retroactively recompute issue severities or only apply on next ingest. v0.12 defaults to "recompute on threshold change" so the queue reflects the latest cut-off without re-ingest.
-
-### Other pre-v1 features (carried over from prior PRD versions)
-
-- Multi-label classification (with toggle UI and `Space` / `Enter` semantics). Slots into the `TaskRenderer` abstraction.
-- Smart re-ingestion merge (preserve reviews across edits, soft-delete removed records, surface new ones).
-- Near-duplicate detection via MinHash; conflicting-duplicate flagging.
-- Train / dev / test split with stratified option.
-- Multi-label export shape.
-- CSV import (with inference rules extended).
-- Extraction review (form-style, no spans).
-- Pairwise / preference review.
-- Hugging Face / spaCy-friendly export shapes.
-- Streaming assistant UI niceties; subscription OAuth headless code-paste flow once `pi-ai` upstream stabilizes.
-- **Brew formula and tap.** Third distribution channel after curl + npm prove out in MVP.
+- **Streaming assistant UI niceties and subscription OAuth (#115).** Keep ADR 0009's inline assistant footer, polish streaming/loading/error/cancel states, and add subscription OAuth only when pi-ai exposes stable headless support.
+- **Brew formula and tap (#116).** Add a dedicated Homebrew tap and `labellens` formula that installs existing release tarballs while preserving the bundled `parser.worker.js` runtime layout.
 
 ## v1.0+ / future
 
-- NER / span review (technical risk; see [PRD §19](./PRD.md#19-why-ner-and-extraction-with-spans-are-deferred))
+- NER / span review (technical risk; see [PRD §19](./PRD.md#19-why-ner-and-extraction-with-spans-are-deferred)): first-class `span` / `ner` task type; `{ start, end, label, text }` predictions; span accept/reject/relabel; boundary adjustment; missing-entity insertion; overlap resolution; exhaustive document/section marking; full document/section span view with inline colored spans and candidate list; NER exports for BIO/IOB2, Hugging Face token-classification JSON, spaCy-style entities, and generic `{ text, entities }` JSONL.
 - Label Studio / Doccano import-export bridges
+- Resume-ner bridge: import `training_v2` review queues/actions into LabelLens and export back to `reviewed_actions.jsonl` only after span editing, missing-entity insertion, exhaustive marking, and compatible export semantics exist.
 - Inter-session quality comparison (this review pass vs last)
 - Multi-dataset workspace
 - Optional remote sync for personal use across machines
