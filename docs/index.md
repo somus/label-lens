@@ -40,6 +40,7 @@ Documentation is organised by [Diátaxis](https://diataxis.fr): pick a quadrant 
 
 | Explanation | Why it matters |
 |---|---|
+| [Architecture](./explanation/architecture.md) | The map: module layout, data flow, key seams. Start here if you're contributing. |
 | [Prediction vs annotation](./explanation/prediction-vs-annotation.md) | The core domain split. Read this first. |
 | [Review task types](./explanation/task-types.md) | How classification, boundary review, and future task shapes differ. |
 | [Skipped is its own state](./explanation/skipped-state.md) | Why `s` doesn't just defer (ADR 0003). |
@@ -52,5 +53,5 @@ Not user-facing, but listed here so you know where to look if you contribute:
 
 - [`PRD.md`](../PRD.md) — full product spec (v2.9).
 - [`CONTEXT.md`](../CONTEXT.md) — domain glossary.
-- [`docs/adr/`](./adr/) — architecture decision records (ADRs 0001 – 0009).
+- [`docs/adr/`](./adr/) — architecture decision records (ADRs 0001 – 0013).
 - [`AGENTS.md`](../AGENTS.md) — orientation for AI agents working on the repo (symlinked to `CLAUDE.md`).
