@@ -20,54 +20,73 @@ const baseConfig: LabellensConfig = {
  * decisions through the real decision-action path, and assert the
  * smart-pending Cursor reorders the remaining queue.
  *
- * Closes the unit-test gap that let issue #93's user-visible reorder appear
- * silent under live use: the unit suite verified each seam in isolation but
- * never drove a keystroke → cursor-reorder round trip end to end.
+ * The unit suite covers each seam in isolation (cursor.refresh picks up new
+ * weights, applyEffects calls recordDecision, query factory orders by
+ * weighted sum, undo reverses). This e2e closes the gap by exercising the
+ * keystroke → cursor-reorder round trip and asserts a STRICT FLIP: a pair of
+ * Records whose default-weight ordering is X → Y must reverse to Y → X after
+ * the learned weights take effect. A test that asserts the post-learning
+ * order only is too weak; tie-breaker behavior could satisfy it without any
+ * learning at all.
  */
 describe("review screen — smart-learning reorders smart-pending under keystroke load", () => {
-  test("relabel-heavy type lifts records carrying it above records carrying a relabel-empty type", async () => {
+  test("strict flip: relabel-heavy type outranks relabel-empty type after learning kicks in", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
 
     // Wipe the fixture's incoming imported Issue + extra prediction so the
-    // four target Records below are the only ones carrying built-in Issues.
-    // This isolates the test from tiny.jsonl drift.
+    // test owns the entire Issue table. Otherwise tiny.jsonl drift could
+    // change the scoring landscape underneath us.
     store.db.run(sql`DELETE FROM issues`);
 
-    // Pick four Records with comparable raw scores so the default-weight
-    // ordering is driven by the SQL tie-breakers (confidence ASC, row_index
-    // ASC) and not by raw Issue score magnitude. Once learning kicks in, the
-    // per-type weights must override the tie-breakers.
-    const lunch = store.db.all<{ id: string; row_index: number }>(
-      sql`SELECT id, row_index FROM records WHERE text = 'Lunch at Zomato Bangalore'`,
+    // Two "victim" Records that drive the learning sampler — both carry
+    // `low_confidence`. Both get relabeled below to push the low_confidence
+    // weight above 1.0 and the exact_duplicate weight below 1.0.
+    const amazon = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Amazon order #12345'`,
     )[0]!;
-    const uber = store.db.all<{ id: string; row_index: number }>(
-      sql`SELECT id, row_index FROM records WHERE text = 'Uber ride to airport'`,
+    const lunch = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Lunch at Zomato Bangalore'`,
     )[0]!;
-    const amazon = store.db.all<{ id: string; row_index: number }>(
-      sql`SELECT id, row_index FROM records WHERE text = 'Amazon order #12345'`,
+    // One "accepted" Record carrying `exact_duplicate` so the per-type
+    // baseline diverges from the low_confidence rate.
+    const uber = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Uber ride to airport'`,
     )[0]!;
-    const rent = store.db.all<{ id: string; row_index: number }>(
-      sql`SELECT id, row_index FROM records WHERE text = 'Rent transfer to landlord'`,
+
+    // The TWO probe Records whose relative order encodes the learning effect.
+    // `probeDup` carries `exact_duplicate` with a HIGHER raw Issue score than
+    // `probeLow` carries `low_confidence`. Under default weights (1.0 each):
+    //   probeDup score = 1.0 × 0.50 = 0.50
+    //   probeLow score = 1.0 × 0.30 = 0.30
+    // → probeDup ranks ABOVE probeLow.
+    //
+    // After learning (computed below):
+    //   probeDup score = ~0.667 × 0.50 ≈ 0.333
+    //   probeLow score = ~1.333 × 0.30 ≈ 0.400
+    // → probeLow ranks ABOVE probeDup. STRICT FLIP.
+    const probeDup = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Salary credit October'`,
+    )[0]!;
+    const probeLow = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Rent transfer to landlord'`,
     )[0]!;
 
     const now = new Date().toISOString();
-    // Lunch + Amazon carry `low_confidence`; Uber + Rent carry `exact_duplicate`.
-    // All four Issue scores are identical (0.5) so the default-weight smart-
-    // pending score is also identical — ordering falls back to tie-breakers.
     store.db.run(sql`
       INSERT INTO issues (record_id, type, score, source, created_at)
-      VALUES (${lunch.id},  'low_confidence',  0.5, 'labellens:computed', ${now}),
-             (${uber.id},   'exact_duplicate', 0.5, 'labellens:computed', ${now}),
-             (${amazon.id}, 'low_confidence',  0.5, 'labellens:computed', ${now}),
-             (${rent.id},   'exact_duplicate', 0.5, 'labellens:computed', ${now})
+      VALUES (${amazon.id},   'low_confidence',  0.5, 'labellens:computed', ${now}),
+             (${lunch.id},    'low_confidence',  0.5, 'labellens:computed', ${now}),
+             (${uber.id},     'exact_duplicate', 0.5, 'labellens:computed', ${now}),
+             (${probeDup.id}, 'exact_duplicate', 0.5, 'labellens:computed', ${now}),
+             (${probeLow.id}, 'low_confidence',  0.3, 'labellens:computed', ${now})
     `);
 
     const { renderer, mockInput, renderOnce } = await createTestRenderer({
       width: 140,
       height: 30,
     });
-    // Tight learning knobs so the first relabel flips weights immediately —
-    // mirror the manual-test config in docs/explanation/smart-learning.md.
+    // rerankColdStart=0 + rerankInterval=1 so each commit refreshes weights —
+    // mirrors the manual-test config in docs/explanation/smart-learning.md.
     const app = createAppContext({
       db: store.db,
       config: {
@@ -82,99 +101,165 @@ describe("review screen — smart-learning reorders smart-pending under keystrok
     await renderOnce();
     expect(app.cursor?.queueId).toBe("smart-pending");
 
-    // The four Records all share score = 1.0 × 0.5 = 0.5. They tie on the
-    // primary score; the SQL tie-breakers fall to confidence ASC (NULL last)
-    // then row_index ASC. tiny.jsonl confidences:
-    //   Lunch 0.92, Uber 0.88, Amazon 0.74, Rent 0.96.
-    // So within the tied tier the cursor order is Amazon → Uber → Lunch → Rent.
-    const initialOrder = app.cursor!.recordIds();
-    expect(initialOrder.slice(0, 4)).toEqual([amazon.id, uber.id, lunch.id, rent.id]);
+    // STRICT FLIP precondition: under default weights, probeDup (raw 0.5) MUST
+    // outrank probeLow (raw 0.3). If this fails, the test setup is wrong and
+    // the post-learning assertion would be meaningless.
+    const initialIds = app.cursor!.recordIds();
+    const initialDupIdx = initialIds.indexOf(probeDup.id);
+    const initialLowIdx = initialIds.indexOf(probeLow.id);
+    expect(initialDupIdx).toBeGreaterThanOrEqual(0);
+    expect(initialLowIdx).toBeGreaterThanOrEqual(0);
+    expect(initialDupIdx).toBeLessThan(initialLowIdx);
 
-    // Drive two keystrokes that relabel `low_confidence` carriers (status =
-    // 'relabeled' because the chosen labels differ from the predictions).
-    // Press `2` while Amazon is focused (predicted 'shopping' → 'travel'),
-    // then `1` while Uber is focused (predicted 'travel' → 'food').
-    //
-    // Wait — Uber relabel would credit `exact_duplicate`, not low_confidence.
-    // To bias purely toward `low_confidence`, relabel Amazon then Lunch
-    // (both `low_confidence`). After Amazon commit, cursor advances; Lunch is
-    // now at the position Amazon held minus one — but the queue refreshes
-    // re-running queueRecords, so positions shift. Seek to Lunch explicitly
-    // before pressing the next key so the test is deterministic regardless of
-    // intermediate refresh side effects.
+    // Drive three decisions via the real keystroke path. After each press we
+    // seek to the next target so the test is deterministic regardless of
+    // intermediate cursor advance.
+
+    // Decision 1: relabel Amazon (low_confidence). Predicted 'shopping';
+    // labels[2] = 'utility' → status='relabeled'.
+    app.cursor!.seek(amazon.id);
     expect(app.cursor?.current()?.id).toBe(amazon.id);
-    // 'utility' (predicted 'shopping') → status = 'relabeled' for Amazon.
     mockInput.pressKey("3");
     await renderOnce();
 
-    // After commit, Amazon is filtered out of smart-pending; cursor lands on
-    // the next head record (Uber under the previous tie ordering).
+    // Decision 2: relabel Lunch (low_confidence). Predicted 'food';
+    // labels[1] = 'travel' → status='relabeled'.
     app.cursor!.seek(lunch.id);
     expect(app.cursor?.current()?.id).toBe(lunch.id);
-    // 'travel' (predicted 'food') → status = 'relabeled' for Lunch.
     mockInput.pressKey("2");
     await renderOnce();
 
-    // Two relabels, both on `low_confidence` carriers. Per the smoothed lift:
-    //   total decisions = 2, total relabels = 2
-    //   baseline       = (2 + 1) / (2 + 1) = 1.0
-    //   low_confidence rate = (2 + 1) / (2 + 1) = 1.0 → lift 1.0
-    //   exact_duplicate  rate = 0/0 → defaults to 1.0
-    // Equal lifts means equal scores still. We need a non-relabel decision on
-    // an `exact_duplicate` carrier so the baseline diverges from the type
-    // rates. Accept Uber (predicted 'travel' === label 'travel' at index 2
-    // → status = 'accepted').
-    expect(app.cursor!.recordIds()).toContain(uber.id);
+    // Decision 3: accept Uber (exact_duplicate). Predicted 'travel' matches
+    // labels[1] = 'travel' → status='accepted'.
     app.cursor!.seek(uber.id);
     expect(app.cursor?.current()?.id).toBe(uber.id);
     mockInput.pressKey("2");
     await renderOnce();
 
-    // Updated counters: total decisions = 3, total relabels = 2.
-    //   baseline                = (2 + 1) / (3 + 1) = 0.75
-    //   low_confidence rate     = (2 + 1) / (2 + 1) = 1.0 → lift ≈ 1.333
-    //   exact_duplicate rate    = (0 + 1) / (1 + 1) = 0.5 → lift ≈ 0.667
-    // Only Rent (exact_duplicate, score 0.5) remains untouched. Its weighted
-    // score: 0.5 × 0.667 ≈ 0.333. Any unrelated pending Record sits at score
-    // 0. So Rent should still be the highest-scored Record remaining…
-    //
-    // The reorder we want to assert: had Rent's type been the relabel-heavy
-    // one, it would have outranked the no-Issue Records by a wider margin.
-    // To prove learning is actively re-weighting, attach a NEW pair of equal-
-    // score Records mid-test and assert the low_confidence carrier outranks
-    // the exact_duplicate carrier.
-    const ghostA = store.db.all<{ id: string }>(
-      sql`SELECT id FROM records WHERE text = 'Coffee at Blue Tokai'`,
-    )[0]!;
-    const ghostB = store.db.all<{ id: string }>(
-      sql`SELECT id FROM records WHERE text = 'Refund from Swiggy'`,
-    )[0]!;
-    store.db.run(
-      sql`DELETE FROM predictions WHERE record_id = ${ghostA.id} AND label = 'shopping'`,
-    );
-    const now2 = new Date().toISOString();
-    store.db.run(sql`
-      INSERT INTO issues (record_id, type, score, source, created_at)
-      VALUES (${ghostA.id}, 'low_confidence',  0.5, 'labellens:computed', ${now2}),
-             (${ghostB.id}, 'exact_duplicate', 0.5, 'labellens:computed', ${now2})
-    `);
-    app.cursor!.refresh();
-    await renderOnce();
-
-    // With the learned weights, ghostA (low_confidence: lift 1.333 → score
-    // 0.667) must rank above ghostB (exact_duplicate: lift 0.667 → score
-    // 0.333), even though they share the same raw Issue score.
-    const finalIds = app.cursor!.recordIds();
-    const ghostAIdx = finalIds.indexOf(ghostA.id);
-    const ghostBIdx = finalIds.indexOf(ghostB.id);
-    expect(ghostAIdx).toBeGreaterThanOrEqual(0);
-    expect(ghostBIdx).toBeGreaterThanOrEqual(0);
-    expect(ghostAIdx).toBeLessThan(ghostBIdx);
-
-    // And the live weights expose the same lift externally — a future
-    // `:weights` palette command would surface this for end-users.
+    // Lift math after these three decisions (α = 1):
+    //   totalDecisions = 3, totalRelabels = 2
+    //   baseline                = (2 + 1) / (3 + 1)           = 0.75
+    //   low_confidence  rate    = (2 + 1) / (2 + 1)           = 1.0
+    //   low_confidence  lift    = 1.0   / 0.75                ≈ 1.333
+    //   exact_duplicate rate    = (0 + 1) / (1 + 1)           = 0.5
+    //   exact_duplicate lift    = 0.5   / 0.75                ≈ 0.667
     const w = app.smartLearning.weights();
     expect(w.low_confidence).toBeGreaterThan(1);
+    expect(w.low_confidence).toBeLessThanOrEqual(3);
     expect(w.exact_duplicate).toBeLessThan(1);
+    expect(w.exact_duplicate).toBeGreaterThanOrEqual(0.25);
+
+    // STRICT FLIP postcondition: probeLow must now rank above probeDup. If
+    // the cursor wasn't using learned weights, the raw 0.5 vs 0.3 score
+    // ordering from the precondition would hold and this assertion would
+    // fail. Passing this strictly requires the smart-pending factory to have
+    // re-queried with the live weights map.
+    const finalIds = app.cursor!.recordIds();
+    const finalDupIdx = finalIds.indexOf(probeDup.id);
+    const finalLowIdx = finalIds.indexOf(probeLow.id);
+    expect(finalDupIdx).toBeGreaterThanOrEqual(0);
+    expect(finalLowIdx).toBeGreaterThanOrEqual(0);
+    expect(finalLowIdx).toBeLessThan(finalDupIdx);
+  });
+
+  test("undo crossing the cold-start floor restores the default ordering", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    store.db.run(sql`DELETE FROM issues`);
+
+    // Probe pair: default-weight ordering is probeDup → probeLow (raw 0.5 vs
+    // 0.3). Reaching the floor flips it via the same lift math as the first
+    // test. Undo must drop totalDecisions below the floor and *visibly*
+    // restore the default ordering — that's the regression Codex caught on
+    // PR #120 (without the cache-reset fix, lifted weights would persist).
+    const amazon = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Amazon order #12345'`,
+    )[0]!;
+    const lunch = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Lunch at Zomato Bangalore'`,
+    )[0]!;
+    const uber = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Uber ride to airport'`,
+    )[0]!;
+    const probeDup = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Salary credit October'`,
+    )[0]!;
+    const probeLow = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records WHERE text = 'Rent transfer to landlord'`,
+    )[0]!;
+    const now = new Date().toISOString();
+    store.db.run(sql`
+      INSERT INTO issues (record_id, type, score, source, created_at)
+      VALUES (${amazon.id},   'low_confidence',  0.5, 'labellens:computed', ${now}),
+             (${lunch.id},    'low_confidence',  0.5, 'labellens:computed', ${now}),
+             (${uber.id},     'exact_duplicate', 0.5, 'labellens:computed', ${now}),
+             (${probeDup.id}, 'exact_duplicate', 0.5, 'labellens:computed', ${now}),
+             (${probeLow.id}, 'low_confidence',  0.3, 'labellens:computed', ${now})
+    `);
+
+    const { renderer, mockInput, renderOnce } = await createTestRenderer({
+      width: 140,
+      height: 30,
+    });
+    // Cold-start = 3 so the 3rd decision crosses the floor; undo drops the
+    // session back to totalDecisions=2 (< floor) and must reset the cache.
+    const app = createAppContext({
+      db: store.db,
+      config: {
+        ...baseConfig,
+        navigation: { smartNext: true, rerankInterval: 1, rerankColdStart: 3 },
+      },
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    mountReviewScreen({ renderer, app, initialQueueId: "pending" });
+    await renderOnce();
+    expect(app.cursor?.queueId).toBe("smart-pending");
+
+    // Default-weight precondition.
+    {
+      const initialIds = app.cursor!.recordIds();
+      expect(initialIds.indexOf(probeDup.id)).toBeLessThan(initialIds.indexOf(probeLow.id));
+    }
+
+    // Three decisions to clear the cold-start floor and bias the weights:
+    //   relabel Amazon (low_confidence)
+    //   relabel Lunch  (low_confidence)
+    //   accept  Uber   (exact_duplicate)
+    // After these: low_confidence lift ≈ 1.333, exact_duplicate lift ≈ 0.667.
+    // Probe scores flip: probeLow (0.3 × 1.333 = 0.4) > probeDup (0.5 × 0.667
+    // = 0.333).
+    app.cursor!.seek(amazon.id);
+    mockInput.pressKey("3"); // 'utility' vs predicted 'shopping' → relabeled
+    await renderOnce();
+    app.cursor!.seek(lunch.id);
+    mockInput.pressKey("2"); // 'travel'  vs predicted 'food'     → relabeled
+    await renderOnce();
+    app.cursor!.seek(uber.id);
+    mockInput.pressKey("2"); // 'travel'  vs predicted 'travel'   → accepted
+    await renderOnce();
+
+    // Lifted weights + flipped probe order.
+    expect(app.smartLearning.weights().low_confidence).toBeGreaterThan(1);
+    expect(app.smartLearning.weights().exact_duplicate).toBeLessThan(1);
+    {
+      const liftedIds = app.cursor!.recordIds();
+      expect(liftedIds.indexOf(probeLow.id)).toBeLessThan(liftedIds.indexOf(probeDup.id));
+    }
+
+    // Undo — `record.undo` (binding 'u') reverses the most recent decision
+    // (Uber accept). totalDecisions drops to 2 (< coldStart=3). Without the
+    // cache-reset fix, `cached` would retain the lifted weights from the
+    // last recompute and probeLow would still rank above probeDup. With the
+    // fix, weights snap back to 1.0 and the probe order returns to default.
+    mockInput.pressKey("u");
+    await renderOnce();
+    expect(app.smartLearning.weights()).toEqual({
+      low_confidence: 1,
+      source_disagreement: 1,
+      exact_duplicate: 1,
+    });
+    const restoredIds = app.cursor!.recordIds();
+    expect(restoredIds.indexOf(probeDup.id)).toBeLessThan(restoredIds.indexOf(probeLow.id));
   });
 });
