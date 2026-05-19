@@ -141,4 +141,21 @@ describe("validateConfigSchema", () => {
     const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS });
     expect(cfg.$schema).toBe(CONFIG_SCHEMA_URL);
   });
+
+  test("accepts navigation.rerankInterval and navigation.rerankColdStart", () => {
+    const cfg = makeValid({ navigation: { rerankInterval: 25, rerankColdStart: 50 } });
+    expect(validateConfigSchema(cfg)).toEqual([]);
+  });
+
+  test("rejects navigation.rerankInterval below 1", () => {
+    const bad = makeValid({ navigation: { rerankInterval: 0 } });
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("rejects navigation.rerankColdStart below 0", () => {
+    const bad = makeValid({ navigation: { rerankColdStart: -1 } });
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
 });

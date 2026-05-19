@@ -8,53 +8,40 @@ import { openTmpStore } from "../util/tmp.ts";
 const SMART = resolveQueue("smart-pending").query;
 
 describe("smart-pending queue", () => {
-  test("orders by composite signal score descending", async () => {
+  test("orders by weighted Issue-score sum descending (default weights 1.0)", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
 
-    // Locate ATM withdrawal (already low-conf 0.22) and pump it to score=3
-    // by adding a second prediction (disagreement) + an issue (flagged).
+    // Locate ATM withdrawal and attach a built-in `labellens:computed` Issue
+    // so the default-weight query gives it a known score contribution.
     const atm = store.db.all<{ id: string }>(
       sql`SELECT id FROM records WHERE text = 'ATM withdrawal'`,
     )[0]!;
     store.db.run(sql`
-      INSERT INTO predictions (record_id, label, confidence, source, raw)
-      VALUES (${atm.id}, 'cash', 0.18, 'regex.simple', '{}')
-    `);
-    store.db.run(sql`
       INSERT INTO issues (record_id, type, score, source, created_at)
-      VALUES (${atm.id}, 'low_confidence', 0.18, 'signals', ${new Date().toISOString()})
+      VALUES (${atm.id}, 'low_confidence', 0.78, 'labellens:computed', ${new Date().toISOString()})
     `);
 
     const rows = queueRecords(store.db, SMART);
 
-    // ATM withdrawal should be first (score=3).
+    // ATM (0.78) should rank above Senior Engineer (imported label_issue 0.6).
     expect(rows[0]?.text).toBe("ATM withdrawal");
+    expect(rows[1]?.text).toBe("Senior Engineer at Acme");
 
-    // Compute per-row composite score and assert non-increasing order.
-    const scores = rows.map((r) => {
-      const conf = r.primaryPrediction?.confidence ?? null;
-      const lowConf = conf !== null && conf < 0.4 ? 1 : 0;
-      const disagreement =
-        store.db.all<{ n: number }>(
-          sql`SELECT COUNT(DISTINCT label) AS n FROM predictions WHERE record_id = ${r.id}`,
-        )[0]!.n > 1
-          ? 1
-          : 0;
-      const flagged =
-        store.db.all<{ n: number }>(
-          sql`SELECT COUNT(*) AS n FROM issues WHERE record_id = ${r.id}`,
-        )[0]!.n > 0
-          ? 1
-          : 0;
-      return lowConf + disagreement + flagged;
-    });
+    // Per-row weighted score from the issues table (default weights = 1.0 for
+    // built-in + imported) must be non-increasing across the queue.
+    const scores = rows.map(
+      (r) =>
+        store.db.all<{ s: number | null }>(
+          sql`SELECT COALESCE(SUM(CASE WHEN score > 0 THEN score ELSE 0 END), 0) AS s
+              FROM issues WHERE record_id = ${r.id}`,
+        )[0]!.s ?? 0,
+    );
     for (let i = 1; i < scores.length; i++) {
       expect(scores[i - 1]!).toBeGreaterThanOrEqual(scores[i]!);
     }
 
-    // Sanity: at least one record scored above zero.
+    // Sanity: at least one record scored above zero (ATM) and one at zero.
     expect(scores[0]!).toBeGreaterThan(0);
-    // And at least one scored zero (tail).
     expect(scores.at(-1)!).toBe(0);
   });
 

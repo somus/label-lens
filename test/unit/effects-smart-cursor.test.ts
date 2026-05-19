@@ -16,17 +16,15 @@ const baseConfig: LabellensConfig = {
 describe("applyEffects refreshes the active smart-pending cursor", () => {
   test("commitDecision drops the reviewed record from the on-screen smart cursor", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    // Pump ATM withdrawal to score=3 so smart-pending pins it at index 0.
+    // Attach a built-in `labellens:computed` Issue to ATM withdrawal so the
+    // weighted smart-pending score pins it at index 0 ahead of the fixture's
+    // imported `label_issue` on Senior Engineer (0.6).
     const atm = store.db.all<{ id: string }>(
       sql`SELECT id FROM records WHERE text = 'ATM withdrawal'`,
     )[0]!;
     store.db.run(sql`
-      INSERT INTO predictions (record_id, label, confidence, source, raw)
-      VALUES (${atm.id}, 'cash', 0.18, 'regex.simple', '{}')
-    `);
-    store.db.run(sql`
       INSERT INTO issues (record_id, type, score, source, created_at)
-      VALUES (${atm.id}, 'low_confidence', 0.18, 'signals', ${new Date().toISOString()})
+      VALUES (${atm.id}, 'low_confidence', 0.78, 'labellens:computed', ${new Date().toISOString()})
     `);
 
     const app = createAppContext({

@@ -1,13 +1,24 @@
 import { writeFileSync } from "node:fs";
 import { switchQueue } from "../actions/queue/switch.ts";
 import { type AppContext, effectiveQueueId } from "../app/context.ts";
+import { type BuiltinIssueType, isBuiltinIssueType } from "../learning/smart-learning.ts";
 import { flash } from "../render/anim.ts";
+import { COMPUTED_SIGNAL_SOURCE, issuesForRecord } from "../store/issues.ts";
 import { predicateQueue } from "../store/queues/predicate.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { insertReview, updateRecordNote } from "../store/records.ts";
 import { reduceOverlay } from "./reduce.ts";
 import type { Effect, OverlayEvent } from "./types.ts";
+
+function builtinIssueTypesFor(app: AppContext, recordId: string): BuiltinIssueType[] {
+  const types: BuiltinIssueType[] = [];
+  for (const issue of issuesForRecord(app.db, recordId)) {
+    if (issue.source !== COMPUTED_SIGNAL_SOURCE) continue;
+    if (isBuiltinIssueType(issue.type)) types.push(issue.type);
+  }
+  return types;
+}
 
 /**
  * Refresh whichever cursor is actually backing the active screen. Smart-next
@@ -69,6 +80,21 @@ export function applyEffects(
         app.closeOverlay();
         break;
       case "commitDecision": {
+        // Sample built-in Issue types before `insertReview` so the smart-pending
+        // weight refresh that follows the cursor refresh reflects this decision.
+        // `skipped` is deferred-not-annotated (ADR 0003) and never feeds the
+        // learning sampler — a deferral reveals nothing about whether an Issue
+        // type is a productive filter.
+        if (
+          effect.status === "accepted" ||
+          effect.status === "relabeled" ||
+          effect.status === "rejected"
+        ) {
+          app.smartLearning.recordDecision(
+            effect.status,
+            builtinIssueTypesFor(app, effect.recordId),
+          );
+        }
         insertReview(app.db, {
           record_id: effect.recordId,
           status: effect.status,

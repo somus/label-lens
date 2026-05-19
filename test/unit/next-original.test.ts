@@ -16,18 +16,15 @@ const baseConfig: LabellensConfig = {
 describe("shift+j / shift+k navigate original (row-index) order", () => {
   test("under smart-next, shift+j advances to next pending row, not next smart row", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    // Pump ATM withdrawal to score=3 — so smart-pending puts it at position 0,
-    // followed by other signaled records. Pending order stays document order.
+    // Attach a built-in `labellens:computed` Issue to ATM withdrawal so the
+    // weighted smart-pending score pins it at position 0 ahead of the
+    // fixture's imported `label_issue` on Senior Engineer.
     const atm = store.db.all<{ id: string }>(
       sql`SELECT id FROM records WHERE text = 'ATM withdrawal'`,
     )[0]!;
     store.db.run(sql`
-      INSERT INTO predictions (record_id, label, confidence, source, raw)
-      VALUES (${atm.id}, 'cash', 0.18, 'regex.simple', '{}')
-    `);
-    store.db.run(sql`
       INSERT INTO issues (record_id, type, score, source, created_at)
-      VALUES (${atm.id}, 'low_confidence', 0.18, 'signals', ${new Date().toISOString()})
+      VALUES (${atm.id}, 'low_confidence', 0.78, 'labellens:computed', ${new Date().toISOString()})
     `);
 
     const app = createAppContext({

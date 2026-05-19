@@ -135,6 +135,20 @@ const NavigationConfigSchema = Type.Object(
           "When true, j/k walks a signal-weighted smart-pending cursor on the pending queue.",
       }),
     ),
+    rerankInterval: Type.Optional(
+      Type.Integer({
+        minimum: 1,
+        description:
+          "Commit decisions between smart-pending weight refreshes. Session-local active learning re-weights built-in Issue types every N committed decisions. Default 25.",
+      }),
+    ),
+    rerankColdStart: Type.Optional(
+      Type.Integer({
+        minimum: 0,
+        description:
+          "Minimum committed decisions before learned smart-pending weights replace the default 1.0 multipliers. Default 50.",
+      }),
+    ),
   },
   { description: "Navigation-mode toggles." },
 );

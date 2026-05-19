@@ -38,6 +38,7 @@ These are the ones agents get wrong most often. The full set with examples lives
 - **Heavy CPU work runs in a Bun `Worker`.** Hashing, signal computation, embeddings. Main thread stays responsive.
 - **Streaming JSONL ingest.** Never load the full file into memory.
 - **Stop before changing load-bearing shape.** AppContext shape, Overlay reducer base type, `effective_reviews` semantics, render primitive surface ([ADR 0010](./docs/adr/0010-render-primitives-vs-composites.md)), and schema migration shape need a written proposal or superseding ADR before code. Don't bypass with `--no-verify` or a sibling helper that re-derives the rule.
+- **Smart-pending learns at commit time, undoes via memory, never reads it back from SQL.** Session-local active learning ([explanation](./docs/explanation/smart-learning.md)) samples `accepted | relabeled | rejected` decisions inside `commitDecision` *before* `insertReview`; `record.undo` reverses via `smartLearning.reverseDecision`, not by re-querying `effective_reviews`. `skipped` never feeds the sampler. New code that commits decisions outside the Overlay effect path must call `recordDecision` itself.
 
 ## Verify
 
@@ -63,6 +64,7 @@ These are the ones agents get wrong most often. The full set with examples lives
 | Queue registration pattern | [`src/store/queues/`](./src/store/queues/) — one file per queue, register in `registry.ts`. |
 | Assistant call shape | [`src/assistant/provider.ts`](./src/assistant/provider.ts) — `queryAssistant` is the single entry. ADR 0009 superseded PRD §14.4's right-side panel with an inline footer. |
 | Config schema source of truth | [`src/config/config.ts`](./src/config/config.ts) — TypeBox `LabellensConfigSchema`. Run `bun run schema` after edits to refresh [`schema/labellens.config.schema.json`](./schema/labellens.config.schema.json). A unit test fails on drift. |
+| Smart-pending learned weights | [`src/learning/smart-learning.ts`](./src/learning/smart-learning.ts) — pure session-local sampler. Wired into AppContext + invoked from `src/overlay/effects.ts` (commit) and `src/actions/record/undo.ts` (reverse). Query factory: `buildSmartPendingQuery` in [`src/store/queues/smart-pending.ts`](./src/store/queues/smart-pending.ts). |
 
 ## Quick rules for PRs
 
