@@ -8,7 +8,7 @@ import { queueRecords } from "../../src/store/queries.ts";
 import { resolveQueue } from "../../src/store/queues/registry.ts";
 import { insertReview } from "../../src/store/records.ts";
 import { DEFAULT_FIELDS, openTmpStore } from "../util/tmp.ts";
-import { assertPerf } from "./_util.ts";
+import { assertPerf, measureMedian } from "./_util.ts";
 
 const REVIEW_RATIO = 0.1;
 
@@ -57,9 +57,18 @@ test("stats overlay opens on large fixture within envelope", async () => {
 
   mountReviewScreen({ renderer, app });
   await renderOnce();
-  const t0 = performance.now();
-  mockInput.pressKey("t");
-  await renderOnce();
-  const elapsed = performance.now() - t0;
+
+  // Sample = press 't' (opens stats overlay → triggers allStats + first
+  // frame) → close overlay → settle. Each sample is ~5s on large fixture, so
+  // warmup + 3 samples ≈ 20s within the 120s timeout.
+  const elapsed = await measureMedian(async () => {
+    const t0 = performance.now();
+    mockInput.pressKey("t");
+    await renderOnce();
+    const ms = performance.now() - t0;
+    app.closeOverlay();
+    await renderOnce();
+    return ms;
+  });
   assertPerf("stats_open_large_ms", elapsed);
 }, 120_000);

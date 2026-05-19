@@ -53,11 +53,18 @@ for (const line of lines) {
 }
 
 // Guard against partial-suite runs (test crashed mid-way, hang, etc.) writing
-// truncated baselines that then get committed. The number of perf files is
-// the source of truth — one assertPerf call per file by convention.
-if (Object.keys(merged).length !== perfFiles.length) {
+// truncated baselines that then get committed. The existing baselines file
+// names every metric we already track; every one of those keys must be
+// re-captured before we overwrite. Files that intentionally don't call
+// `assertPerf` (e.g. motion.perf.ts compares motion_on vs motion_off ratios
+// without a stored baseline) are tolerated.
+const existing: Record<string, number> = existsSync(BASELINES_PATH)
+  ? (JSON.parse(readFileSync(BASELINES_PATH, "utf8")) as Record<string, number>)
+  : {};
+const missing = Object.keys(existing).filter((k) => !(k in merged));
+if (missing.length > 0) {
   console.error(
-    `expected ${perfFiles.length} captured metrics (one per .perf.ts file), got ${Object.keys(merged).length}: ${Object.keys(merged).sort().join(", ")}`,
+    `existing baselines missing from capture: ${missing.sort().join(", ")} — did any perf test crash before reaching assertPerf?`,
   );
   rmSync(CAPTURE_PATH);
   process.exit(1);

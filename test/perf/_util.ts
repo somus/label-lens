@@ -44,6 +44,36 @@ function loadBaselines(): PerfBaselines {
   return cached;
 }
 
+/**
+ * Run `measure` repeatedly to suppress one-shot CI noise, then return the
+ * median elapsed-ms. The first `warmup` invocations are discarded so JIT,
+ * filesystem caches, and module-init costs don't bias the timing; the next
+ * `samples` are sorted and the middle value is returned.
+ *
+ * Each invocation must fully encapsulate the work being measured — set up,
+ * time the relevant span, tear down, and return the timed span in ms. The
+ * helper does not own state across invocations so callers can rebuild fresh
+ * stores or reset side-effected tables between samples when the work isn't
+ * idempotent (`signals`, `ingest`).
+ *
+ * Defaults (warmup=1, samples=3) target a 4× cost over the previous single-
+ * shot harness while collapsing the failure mode that triggered the perf-
+ * envelope flake on PR #120: keystroke_j_ms = 23.3ms vs limit 22.8ms, a
+ * 0.5ms spike well within bun:test's per-run variance on a shared runner.
+ */
+export async function measureMedian(
+  measure: () => Promise<number>,
+  opts: { warmup?: number; samples?: number } = {},
+): Promise<number> {
+  const warmup = opts.warmup ?? 1;
+  const samples = opts.samples ?? 3;
+  for (let i = 0; i < warmup; i++) await measure();
+  const xs: number[] = [];
+  for (let i = 0; i < samples; i++) xs.push(await measure());
+  xs.sort((a, b) => a - b);
+  return xs[Math.floor(xs.length / 2)]!;
+}
+
 export function assertPerf(name: string, elapsedMs: number): void {
   // Read env at call time, not module-import time — capture-mode runs share
   // a bun process with non-capture runs in some Bun versions, and an early
