@@ -43,6 +43,28 @@ describe("smart-learning — rerank interval", () => {
   });
 });
 
+describe("smart-learning — reverseDecision at zero", () => {
+  test("reversing before any decision is a no-op and leaves weights at 1.0", () => {
+    const sl = createSmartLearning({ rerankInterval: 1, rerankColdStart: 0 });
+
+    // Calling reverseDecision with empty counters must not throw, must not
+    // underflow `totalDecisions`, and must keep weights at the default 1.0.
+    sl.reverseDecision("relabeled", ["low_confidence"]);
+    sl.reverseDecision("accepted", []);
+
+    expect(sl.weights()).toEqual({
+      low_confidence: 1,
+      source_disagreement: 1,
+      exact_duplicate: 1,
+    });
+
+    // After the no-op reversals, the very first recordDecision should still
+    // behave normally — confirms counters were not corrupted into negative.
+    sl.recordDecision("relabeled", ["low_confidence"]);
+    expect(sl.weights().low_confidence).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe("smart-learning — reverseDecision (undo)", () => {
   test("reversing a relabeled sample returns the type's lift to baseline", () => {
     // Interval 1 + cold-start 0 so each call updates the cache; deterministic

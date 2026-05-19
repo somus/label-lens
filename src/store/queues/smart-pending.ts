@@ -9,15 +9,30 @@ import type { QueueDefinition } from "./registry.ts";
 export type SmartPendingWeights = Partial<Record<BuiltinIssueType, number>>;
 
 export type BuildSmartPendingOptions = {
-  /** Multiplier per built-in Issue type. Missing types default to 1. */
+  /**
+   * Multiplier per built-in Issue type. Missing or non-finite values fall back
+   * to 1. All values are clamped to `[MIN_WEIGHT, MAX_WEIGHT]` so the SQL
+   * score expression can't be poisoned by a malformed caller (0, negative,
+   * Infinity).
+   */
   weights?: SmartPendingWeights;
-  /** Fixed multiplier for imported Issue rows. Defaults to 1. */
+  /**
+   * Fixed multiplier for imported Issue rows. Defaults to 1.0; clamped to
+   * `[MIN_WEIGHT, MAX_WEIGHT]` for the same reason as built-in weights.
+   */
   importedWeight?: number;
 };
 
+const MIN_WEIGHT = 0.25;
+const MAX_WEIGHT = 3.0;
+
+function clampWeight(x: number): number {
+  return Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, x));
+}
+
 function weightFor(weights: SmartPendingWeights | undefined, t: BuiltinIssueType): number {
   const w = weights?.[t];
-  return typeof w === "number" && Number.isFinite(w) ? w : 1;
+  return typeof w === "number" && Number.isFinite(w) ? clampWeight(w) : 1;
 }
 
 /**
@@ -36,7 +51,10 @@ export function buildSmartPendingQuery(opts: BuildSmartPendingOptions = {}): Que
   const wLow = weightFor(opts.weights, "low_confidence");
   const wDis = weightFor(opts.weights, "source_disagreement");
   const wDup = weightFor(opts.weights, "exact_duplicate");
-  const wImp = typeof opts.importedWeight === "number" ? opts.importedWeight : 1;
+  const wImp =
+    typeof opts.importedWeight === "number" && Number.isFinite(opts.importedWeight)
+      ? clampWeight(opts.importedWeight)
+      : 1;
 
   // SQLite has no MAX(scalar, scalar); clamp negatives to 0 via CASE before
   // multiplying. NULL scores collapse to 0 via COALESCE.

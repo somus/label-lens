@@ -1,12 +1,15 @@
 /**
  * Session-local active learning for the smart-pending Queue (issue #93).
  *
- * Tracks `relabeled` decisions per built-in Issue type in the current launch
- * and re-weights the smart-pending score every `rerankInterval` decisions
- * once the `rerankColdStart` floor is cleared. Weights are clamped to
- * `[0.25, 3.0]` so a noisy early session can't push any type to zero or
- * dominate the ranking. Imported Issues are never sampled here — they keep a
- * fixed weight of 1.0 inside `buildSmartPendingQuery`.
+ * Tracks the **relabel rate** per built-in Issue type in the current launch:
+ * the numerator counts `relabeled` decisions; the denominator counts every
+ * committed annotation (`accepted | relabeled | rejected`). `skipped` is
+ * deferred-not-annotated (ADR 0003) and never feeds the sampler. Weights are
+ * recomputed every `rerankInterval` decisions once the `rerankColdStart`
+ * floor is cleared, clamped to `[0.25, 3.0]` so a noisy early session can't
+ * push any type to zero or dominate the ranking. Imported Issues are never
+ * sampled here — they keep a fixed weight of 1.0 inside
+ * `buildSmartPendingQuery`.
  */
 
 export const BUILTIN_ISSUE_TYPES = [
@@ -17,12 +20,26 @@ export const BUILTIN_ISSUE_TYPES = [
 
 export type BuiltinIssueType = (typeof BUILTIN_ISSUE_TYPES)[number];
 
-export type LearningDecisionStatus = "accepted" | "relabeled" | "rejected" | "skipped";
+/**
+ * Decision statuses the sampler accepts. `skipped` is intentionally excluded
+ * because a deferred Record reveals nothing about whether the Issue type is a
+ * productive filter (ADR 0003). `undone` and `pending` are also excluded —
+ * undo paths call `reverseDecision` on the prior status, not the compensating
+ * row.
+ */
+export type LearningDecisionStatus = "accepted" | "relabeled" | "rejected";
 
 export type SmartLearningOptions = {
   rerankInterval: number;
   rerankColdStart: number;
-  /** Additive smoothing for the lift ratio. Default 1. */
+  /**
+   * Additive (Laplace) smoothing for the lift ratio. Default 1 (standard
+   * Laplace). Prevents division-by-zero and shrinks early-session estimates
+   * toward the baseline so a single noisy sample can't pin a weight to the
+   * clamp edges. Lower values approach the unsmoothed MLE; setting to 0 is
+   * not recommended (the per-type rate becomes 0/0 when a type has been
+   * sampled but never relabeled).
+   */
   smoothing?: number;
 };
 
@@ -51,6 +68,11 @@ function clamp(x: number, lo: number, hi: number): number {
 
 export function createSmartLearning(opts: SmartLearningOptions): SmartLearning {
   const alpha = opts.smoothing ?? 1;
+  // Clamp the bypass-time values so programmatic callers (tests, future
+  // config-edit paths) can't trigger `% 0` or a coldStart that never clears.
+  // TypeBox validates loaded config; this guard catches everything else.
+  const rerankInterval = Math.max(1, Math.floor(opts.rerankInterval));
+  const rerankColdStart = Math.max(0, Math.floor(opts.rerankColdStart));
   let totalDecisions = 0;
   let totalRelabels = 0;
   const perType: Record<BuiltinIssueType, { relabels: number; total: number }> = {
@@ -61,7 +83,7 @@ export function createSmartLearning(opts: SmartLearningOptions): SmartLearning {
   let cached: SmartLearningWeights = oneWeights();
 
   function recompute(): void {
-    if (totalDecisions < opts.rerankColdStart) {
+    if (totalDecisions < rerankColdStart) {
       cached = oneWeights();
       return;
     }
@@ -84,8 +106,8 @@ export function createSmartLearning(opts: SmartLearningOptions): SmartLearning {
   }
 
   function maybeRecompute(): void {
-    if (totalDecisions < opts.rerankColdStart) return;
-    if (totalDecisions % opts.rerankInterval !== 0) return;
+    if (totalDecisions < rerankColdStart) return;
+    if (totalDecisions % rerankInterval !== 0) return;
     recompute();
   }
 

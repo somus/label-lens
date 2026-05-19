@@ -21,9 +21,14 @@ describe("undo reverses a smart-learning relabel sample", () => {
     const target = store.db.all<{ id: string }>(
       sql`SELECT id FROM records WHERE text = 'Salary credit October'`,
     )[0]!;
-    const ghost = store.db.all<{ id: string }>(
-      sql`SELECT id FROM records WHERE text = 'Lunch at Zomato Bangalore'`,
-    )[0]!;
+    // Five DISTINCT distractor Records — committing the same id repeatedly
+    // would conflate the learning sampler with effective_reviews semantics.
+    const distractors = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records
+          WHERE text IN ('Lunch at Zomato Bangalore', 'Uber ride to airport',
+                         'Amazon order #12345', 'Netflix monthly',
+                         'Rent transfer to landlord')`,
+    );
     store.db.run(sql`
       INSERT INTO issues (record_id, type, score, source, created_at)
       VALUES (${target.id}, 'low_confidence', 0.5, 'labellens:computed', ${new Date().toISOString()})
@@ -41,9 +46,10 @@ describe("undo reverses a smart-learning relabel sample", () => {
     });
     enterReview(app, "pending");
 
-    // Drive a few distractor accepts so the relabel-lift comparison has a
-    // non-degenerate baseline.
-    for (let i = 0; i < 5; i++) {
+    // Drive distractor accepts on five distinct Records so the relabel-lift
+    // comparison has a non-degenerate baseline.
+    expect(distractors.length).toBe(5);
+    for (const ghost of distractors) {
       applyEffects(app, "pending", [
         {
           kind: "commitDecision",

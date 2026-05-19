@@ -134,8 +134,8 @@ Terminal capability + theme are detected at startup. These overrides force a spe
 | Field | Default | Meaning |
 |---|---|---|
 | `smartNext` | `false` | When true and the queue is `pending`, `j` / `k` walk a signal-weighted `smart-pending` cursor (low confidence + disagreement + flagged bubble up). `shift+j` / `shift+k` always navigate document order. |
-| `rerankInterval` | `25` | Commit decisions between smart-pending weight refreshes. Session-local active learning re-weights built-in Issue types (`low_confidence`, `source_disagreement`, `exact_duplicate`) every N committed decisions. Imported Issues stay at fixed weight 1.0. |
-| `rerankColdStart` | `50` | Minimum committed decisions before learned weights replace the default 1.0 multipliers. Until then, smart-pending uses raw Issue scores at equal weight. Weights reset on relaunch — never persisted. |
+| `rerankInterval` | `25` | Commit decisions between smart-pending weight refreshes. Session-local active learning re-weights built-in Issue types (`low_confidence`, `source_disagreement`, `exact_duplicate`) every N committed decisions. Only `accepted`, `relabeled`, `rejected` decisions feed the sampler — `skipped` is deferred-not-annotated (ADR 0003) and never counted. Imported Issues stay at fixed weight 1.0. Read once at app launch — immutable for the session. |
+| `rerankColdStart` | `50` | Minimum committed decisions before learned weights replace the default 1.0 multipliers. Weights remain 1.0 for every type until `totalDecisions ≥ rerankColdStart` **and** the next rerank-interval boundary fires. Until both conditions hold, smart-pending uses raw Issue scores at equal weight. Weights reset on relaunch — never persisted. See [docs/explanation/smart-learning.md](../explanation/smart-learning.md) for the lift formula. |
 
 ## `assistant`
 

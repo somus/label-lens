@@ -173,6 +173,13 @@ export function createAppContext(args: {
   let inputPendingUntil = 0;
   let lastObservedProgress: number | null = null;
   let ctx: AppContext;
+  // `navigation.rerankInterval` and `navigation.rerankColdStart` are read once
+  // at app launch. They are immutable for the duration of the session — no
+  // current UI surface edits them, and the factory closure below captures
+  // this `smartLearning` reference for every smart-pending cursor refresh.
+  // If a future feature exposes these in an overlay, it must call a setter on
+  // `smartLearning` rather than mutating `app.config.navigation` (the factory
+  // would not pick the mutation up).
   const smartLearning = createSmartLearning({
     rerankInterval: args.config.navigation?.rerankInterval ?? 25,
     rerankColdStart: args.config.navigation?.rerankColdStart ?? 50,

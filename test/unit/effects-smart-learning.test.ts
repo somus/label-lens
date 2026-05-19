@@ -46,15 +46,18 @@ describe("applyEffects feeds smart-learning samples on commitDecision", () => {
       exact_duplicate: 1,
     });
 
-    // Drive distractor decisions through the effects interpreter so the
-    // learning baseline has non-trivial denominator before the relabel lands.
-    for (let i = 0; i < 5; i++) {
-      const ghost = store.db.all<{ id: string }>(
-        sql`SELECT id FROM records WHERE text = 'Lunch at Zomato Bangalore'`,
-      )[0]!;
-      // Re-using the same recordId is fine for this counter check — the
-      // effective_reviews semantics make later commits no-op the queue, but
-      // the learning sampler still increments its in-memory totals.
+    // Drive distractor decisions on FIVE DISTINCT Records so the learning
+    // baseline has a non-trivial denominator built from independent samples,
+    // not from re-committing the same record id (which would exploit a
+    // sampler/effective_reviews quirk and obscure the test's intent).
+    const distractors = store.db.all<{ id: string }>(
+      sql`SELECT id FROM records
+          WHERE text IN ('Lunch at Zomato Bangalore', 'Uber ride to airport',
+                         'Amazon order #12345', 'Netflix monthly',
+                         'Rent transfer to landlord')`,
+    );
+    expect(distractors.length).toBe(5);
+    for (const ghost of distractors) {
       applyEffects(app, "pending", [
         {
           kind: "commitDecision",

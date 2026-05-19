@@ -8,8 +8,17 @@ describe("smart-pending — weighted scoring", () => {
   test("learned weights multiply built-in Issue score magnitude", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
 
-    // Pick two clean Records (no predictions disagreement, high confidence,
-    // no incoming issues) and attach one computed built-in Issue each.
+    // Two clean Records (no predictions disagreement, high confidence, no
+    // incoming issues) get one computed built-in Issue each.
+    const SALARY_ISSUE_SCORE = 0.5;
+    const RENT_ISSUE_SCORE = 0.9;
+    const W_LOW = 3;
+    const W_DUP = 0.25;
+    // Expected weighted contributions:
+    const EXPECTED_SALARY_SCORE = W_LOW * SALARY_ISSUE_SCORE; // 1.5
+    const EXPECTED_RENT_SCORE = W_DUP * RENT_ISSUE_SCORE; //   0.225
+    expect(EXPECTED_SALARY_SCORE).toBeGreaterThan(EXPECTED_RENT_SCORE);
+
     const salary = store.db.all<{ id: string }>(
       sql`SELECT id FROM records WHERE text = 'Salary credit October'`,
     )[0]!;
@@ -20,19 +29,16 @@ describe("smart-pending — weighted scoring", () => {
     const now = new Date().toISOString();
     store.db.run(sql`
       INSERT INTO issues (record_id, type, score, source, created_at)
-      VALUES (${salary.id}, 'low_confidence', 0.5, 'labellens:computed', ${now}),
-             (${rent.id}, 'exact_duplicate', 0.9, 'labellens:computed', ${now})
+      VALUES (${salary.id}, 'low_confidence',  ${SALARY_ISSUE_SCORE}, 'labellens:computed', ${now}),
+             (${rent.id},   'exact_duplicate', ${RENT_ISSUE_SCORE},   'labellens:computed', ${now})
     `);
 
-    // With learned weights {low_confidence: 3, exact_duplicate: 0.25}:
-    //   salary score = 3 × 0.5  = 1.50
-    //   rent   score = 0.25 × 0.9 = 0.225
-    // → salary must outrank rent even though rent has the higher raw Issue
-    //   score.
+    // Salary outranks Rent even though Rent has the higher raw Issue score —
+    // learned weights flip the effective ordering.
     const rows = queueRecords(
       store.db,
       buildSmartPendingQuery({
-        weights: { low_confidence: 3, source_disagreement: 1, exact_duplicate: 0.25 },
+        weights: { low_confidence: W_LOW, source_disagreement: 1, exact_duplicate: W_DUP },
       }),
     );
 
@@ -46,13 +52,14 @@ describe("smart-pending — weighted scoring", () => {
   test("imported Issues contribute at fixed weight 1.0 regardless of learned weights", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
 
-    // Record A: built-in `low_confidence` Issue at score 0.1, learned weight 3.
-    //   contribution = 3 × 0.1 = 0.3
-    // Record B: imported Issue typed `low_confidence` at score 0.5 from
-    //   a non-sentinel source. Even with learned `low_confidence` weight = 3,
-    //   the import must stay at fixed weight 1.0.
-    //   contribution = 1 × 0.5 = 0.5
-    // → Record B ranks above Record A.
+    const SALARY_BUILTIN_SCORE = 0.1;
+    const RENT_IMPORTED_SCORE = 0.5;
+    const W_LOW = 3;
+    // Built-in Issue takes the learned multiplier; imported is hard-pinned at 1.
+    const EXPECTED_SALARY_SCORE = W_LOW * SALARY_BUILTIN_SCORE; // 0.3
+    const EXPECTED_RENT_SCORE = 1 * RENT_IMPORTED_SCORE; //         0.5
+    expect(EXPECTED_RENT_SCORE).toBeGreaterThan(EXPECTED_SALARY_SCORE);
+
     const salary = store.db.all<{ id: string }>(
       sql`SELECT id FROM records WHERE text = 'Salary credit October'`,
     )[0]!;
@@ -63,14 +70,14 @@ describe("smart-pending — weighted scoring", () => {
     const now = new Date().toISOString();
     store.db.run(sql`
       INSERT INTO issues (record_id, type, score, source, created_at)
-      VALUES (${salary.id}, 'low_confidence', 0.1, 'labellens:computed', ${now}),
-             (${rent.id},   'low_confidence', 0.5, 'cleanlab',           ${now})
+      VALUES (${salary.id}, 'low_confidence', ${SALARY_BUILTIN_SCORE}, 'labellens:computed', ${now}),
+             (${rent.id},   'low_confidence', ${RENT_IMPORTED_SCORE},  'cleanlab',           ${now})
     `);
 
     const rows = queueRecords(
       store.db,
       buildSmartPendingQuery({
-        weights: { low_confidence: 3, source_disagreement: 1, exact_duplicate: 1 },
+        weights: { low_confidence: W_LOW, source_disagreement: 1, exact_duplicate: 1 },
       }),
     );
 

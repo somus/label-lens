@@ -82,7 +82,19 @@ export function applyEffects(
       case "commitDecision": {
         // Sample built-in Issue types before `insertReview` so the smart-pending
         // weight refresh that follows the cursor refresh reflects this decision.
-        app.smartLearning.recordDecision(effect.status, builtinIssueTypesFor(app, effect.recordId));
+        // `skipped` is deferred-not-annotated (ADR 0003) and never feeds the
+        // learning sampler — a deferral reveals nothing about whether an Issue
+        // type is a productive filter.
+        if (
+          effect.status === "accepted" ||
+          effect.status === "relabeled" ||
+          effect.status === "rejected"
+        ) {
+          app.smartLearning.recordDecision(
+            effect.status,
+            builtinIssueTypesFor(app, effect.recordId),
+          );
+        }
         insertReview(app.db, {
           record_id: effect.recordId,
           status: effect.status,

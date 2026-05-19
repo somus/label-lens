@@ -16,14 +16,15 @@ export const undo: Command = {
       return;
     }
     // Reverse the learning sample before writing the compensating row so the
-    // upcoming smart-pending refresh sees the corrected counters. `pending`
-    // and `undone` never feed the sampler in the first place, so they have
-    // nothing to reverse here either.
+    // upcoming smart-pending refresh sees the corrected counters. `pending` is
+    // unreachable here — `latestReview` reads from `effective_reviews` (ADR
+    // 0007), which only surfaces committed-decision rows. `skipped` and
+    // `undone` never fed the sampler in the first place, so they have nothing
+    // to reverse.
     if (
       target.status === "accepted" ||
       target.status === "relabeled" ||
-      target.status === "rejected" ||
-      target.status === "skipped"
+      target.status === "rejected"
     ) {
       const types: BuiltinIssueType[] = [];
       for (const issue of issuesForRecord(ctx.db, target.record_id)) {
