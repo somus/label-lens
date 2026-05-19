@@ -48,7 +48,7 @@ flowchart TB
   Signals -.-> Store
 ```
 
-Stack: Bun + TypeScript, OpenTUI (imperative core), `bun:sqlite` + `drizzle-orm/bun-sqlite`, [`@earendil-works/pi-ai`](https://github.com/earendil-works/pi-ai) for the assistant, TypeBox for config and tool schemas. The keymap engine is pure TS with no UI deps so it stays deterministic and unit-testable. See [PRD §16](../../PRD.md) for the layering rationale.
+Stack: Bun + TypeScript, OpenTUI (imperative core), `bun:sqlite` + `drizzle-orm/bun-sqlite`, [`@earendil-works/pi-ai`](https://github.com/earendil-works/pi-ai) for the assistant, TypeBox for config and tool schemas. The keymap engine is pure TS with no UI deps so it stays deterministic and unit-testable. See [PRD §16](../../PRD.md#16-technical-stack) for the layering rationale.
 
 ## Module layout
 
@@ -67,6 +67,7 @@ Stack: Bun + TypeScript, OpenTUI (imperative core), `bun:sqlite` + `drizzle-orm/
 | [`src/export/`](../../src/export/) | JSONL, CSV, audit-log writers. |
 | [`src/app/`](../../src/app/) | `AppContext` — the shared state object that ties cursors, config, db handle, motion, flash, overlay, and counters together. |
 | [`src/cursor/`](../../src/cursor/), [`src/keymap/`](../../src/keymap/), [`src/picker/`](../../src/picker/), [`src/boundary/`](../../src/boundary/), [`src/man/`](../../src/man/) | Smaller focused subsystems — cursor abstraction, keymap engine, relabel palette filter, document boundary resolution, in-app man page. |
+| [`test/`](../../test/) | `unit/`, `e2e/`, `perf/` tiers + shared fixtures and helpers. See [`test/AGENTS.md`](../../test/AGENTS.md) for the harness and conventions. |
 
 The "Where things live" table in [CLAUDE.md](../../CLAUDE.md) covers the same ground at the file-pointer level — use it for fast lookups; use this page when you need the shape.
 
