@@ -22,22 +22,55 @@ function firstBinding(cmd: Command): string | null {
   return Array.isArray(cmd.binding) ? (cmd.binding[0] ?? null) : cmd.binding;
 }
 
+const ARROW_GLYPH: Record<string, string> = {
+  up: "↑",
+  down: "↓",
+  left: "←",
+  right: "→",
+};
+
+function glyphFor(key: string): string {
+  return ARROW_GLYPH[key] ?? key;
+}
+
 function displayKey(binding: string): string {
-  // "g d" → "gd" (chord), "shift+q" → "Q", "ctrl+d" → "^d".
+  // "g d" → "gd" (chord), "shift+q" → "Q", "ctrl+d" → "^d", "right" → "→".
   if (binding.includes(" ") && !binding.includes("+")) {
     const keys = binding.split(" ");
     if (keys.length > 2) {
       throw new Error(`displayKey: footer chord exceeds 2 keys: "${binding}"`);
     }
-    return keys.join("");
+    return keys.map(glyphFor).join("");
   }
   const lower = binding.toLowerCase();
   const parts = lower.split("+");
   const key = parts[parts.length - 1] ?? "";
-  if (parts.includes("ctrl")) return `^${key}`;
-  if (parts.includes("shift")) return key.toUpperCase();
-  if (parts.includes("meta")) return `M-${key}`;
-  return key;
+  if (parts.includes("ctrl")) return `^${glyphFor(key)}`;
+  if (parts.includes("shift")) {
+    const glyph = ARROW_GLYPH[key];
+    return glyph ? `S-${glyph}` : key.toUpperCase();
+  }
+  if (parts.includes("meta")) return `M-${glyphFor(key)}`;
+  return glyphFor(key);
+}
+
+/**
+ * Append a `[‹prev›/‹next›]` cycle-keys suffix to the queue-screen footer
+ * entry when both `queue.prev` and `queue.next` are bound. Reads resolved
+ * bindings from the registry so the suffix tracks the active preset (vim
+ * shows `[/]`, simple shows `[←/→]`) without baking either form into the
+ * static `footer.label`.
+ */
+function queueCycleSuffix(registry: CommandRegistry): string {
+  const prev = registry.get("queue.prev");
+  const next = registry.get("queue.next");
+  const prevKey = prev ? firstBinding(prev) : null;
+  const nextKey = next ? firstBinding(next) : null;
+  if (!prevKey || !nextKey) return "";
+  // No enclosing brackets — the displayed glyphs/chars are the keys themselves
+  // (vim: `[` / `]`; simple: `←` / `→`). Wrapping in `[…]` would either nest
+  // (`[[/]]`) or shadow the action-key bracket convention used by other entries.
+  return ` ${displayKey(prevKey)}/${displayKey(nextKey)}`;
 }
 
 export function collectFooterEntries(
@@ -46,6 +79,7 @@ export function collectFooterEntries(
   ctx: AppContext,
 ): FooterEntry[] {
   const out: FooterEntry[] = [];
+  const cycleSuffix = queueCycleSuffix(registry);
   for (const cmd of registry.values()) {
     if (!cmd.footer) continue;
     const inScope =
@@ -58,9 +92,11 @@ export function collectFooterEntries(
     // Disabled commands stay visible (rendered dimmed with an `(unavailable)`
     // suffix by entriesToSegments) so the binding stays discoverable. ADR 0008.
     const enabled = cmd.enabled ? cmd.enabled(ctx) : true;
+    const label =
+      cmd.name === "queue.openScreen" ? `${cmd.footer.label}${cycleSuffix}` : cmd.footer.label;
     out.push({
       binding: displayKey(binding),
-      label: cmd.footer.label,
+      label,
       order: cmd.footer.order ?? 1000,
       disabled: !enabled,
       group: cmd.footer.group ?? "primary",

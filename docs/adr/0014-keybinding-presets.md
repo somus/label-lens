@@ -41,4 +41,4 @@ Overlay-local navigation (j/k vs arrow keys) is gated by a single `OverlayKeyPre
 - Custom presets inherit from the `vim` baseline for unspecified commands. Merge order is preset → overrides.
 - `reservedReviewKeys` reads post-resolve `binding`, so switching presets or adding overrides re-derives the label-key reserved set without manual tracking.
 - The committed `schema/labellens.config.schema.json` regenerates from the new TypeBox shape; a drift test guards against forgotten regeneration.
-- Overlay-local keys are NOT individually configurable via `keys.overrides` in this iteration — the preset choice controls them collectively (vim keeps `j/k`/`ctrl+j` aliases; simple drops them). Per-command overlay bindings can be a follow-up if needed.
+- Overlay-local keys are NOT individually configurable via `keys.overrides` in this iteration — the preset choice controls them collectively (vim keeps `j/k`/`ctrl+j` aliases; simple drops them). Per-command overlay bindings would multiply the config surface (binding × preset × overlay-local) without a clear demand signal; preset-wide gating covers the j/k vs arrow split in one switch. Follow-up if a real ask lands.

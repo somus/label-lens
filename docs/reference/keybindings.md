@@ -17,7 +17,7 @@ Select via [`keys.preset`](./config.md#keys) in `labellens.config.json`. Custom 
 
 The default scope when no overlay or screen is open.
 
-### Decisions (both presets)
+### Decisions (same in both presets)
 
 | Key | Action | Notes |
 |---|---|---|
