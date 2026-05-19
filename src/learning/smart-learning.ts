@@ -106,7 +106,15 @@ export function createSmartLearning(opts: SmartLearningOptions): SmartLearning {
   }
 
   function maybeRecompute(): void {
-    if (totalDecisions < rerankColdStart) return;
+    // Under the cold-start floor weights are always 1.0 — undo can drop
+    // `totalDecisions` back below the floor mid-session, and the cache must
+    // follow. Falling through with an early return here would leave the
+    // previously learned multipliers in place, breaking the documented
+    // cold-start contract.
+    if (totalDecisions < rerankColdStart) {
+      cached = oneWeights();
+      return;
+    }
     if (totalDecisions % rerankInterval !== 0) return;
     recompute();
   }

@@ -43,6 +43,28 @@ describe("smart-learning — rerank interval", () => {
   });
 });
 
+describe("smart-learning — undo crosses cold-start floor", () => {
+  test("reversing back below rerankColdStart restores cached weights to 1.0", () => {
+    // Tight floor so the round trip stays inside the test: coldStart=2,
+    // interval=1. After 2 decisions we cross the floor and pick up learned
+    // weights; one reverse drops totalDecisions to 1, which must restore
+    // cached weights to 1.0 — otherwise smart-pending stays reweighted even
+    // though the session is back under the documented cold-start gate.
+    const sl = createSmartLearning({ rerankInterval: 1, rerankColdStart: 2 });
+
+    sl.recordDecision("accepted", []);
+    sl.recordDecision("relabeled", ["low_confidence"]);
+    expect(sl.weights().low_confidence).toBeGreaterThan(1);
+
+    sl.reverseDecision("relabeled", ["low_confidence"]);
+    expect(sl.weights()).toEqual({
+      low_confidence: 1,
+      source_disagreement: 1,
+      exact_duplicate: 1,
+    });
+  });
+});
+
 describe("smart-learning — reverseDecision at zero", () => {
   test("reversing before any decision is a no-op and leaves weights at 1.0", () => {
     const sl = createSmartLearning({ rerankInterval: 1, rerankColdStart: 0 });
