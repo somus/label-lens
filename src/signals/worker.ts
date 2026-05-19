@@ -1,9 +1,10 @@
 /// <reference lib="webworker" />
 import { openDb } from "../store/db.ts";
 import { runSignals } from "./run.ts";
+import type { LowConfidenceThresholds } from "./threshold.ts";
 
 export type WorkerInbound =
-  | { kind: "start"; dbPath: string; lowConfidenceThreshold?: number }
+  | { kind: "start"; dbPath: string; lowConfidence?: LowConfidenceThresholds }
   | { kind: "cancel" };
 
 export type WorkerOutbound =
@@ -33,12 +34,12 @@ self.onmessage = (event) => {
   }
 };
 
-function runStart(msg: { dbPath: string; lowConfidenceThreshold?: number }): void {
+function runStart(msg: { dbPath: string; lowConfidence?: LowConfidenceThresholds }): void {
   let db: ReturnType<typeof openDb> | null = null;
   try {
     db = openDb(msg.dbPath);
     const result = runSignals(db, {
-      lowConfidenceThreshold: msg.lowConfidenceThreshold,
+      lowConfidence: msg.lowConfidence,
       isCancelled: () => cancelRequested,
       onProgress: (done, total) => self.postMessage({ kind: "progress", done, total }),
     });

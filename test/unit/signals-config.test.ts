@@ -76,9 +76,9 @@ describe("runSignals enabled gate", () => {
     expect(types.has("source_disagreement")).toBe(false);
   });
 
-  test("lowConfidenceThreshold gates which records emit low_confidence", async () => {
+  test("lowConfidence.default gates which records emit low_confidence", async () => {
     using store = await seedFixture();
-    runSignals(store.db, { lowConfidenceThreshold: 0.1 });
+    runSignals(store.db, { lowConfidence: { default: 0.1, bySource: [] } });
     const rows = store.db.select().from(issues).all();
     expect(rows.find((r) => r.type === "low_confidence" && r.recordId === "r1")).toBeUndefined();
   });

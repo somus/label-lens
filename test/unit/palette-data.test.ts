@@ -37,7 +37,7 @@ describe("fetchPaletteData", () => {
 
   test("issue types populated after signals run", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    runSignals(store.db, { lowConfidenceThreshold: 0.5 });
+    runSignals(store.db, { lowConfidence: { default: 0.5, bySource: [] } });
     const data = fetchPaletteData(store.db, []);
     expect(data.issueTypes.length).toBeGreaterThan(0);
   });

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { TxOrDb } from "./db.ts";
 import { issues } from "./schema.ts";
 
@@ -64,4 +64,15 @@ export function issuesForRecord(db: TxOrDb, recordId: string): StoredIssue[] {
 
 export function purgeComputedIssues(db: TxOrDb): void {
   db.delete(issues).where(eq(issues.source, COMPUTED_SIGNAL_SOURCE)).run();
+}
+
+/**
+ * Type-scoped variant of `purgeComputedIssues`. Used by the threshold-only
+ * recompute path so retuning `low_confidence` doesn't wipe `source_disagreement`
+ * or `exact_duplicate` rows.
+ */
+export function purgeComputedIssuesOfType(db: TxOrDb, type: string): void {
+  db.delete(issues)
+    .where(and(eq(issues.source, COMPUTED_SIGNAL_SOURCE), eq(issues.type, type)))
+    .run();
 }

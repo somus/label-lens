@@ -48,7 +48,9 @@ describe("Slice 2 visual polish — banded record + badges", () => {
 
   test("issue badges render with semantic icon glyphs at truecolor", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    runSignals(store.db, { lowConfidenceThreshold: 0.5 });
+    // Threshold lifted so the disagreement record's primary (0.81) also
+    // trips low_confidence, giving us both badges on the same frame.
+    runSignals(store.db, { lowConfidence: { default: 0.9, bySource: [] } });
 
     const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
       width: 120,

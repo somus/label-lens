@@ -426,11 +426,37 @@
     "signals": {
       "type": "object",
       "properties": {
+        "lowConfidence": {
+          "type": "object",
+          "required": [
+            "default"
+          ],
+          "properties": {
+            "default": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "description": "Default confidence under which the `low_confidence` signal fires. Validated as 0 < default ≤ 1."
+            },
+            "bySource": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 1
+                }
+              },
+              "description": "Per-Source threshold overrides. Keys are exact Prediction sources or `*`-globs (e.g. `regex.*`, `model-*-prod`). Resolution: exact match wins, else most-specific glob (longest non-wildcard prefix), else config order, else default."
+            }
+          },
+          "description": "Low-confidence threshold tuning."
+        },
         "lowConfidenceThreshold": {
           "type": "number",
-          "minimum": 0,
+          "exclusiveMinimum": 0,
           "maximum": 1,
-          "description": "Confidence under which the `low_confidence` signal fires. Default 0.5."
+          "description": "Deprecated alias for `lowConfidence.default`. Migrated on load and on the first persisted write."
         },
         "enable": {
           "type": "array",

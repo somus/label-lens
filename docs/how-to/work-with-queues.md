@@ -18,6 +18,15 @@ See [Reference: queues](../reference/queues.md) for the full grammar.
 
 Or open the queue overlay (`Q`) and pick `low-confidence`. Records sort by `primary_confidence` ASC.
 
+To tune what "low confidence" means for your dataset:
+
+```bash
+labellens config set signals.lowConfidence.default 0.6
+labellens config set signals.lowConfidence.bySource "regex.*=0.3"
+```
+
+Each call rewrites `labellens.config.json` and recomputes the `by-issue:low_confidence` queue + `smart-pending` ordering against the new thresholds. See [config reference → signals](../reference/config.md#signals) for resolution rules.
+
 ### Find records where two models disagree
 
 ```

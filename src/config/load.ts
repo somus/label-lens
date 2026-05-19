@@ -1,5 +1,32 @@
 import { type LabellensConfig, validateConfigSchema } from "./config.ts";
 
+/**
+ * In-memory migration of legacy `signals.lowConfidenceThreshold` to the
+ * nested `signals.lowConfidence.default` shape. Nested shape wins when both
+ * are present. The legacy key is stripped so downstream code only ever sees
+ * one form; persisted writes (e.g. `labellens config set`) emit the nested
+ * shape too.
+ */
+export function normalizeSignalsConfig(config: LabellensConfig): LabellensConfig {
+  const signals = config.signals;
+  if (!signals) return config;
+  const { lowConfidence, lowConfidenceThreshold, ...rest } =
+    signals as LabellensConfig["signals"] & {
+      lowConfidenceThreshold?: number;
+    };
+  if (lowConfidence === undefined && lowConfidenceThreshold === undefined) return config;
+  const next: LabellensConfig = {
+    ...config,
+    signals: {
+      ...rest,
+      ...(lowConfidence !== undefined
+        ? { lowConfidence }
+        : { lowConfidence: { default: lowConfidenceThreshold as number } }),
+    },
+  };
+  return next;
+}
+
 export class ConfigLoadError extends Error {
   constructor(
     message: string,
@@ -31,5 +58,5 @@ export async function loadConfig(configPath: string): Promise<LabellensConfig> {
   if (errors.length > 0) {
     throw new ConfigLoadError(`labellens: invalid ${configPath}`, errors);
   }
-  return raw as LabellensConfig;
+  return normalizeSignalsConfig(raw as LabellensConfig);
 }

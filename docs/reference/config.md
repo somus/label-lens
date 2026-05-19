@@ -19,7 +19,7 @@ The file ships a `$schema` URL pointing at [`schema/labellens.config.schema.json
   "display": { "color": "auto", "banding": "auto", "theme": "auto", "labelChip": "configured", "sidebar": "auto" },
   "navigation": { "smartNext": false },
   "assistant": { "enabled": false, "provider": "anthropic", "model": "claude-sonnet-4-5", "apiKeyEnvVar": "ANTHROPIC_API_KEY", "privacyAcknowledged": true },
-  "signals": { "lowConfidenceThreshold": 0.5, "enable": ["lowConfidence", "disagreement", "duplicate", "flagged"] },
+  "signals": { "lowConfidence": { "default": 0.5, "bySource": { "regex.*": 0.3 } }, "enable": ["lowConfidence", "disagreement", "duplicate", "flagged"] },
   "notes":   { "presets": ["needs-domain-help", "ambiguous-text"] },
   "keys":    { "record.accept": "y" }
 }
@@ -157,8 +157,35 @@ Tunes the prioritization-signal pass (PRD §10.4).
 
 | Field | Default | Meaning |
 |---|---|---|
-| `lowConfidenceThreshold` | `0.5` | Confidence under which the `low_confidence` signal fires. Records with `primary_confidence < threshold` land in `by-issue:low_confidence`. |
+| `lowConfidence.default` | `0.5` | Default confidence under which the `low_confidence` signal fires. Records whose **primary** prediction has `confidence < default` land in `by-issue:low_confidence`. Validated as `0 < default ≤ 1`. |
+| `lowConfidence.bySource` | _none_ | Per-Source threshold overrides. Object keyed by exact Prediction source (e.g. `"llm:gpt-4"`) or simple `*`-glob (e.g. `"regex.*"`, `"model-*-prod"`). Each value validated as `0 < value ≤ 1`. See **Threshold resolution** below. |
 | `enable` | all four | Subset of signals to compute. Values: `lowConfidence`, `disagreement`, `duplicate`, `flagged`. Disabled signals stop producing `issues` rows — their queues + chips disappear and `smart-pending` stops weighting them. |
+| `lowConfidenceThreshold` | _deprecated_ | Legacy v0.11 alias for `lowConfidence.default`. Still accepted on read; migrated to the nested shape in memory and on the first persisted write (e.g. `labellens config set`). |
+
+**Threshold resolution.** For each record, LabelLens picks the threshold to apply against the **primary** Prediction's `source`:
+
+1. **Exact source match** — `bySource` entry whose pattern has no `*` and equals the source string. First match wins (exact patterns are unique by construction).
+2. **Glob match** — `bySource` entry whose pattern contains `*`. Among matching globs, the one with the **longest non-wildcard prefix** wins; ties broken by config order (earlier entry wins).
+3. **`default`** — fallback.
+
+A record whose primary Prediction has no confidence (`null`) never receives a `low_confidence` Issue.
+
+**Severity score.** Issues use the normalized gap `(threshold − confidence) / threshold`. Records farther below their applicable threshold rank higher in `smart-pending`.
+
+**Recompute behavior.** Threshold changes trigger an incremental recompute that rewrites only `low_confidence` Issue rows; imported Issues and other computed signals (`source_disagreement`, `exact_duplicate`) are preserved. The recompute fires:
+
+- On startup when the persisted threshold fingerprint (in the `meta` kv table) differs from the current config.
+- After `labellens config set signals.lowConfidence.…` commits a write.
+
+To tune from the CLI:
+
+```bash
+labellens config set signals.lowConfidence.default 0.6
+labellens config set signals.lowConfidence.bySource "regex.*=0.3" "model-prod=0.7"
+labellens config unset signals.lowConfidence.bySource "regex.*"
+```
+
+Each call rewrites `labellens.config.json` in the nested shape (dropping the legacy field), then recomputes Issues against the new thresholds.
 
 ## `notes`
 

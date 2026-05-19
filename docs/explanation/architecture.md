@@ -102,6 +102,8 @@ Re-ingest is smart-diff, not destructive: [`src/ingest/reingest.ts`](../../src/i
 
 Prioritization signals are computed at startup once ingest is settled. [`src/signals/run.ts`](../../src/signals/run.ts) walks every record, computes `low_confidence`, `source_disagreement`, and `exact_duplicate` scores, and writes them to `issues` with `source = 'computed'`. Imported `issues` rows survive — only computed rows are purged and re-emitted.
 
+`low_confidence` evaluates the **primary** Prediction only; per-source thresholds resolve via [`src/signals/threshold.ts`](../../src/signals/threshold.ts) (exact match → most-specific glob → default). When threshold config alone changes, [`recomputeLowConfidence`](../../src/signals/run.ts) rewrites only `low_confidence` Issue rows so other signals and imported Issues stay put. The startup gate at [`src/signals/startup.ts`](../../src/signals/startup.ts) reads the last-applied threshold fingerprint from the `meta` kv table and skips recompute when the config hasn't changed — the post-ingest call records the fingerprint so the next launch is a no-op.
+
 The convention is that heavy CPU work runs in a Bun Worker so the main thread stays responsive (see CLAUDE.md). The worker entrypoint exists at [`src/signals/worker.ts`](../../src/signals/worker.ts); the production path currently calls `runSignals` inline from `cli/run.ts` because the loop is short enough that backgrounding it isn't yet a win. The shape is in place for when it is.
 
 ### 3. Queue resolution

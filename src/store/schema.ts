@@ -125,6 +125,16 @@ export const assistantQueries = sqliteTable(
   ],
 );
 
+/**
+ * Singleton key/value bag for state that doesn't fit a typed table: applied
+ * threshold fingerprint for the signals startup gate, future migrated-from
+ * markers, etc. Keep keys namespaced (`signals.lowConfidence.applied`).
+ */
+export const meta = sqliteTable("meta", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
 export const recordTags = sqliteTable(
   "record_tags",
   {
