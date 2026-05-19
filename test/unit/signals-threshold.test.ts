@@ -72,6 +72,23 @@ describe("resolveThreshold", () => {
   });
 
   test("two globs with identical prefix length: first in config order wins", () => {
+    // Both `a*c` and `a*` have the same non-wildcard prefix length (1, the
+    // leading `a`) and both match `aXc`, so the tie-break must fall to config
+    // order. Confirm each pattern matches in isolation first so the tie-break
+    // assertion can't accidentally pass just because the second pattern
+    // doesn't actually match.
+    expect(
+      resolveThreshold("aXc", {
+        default: 0.5,
+        bySource: [{ pattern: "a*c", threshold: 0.1 }],
+      }),
+    ).toBe(0.1);
+    expect(
+      resolveThreshold("aXc", {
+        default: 0.5,
+        bySource: [{ pattern: "a*", threshold: 0.2 }],
+      }),
+    ).toBe(0.2);
     expect(
       resolveThreshold("aXc", {
         default: 0.5,
@@ -81,6 +98,31 @@ describe("resolveThreshold", () => {
         ],
       }),
     ).toBe(0.1);
+  });
+
+  test("consecutive `*` collapses to a single wildcard (no validation pass)", () => {
+    // Single-`*` is the documented grammar; consecutive `*` patterns shouldn't
+    // appear in real configs. Pin current behavior: the matcher splits on `*`
+    // and skips empty parts, so `a**b` matches like `a*b`. If we ever add a
+    // pattern validator, update this test to assert rejection instead.
+    expect(
+      resolveThreshold("aXb", {
+        default: 0.5,
+        bySource: [{ pattern: "a**b", threshold: 0.1 }],
+      }),
+    ).toBe(0.1);
+    expect(
+      resolveThreshold("ab", {
+        default: 0.5,
+        bySource: [{ pattern: "a**b", threshold: 0.1 }],
+      }),
+    ).toBe(0.1);
+    expect(
+      resolveThreshold("aX", {
+        default: 0.5,
+        bySource: [{ pattern: "a**b", threshold: 0.1 }],
+      }),
+    ).toBe(0.5);
   });
 
   test("null source falls through to default even with overrides present", () => {
