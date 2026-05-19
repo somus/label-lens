@@ -29,6 +29,11 @@ describe("defaultConfig", () => {
     expect(cfg.labels).toEqual(["food", "other", "travel"]);
   });
 
+  test("writes keys.preset='simple' so generated configs explicitly opt in", () => {
+    const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS });
+    expect(cfg.keys?.preset).toBe("simple");
+  });
+
   test("populates display defaults: candidatePin=0.4, color/banding/theme/layout/motion/sidebar=auto", () => {
     const cfg = defaultConfig({ inputPath: "/x", fields: FIELDS });
     expect(cfg.display).toEqual({

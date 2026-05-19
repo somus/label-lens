@@ -6,7 +6,7 @@ import type { Command } from "../command.ts";
 export const paletteOpen: Command = {
   name: "palette.open",
   scope: "global",
-  binding: ":",
+  bindings: { vim: ":", simple: "ctrl+p" },
   hidden: true,
   footer: {
     label: "palette",

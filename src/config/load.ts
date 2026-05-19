@@ -56,7 +56,29 @@ export async function loadConfig(configPath: string): Promise<LabellensConfig> {
   }
   const errors = validateConfigSchema(raw);
   if (errors.length > 0) {
-    throw new ConfigLoadError(`labellens: invalid ${configPath}`, errors);
+    const annotated = annotateFlatKeysMigration(raw, errors);
+    throw new ConfigLoadError(`labellens: invalid ${configPath}`, annotated);
   }
   return normalizeSignalsConfig(raw as LabellensConfig);
+}
+
+/**
+ * Pre-2026 configs used a flat `keys: { "<command>": "<key>" }` map.
+ * The schema now requires `keys.preset` / `keys.overrides` / `keys.presets`,
+ * so any extra property under `keys` is a leftover from the old shape.
+ * Detect it and prepend a targeted migration hint so users don't have to
+ * decipher a generic `additionalProperties` error.
+ */
+function annotateFlatKeysMigration(raw: unknown, errors: string[]): string[] {
+  if (typeof raw !== "object" || raw === null) return errors;
+  const keys = (raw as { keys?: unknown }).keys;
+  if (typeof keys !== "object" || keys === null) return errors;
+  const allowed = new Set(["preset", "overrides", "presets"]);
+  const flatNames = Object.keys(keys).filter((k) => !allowed.has(k));
+  if (flatNames.length === 0) return errors;
+  const list = flatNames.map((n) => `'${n}'`).join(", ");
+  const hint =
+    `keys.${flatNames[0]}: flat per-command keys are no longer accepted. ` +
+    `Move ${list} under \`keys.overrides\` (see docs/reference/config.md#keys).`;
+  return [hint, ...errors];
 }

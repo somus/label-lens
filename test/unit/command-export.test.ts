@@ -41,7 +41,7 @@ describe("export command registration", () => {
   test("export.run is registered with binding 'e' in global scope", () => {
     const reg = defaultRegistry();
     const cmd = reg.get("export.run");
-    expect(cmd).toBe(exportCommand);
+    expect(cmd?.name).toBe(exportCommand.name);
     expect(cmd?.scope).toBe("global");
     expect(cmd?.binding).toBe("e");
   });
@@ -49,7 +49,7 @@ describe("export command registration", () => {
   test("palette.export is registered with palette ':export'", () => {
     const reg = defaultRegistry();
     const cmd = reg.get("palette.export");
-    expect(cmd).toBe(paletteExportCommand);
+    expect(cmd?.name).toBe(paletteExportCommand.name);
     expect(cmd?.palette).toBe(":export");
   });
 });

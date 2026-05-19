@@ -39,7 +39,7 @@ exports[`stats overlay e2e renders core sections + first-drillable highlight + f
                                                                                                     
                                                                                                     
   history  > —   ·   - shopping   ·   ~ travel   ·   + food      [u] undo                           
-  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] … 
+  [↑↓] scroll  [esc] close                                                                          
                                                                                                     
 "
 `;

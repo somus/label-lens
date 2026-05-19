@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { LabellensConfig } from "../config/config.ts";
+import { isOverlayNext, isOverlayPrev } from "./key-match.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 export const GUIDELINES_PAGE = 10;
@@ -53,8 +54,8 @@ export function reduceGuidelines(state: GuidelinesState, event: OverlayEvent): R
   if (event.kind !== "key") return { overlay: packed(state), effects: [] };
   const name = event.event.name;
   if (name === "escape") return { overlay: null, effects: [{ kind: "close" }] };
-  if (name === "down") return scrolled(state, 1);
-  if (name === "up") return scrolled(state, -1);
+  if (isOverlayNext(event.event, event.preset)) return scrolled(state, 1);
+  if (isOverlayPrev(event.event, event.preset)) return scrolled(state, -1);
   if (name === "pagedown") return scrolled(state, GUIDELINES_PAGE);
   if (name === "pageup") return scrolled(state, -GUIDELINES_PAGE);
   return { overlay: packed(state), effects: [], propagated: true };

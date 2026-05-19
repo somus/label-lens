@@ -1,5 +1,6 @@
 import type { QueueId } from "../store/queues/registry.ts";
 import { drillToQueue, type Section, type StatRow } from "../store/stats.ts";
+import { isOverlayNext, isOverlayPrev } from "./key-match.ts";
 import type { OverlayEvent, ReduceResult } from "./types.ts";
 
 export type StatsLine =
@@ -109,7 +110,7 @@ export function reduceStatsOverlay(state: StatsOverlayState, event: OverlayEvent
   const name = event.event.name;
   if (name === "escape" || name === "q") return { overlay: null, effects: [{ kind: "close" }] };
 
-  if (name === "down" || name === "j") {
+  if (isOverlayNext(event.event, event.preset)) {
     const highlight =
       state.highlight >= 0 ? clampedDrillable(state.lines, state.highlight, 1) : state.highlight;
     return {
@@ -121,7 +122,7 @@ export function reduceStatsOverlay(state: StatsOverlayState, event: OverlayEvent
       effects: [],
     };
   }
-  if (name === "up" || name === "k") {
+  if (isOverlayPrev(event.event, event.preset)) {
     const highlight =
       state.highlight >= 0 ? clampedDrillable(state.lines, state.highlight, -1) : state.highlight;
     return {

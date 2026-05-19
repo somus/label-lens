@@ -2,14 +2,22 @@ import type { FlashKind } from "../app/context.ts";
 import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Segment } from "../render/chrome/index.ts";
 import { flashGlyph } from "../render/glyph-map.ts";
-import type { Overlay } from "./types.ts";
+import type { Overlay, OverlayKeyPreset } from "./types.ts";
 
 /**
  * Footer hints shown in the chrome bottom strip while an overlay is open.
  * Each overlay owns its own hint set so adding/renaming a key in the overlay
  * reducer doesn't require touching review.ts (or any other host screen).
+ *
+ * `preset` controls the nav hint:
+ *  - simple → `[↑↓]`
+ *  - vim    → `[j/k]`
  */
-export function overlayFooterHint(overlay: Overlay): Segment[] {
+function navHint(preset: OverlayKeyPreset): string {
+  return preset === "vim" ? "[j/k] " : "[↑↓] ";
+}
+
+export function overlayFooterHint(overlay: Overlay, preset: OverlayKeyPreset = "vim"): Segment[] {
   switch (overlay.kind) {
     case "palette": {
       const inPicker = overlay.state.mode === "pick";
@@ -34,17 +42,19 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
         { text: "close", tone: "muted" },
       ];
     }
-    case "filter-builder":
+    case "filter-builder": {
+      const rowHint = preset === "vim" ? "[^j/^k] " : "[^↑↓] ";
       return [
         { text: "[enter] ", tone: "accent" },
         { text: "apply  ", tone: "muted" },
         { text: "[←→/↑↓] ", tone: "accent" },
         { text: "edit  ", tone: "muted" },
-        { text: "[^j/^k] ", tone: "accent" },
+        { text: rowHint, tone: "accent" },
         { text: "row  ", tone: "muted" },
         { text: "[esc] ", tone: "accent" },
         { text: "cancel", tone: "muted" },
       ];
+    }
     case "picker":
       return [
         { text: "[enter] ", tone: "accent" },
@@ -72,7 +82,7 @@ export function overlayFooterHint(overlay: Overlay): Segment[] {
       ];
     case "queue":
       return [
-        { text: "[j/k] ", tone: "accent" },
+        { text: navHint(preset), tone: "accent" },
         { text: "navigate  ", tone: "muted" },
         { text: "[enter] ", tone: "accent" },
         { text: "select  ", tone: "muted" },

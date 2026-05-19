@@ -880,43 +880,62 @@ Screens call `resolve(bindings, currentScope, keyEvent)` and dispatch the return
 
 **Number keys + predicted label coincidence.** Pressing the number key of the **predicted label** is functionally equivalent to `a` (accept) — the model's prediction is highlighted in the label list, and pressing its number applies the same label. Reviewers can use either keystroke; the result is identical and recorded as a human action either way. (Argilla pattern.)
 
+**Keymap presets (ADR 0014).** LabelLens ships two built-in presets and accepts custom presets in config:
+
+- `simple` (default) — arrow keys for navigation, mnemonic single chars for actions, no chords. New reviewers land here.
+- `vim` — `j` / `k` to navigate, `]` / `[` to cycle queues, `g d` / `g g` chords, `:` palette. Preserves the historical default.
+
+Both presets share the same action names; only the keys differ.
+
 **Default bindings (review scope):**
 
-| Keys      | Action               | Description                                              |
-| --------- | -------------------- | -------------------------------------------------------- |
-| `a`       | `record.accept`      | Accept prediction                                        |
-| `r`       | `record.relabel`     | Open fuzzy label picker                                  |
-| `1`–`9`   | `record.label.N`     | Quick-relabel to label N (= accept when N is predicted)  |
-| `x`       | `record.reject`      | Reject (no label)                                        |
-| `s`       | `record.skip`        | Skip                                                     |
-| `m`       | `record.tag.mark`    | Mark / Needs Review (additive tag, does not change status) |
-| `n`       | `record.note.add`    | Add note                                                 |
-| `i`       | `assistant.inquire`  | Ask LLM assistant                                        |
-| `g`       | `guidelines.show`    | Show guidelines                                          |
-| `q`       | `queue.switch`       | Switch queue                                             |
-| `t`       | `stats.show`         | Stats overlay                                            |
-| `u`       | `record.undo`        | Undo last action                                         |
-| `/`       | `search.open`        | Search records                                           |
-| `j` / `k` | `record.next/prev`   | Next / previous record                                   |
-| `e`       | `export.run`         | Export                                                   |
+| Action               | `simple` | `vim`    |
+| -------------------- | -------- | -------- |
+| `record.accept`      | `a`      | `a`      |
+| `record.openRelabelPicker` | `r` | `r`      |
+| `record.relabelByIndex.N` (1..9) | digit | digit |
+| `record.reject`      | `x`      | `x`      |
+| `record.skip`        | `s`      | `s`      |
+| `record.toggleMark`  | `m`      | `m`      |
+| `record.openNote`    | `n`      | `n`      |
+| `record.openAssistant` | `i`    | `i`      |
+| `guidelines.show`    | `g`      | `g g`    |
+| `queue.openScreen`   | `shift+q` | `shift+q` |
+| `stats.show`         | `t`      | `t`      |
+| `record.undo`        | `u`      | `u`      |
+| `record.next`        | `↓`      | `j`      |
+| `record.prev`        | `↑`      | `k`      |
+| `record.nextOriginal` | `shift+↓` | `shift+j` |
+| `record.prevOriginal` | `shift+↑` | `shift+k` |
+| `queue.next`         | `→`      | `]`      |
+| `queue.prev`         | `←`      | `[`      |
+| `record.show-doc`    | `d`      | `g d`    |
+| `export.run`         | `e`      | `e`      |
 
 **Default bindings (global scope):**
 
-| Keys      | Action               |
-| --------- | -------------------- |
-| `?`       | `help.contextual`    |
-| `:`       | `palette.open`       |
+| Action               | `simple` | `vim`    |
+| -------------------- | -------- | -------- |
+| `help.show`          | `?`      | `?`      |
+| `palette.open`       | `ctrl+p` | `:`      |
+| `app.quit`           | `q`      | `q`      |
 
-**Config-file overrides.** Users override default bindings in `labellens.config.json`:
+**Config-file overrides.** Users select a preset and tune individual commands in `labellens.config.json`:
 
 ```jsonc
-"keymap": {
-  "review.record.accept": "y",          // y instead of a
-  "global.palette.open": ["ctrl+p", ":"] // both work
+"keys": {
+  "preset": "simple",
+  "overrides": {
+    "record.accept": "y",
+    "palette.open":  ["ctrl+p", ":"]
+  },
+  "presets": {
+    "dvorak": { "record.accept": ";" }
+  }
 }
 ```
 
-Resolution is: defaults → user config (merged at startup, user wins). MVP supports overrides via config file only. **An interactive `:keymap` remap dialog** is V1 (the same pattern Codex shipped in PR 18594).
+Resolution is: vim baseline → selected preset deltas → `keys.overrides` (last-write-wins). Per-scope collisions, malformed binding strings, and unknown command names fail startup with a list of issues. **An interactive `:keymap` remap dialog** is V1 (the same pattern Codex shipped in PR 18594).
 
 ### Fuzzy picker
 

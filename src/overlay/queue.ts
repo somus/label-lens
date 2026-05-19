@@ -3,6 +3,7 @@ import { queueRecords } from "../store/queries.ts";
 import { nonOrphanRecordCount, queueCount } from "../store/queues/queue-counts.ts";
 import { QUEUE_CYCLE, type QueueId, resolveQueue } from "../store/queues/registry.ts";
 import type { RecordWithPrimaryPrediction } from "../types.ts";
+import { isOverlayNext, isOverlayPrev } from "./key-match.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 /**
@@ -101,13 +102,13 @@ export function reduceQueue(state: QueueState, event: OverlayEvent): ReduceResul
     return { overlay: null, effects: [{ kind: "close" }] };
   }
   if (name === "return" || name === "enter") return commit(state);
-  if (name === "j" || name === "down") {
+  if (isOverlayNext(event.event, event.preset)) {
     return {
       overlay: packed({ ...state, highlight: Math.min(rows.length - 1, state.highlight + 1) }),
       effects: [],
     };
   }
-  if (name === "k" || name === "up") {
+  if (isOverlayPrev(event.event, event.preset)) {
     return {
       overlay: packed({ ...state, highlight: Math.max(0, state.highlight - 1) }),
       effects: [],

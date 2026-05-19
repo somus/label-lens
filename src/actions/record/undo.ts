@@ -7,7 +7,7 @@ import type { Command } from "../command.ts";
 export const undo: Command = {
   name: "record.undo",
   scope: "review",
-  binding: "u",
+  bindings: { vim: "u" },
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => {
     const target = latestReview(ctx.db);

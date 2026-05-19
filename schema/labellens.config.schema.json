@@ -511,15 +511,66 @@
     },
     "keys": {
       "type": "object",
-      "patternProperties": {
-        "^.*$": {
+      "properties": {
+        "preset": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 1,
-          "description": "Single-character key. Modifiers and chords are not supported here."
+          "description": "Which preset to load: `simple` (default), `vim`, or the name of a custom preset under `keys.presets`."
+        },
+        "overrides": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              ],
+              "description": "A keybinding string (e.g. `y`, `ctrl+x`, `g d`) or an array of such strings to bind several keys to the same command."
+            }
+          },
+          "description": "Map of command name to binding string(s)."
+        },
+        "presets": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 1
+                    }
+                  ],
+                  "description": "A keybinding string (e.g. `y`, `ctrl+x`, `g d`) or an array of such strings to bind several keys to the same command."
+                }
+              },
+              "description": "Map of command name to binding string(s)."
+            }
+          },
+          "description": "Project-defined presets. Each inherits from the `vim` baseline for unspecified commands. Selected by name via `keys.preset`."
         }
       },
-      "description": "Per-command keybinding overrides. Keys are command names (e.g. `record.accept`); values are single-character key strings (e.g. `y`). Reserved keys (digits, chord starters, label keys) are still off-limits. Chord overrides (`g d`) and modifier overrides (`ctrl+x`) are intentionally out of scope."
+      "additionalProperties": false,
+      "description": "Keybinding configuration. Use `preset` to pick built-in or custom mapping; `overrides` to retune individual commands."
     }
   },
   "$id": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",

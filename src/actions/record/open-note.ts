@@ -4,7 +4,7 @@ import type { Command } from "../command.ts";
 export const openNoteCommand: Command = {
   name: "record.openNote",
   scope: "review",
-  binding: "n",
+  bindings: { vim: "n" },
   footer: { label: "note", order: 50 },
   enabled: (ctx) => ctx.cursor?.current() != null,
   run: (ctx) => {

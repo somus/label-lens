@@ -4,7 +4,7 @@ import type { Command } from "../command.ts";
 export const openQueueScreen: Command = {
   name: "queue.openScreen",
   scope: "review",
-  binding: "shift+q",
+  bindings: { vim: "shift+q" },
   hidden: true,
   // `[/]` suffix hints at the prev/next queue cycle keys (`[`, `]`) next
   // to the queue-screen binding — keeps both discoverable in one row.

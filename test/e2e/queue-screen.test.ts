@@ -15,6 +15,7 @@ function makeConfig(): LabellensConfig {
     labels: ["food", "travel", "other"],
     input: { path: "test/fixtures/tiny.jsonl", format: "jsonl", fields: DEFAULT_FIELDS },
     output: { path: "/tmp/out.jsonl", format: "jsonl" },
+    keys: { preset: "vim" },
   };
 }
 

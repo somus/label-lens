@@ -5,7 +5,7 @@ import type { Command } from "../command.ts";
 export const openRelabelPicker: Command = {
   name: "record.openRelabelPicker",
   scope: "review",
-  binding: "r",
+  bindings: { vim: "r" },
   footer: { label: "relabel", order: 20 },
   enabled: (ctx) => ctx.cursor?.current() != null,
   run: (ctx) => {

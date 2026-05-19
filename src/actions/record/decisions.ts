@@ -3,7 +3,7 @@ import { type LabelConfigEntry, labelKey, labelName } from "../../config/config.
 import { applyEffects } from "../../overlay/effects.ts";
 import type { Effect } from "../../overlay/types.ts";
 import type { RecordWithPrimaryPrediction } from "../../types.ts";
-import type { Command } from "../command.ts";
+import type { Command, CommandBindings } from "../command.ts";
 
 /**
  * A Review state transition keyed off the current Record. Same shape across
@@ -18,7 +18,7 @@ type DecisionStatus = Extract<Effect, { kind: "commitDecision" }>["status"];
 
 type DecisionSpec = {
   name: string;
-  binding: string | string[];
+  bindings: CommandBindings;
   status: DecisionStatus;
   /** Returns the label to record. `null` for status='rejected'/'skipped'. */
   finalLabel: (record: RecordWithPrimaryPrediction) => string | null;
@@ -32,7 +32,7 @@ function decisionCommand(spec: DecisionSpec): Command {
   return {
     name: spec.name,
     scope: "review",
-    binding: spec.binding,
+    bindings: spec.bindings,
     enabled: (ctx) => ctx.cursor?.current() != null,
     run: (ctx) => {
       const record = ctx.cursor?.current();
@@ -57,7 +57,7 @@ function decisionCommand(spec: DecisionSpec): Command {
 export const accept: Command = {
   ...decisionCommand({
     name: "record.accept",
-    binding: "a",
+    bindings: { vim: "a" },
     status: "accepted",
     finalLabel: (r) => r.primaryPrediction?.label ?? null,
     prevLabel: () => null,
@@ -69,7 +69,7 @@ export const accept: Command = {
 export const reject: Command = {
   ...decisionCommand({
     name: "record.reject",
-    binding: "x",
+    bindings: { vim: "x" },
     status: "rejected",
     finalLabel: () => null,
     prevLabel: (r) => r.primaryPrediction?.label ?? null,
@@ -80,7 +80,7 @@ export const reject: Command = {
 export const skip: Command = {
   ...decisionCommand({
     name: "record.skip",
-    binding: "s",
+    bindings: { vim: "s" },
     status: "skipped",
     finalLabel: () => null,
     prevLabel: () => null,
@@ -97,7 +97,7 @@ export function relabelByIndexCommand(n: number): Command {
   return {
     name: `record.relabelByIndex.${n}`,
     scope: "review",
-    binding: String(n),
+    bindings: { vim: String(n) },
     enabled: (ctx) => ctx.cursor?.current() != null,
     run: (ctx: AppContext) => {
       const record = ctx.cursor?.current();

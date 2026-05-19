@@ -9,7 +9,7 @@ import { CONFIGURE_PROVIDERS, envVarFor } from "../overlay/configure-assistant.t
 import { applyEffects } from "../overlay/effects.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
-import { flashFooterHint } from "../overlay/hints.ts";
+import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
 import type { QueueState } from "../overlay/queue.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import { withStatsPageSize } from "../overlay/stats-overlay.ts";
@@ -292,7 +292,16 @@ export function mountReviewScreen(args: {
     );
 
     const flashActive = !app.overlay && flash !== null;
-    const footerHint = app.overlay ? undefined : flashFooterHint(flash, app.display, flashActive);
+    // Assistant + note overlays keep the registry-derived footer so the
+    // reviewer still sees accept/reject/relabel under them — the commit
+    // shortcuts stay live while the overlay is open.
+    const overlayWantsCustomHint =
+      app.overlay !== null && app.overlay.kind !== "assistant" && app.overlay.kind !== "note";
+    const footerHint = overlayWantsCustomHint
+      ? overlayFooterHint(app.overlay!, app.keyPreset)
+      : app.overlay
+        ? undefined
+        : flashFooterHint(flash, app.display, flashActive);
 
     // Skip the per-frame sidebar snapshot when the sidebar is hidden.
     // `getSidebarData` queries the DB (signal counts, queue progress) +
@@ -367,6 +376,7 @@ export function mountReviewScreen(args: {
         {
           kind: "key",
           event,
+          preset: app.keyPreset,
         },
       );
       app.overlay = result.overlay;

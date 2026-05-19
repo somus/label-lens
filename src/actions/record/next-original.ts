@@ -33,7 +33,7 @@ function stepOriginal(ctx: import("../../app/context.ts").AppContext, direction:
 export const nextOriginal: Command = {
   name: "record.nextOriginal",
   scope: "review",
-  binding: "shift+j",
+  bindings: { vim: "shift+j", simple: "shift+down" },
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => stepOriginal(ctx, 1),
 };
@@ -41,7 +41,7 @@ export const nextOriginal: Command = {
 export const prevOriginal: Command = {
   name: "record.prevOriginal",
   scope: "review",
-  binding: "shift+k",
+  bindings: { vim: "shift+k", simple: "shift+up" },
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => stepOriginal(ctx, -1),
 };

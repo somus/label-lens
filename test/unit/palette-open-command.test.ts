@@ -27,7 +27,7 @@ function ctx(db: import("../../src/store/db.ts").Db): AppContext {
 
 describe("paletteOpen command", () => {
   test("is bound to ':' in global scope and hidden from the palette", () => {
-    expect(paletteOpen.binding).toBe(":");
+    expect(paletteOpen.bindings?.vim).toBe(":");
     expect(paletteOpen.scope).toBe("global");
     expect(paletteOpen.hidden).toBe(true);
   });

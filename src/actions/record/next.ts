@@ -3,7 +3,7 @@ import type { Command } from "../command.ts";
 export const next: Command = {
   name: "record.next",
   scope: "review",
-  binding: "j",
+  bindings: { vim: "j", simple: "down" },
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => {
     const before = ctx.cursor?.current()?.id;

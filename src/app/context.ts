@@ -2,7 +2,7 @@ import type { CommandRegistry } from "../actions/command.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import { createSmartLearning, type SmartLearning } from "../learning/smart-learning.ts";
-import type { Overlay } from "../overlay/types.ts";
+import type { Overlay, OverlayKeyPreset } from "../overlay/types.ts";
 import {
   createMotionController,
   type MotionController,
@@ -154,6 +154,13 @@ export type AppContext = {
    * app relaunch — never persisted.
    */
   smartLearning: SmartLearning;
+  /**
+   * Resolved keymap preset for overlay-local nav. Derived from
+   * `config.keys.preset` at startup. Threaded onto each `OverlayEvent` of
+   * kind `key` so reducers can gate `j/k` aliases without reaching into the
+   * config.
+   */
+  keyPreset: OverlayKeyPreset;
 };
 
 export const PALETTE_HISTORY_LIMIT = 50;
@@ -350,6 +357,10 @@ export function createAppContext(args: {
     localOnly: args.localOnly ?? false,
     configPath: args.configPath,
     smartLearning,
+    // Overlay-nav aliases: simple preset strips j/k. Vim (and custom presets,
+    // which inherit from the vim baseline) keep them. Falls back to simple
+    // when `config.keys` is omitted entirely — matches the resolver default.
+    keyPreset: (args.config.keys?.preset ?? "simple") === "simple" ? "simple" : "vim",
     pushPaletteHistory(entry) {
       const trimmed = entry.trim();
       if (trimmed.length === 0) return;

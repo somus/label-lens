@@ -8,6 +8,7 @@ import {
   type PredicateValue,
   serializePredicate,
 } from "../store/queues/predicate.ts";
+import { isOverlayRowNext, isOverlayRowPrev } from "./key-match.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 export type FilterBuilderCell = "column" | "operator" | "value";
@@ -90,8 +91,10 @@ export function reduceFilterBuilder(state: FilterBuilderState, event: OverlayEve
   if (specialKey(name, "left")) return { overlay: packed(moveCell(state, -1)), effects: [] };
   if (specialKey(name, "right") || specialKey(name, "tab"))
     return { overlay: packed(moveCell(state, 1)), effects: [] };
-  if (event.event.ctrl && name === "j") return { overlay: packed(moveRow(state, 1)), effects: [] };
-  if (event.event.ctrl && name === "k") return { overlay: packed(moveRow(state, -1)), effects: [] };
+  if (isOverlayRowNext(event.event, event.preset))
+    return { overlay: packed(moveRow(state, 1)), effects: [] };
+  if (isOverlayRowPrev(event.event, event.preset))
+    return { overlay: packed(moveRow(state, -1)), effects: [] };
   if (specialKey(name, "up")) return update(state, cycleCurrent(state, -1));
   if (specialKey(name, "down")) return update(state, cycleCurrent(state, 1));
   if (state.activeCell !== "value" && name === "a") return update(state, setJoin(state, "and"));

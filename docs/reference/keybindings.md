@@ -2,6 +2,13 @@
 
 LabelLens scopes its keymap by screen / overlay. Press `?` in any scope for the live, filterable version of this table — the in-app help reads the same registry.
 
+LabelLens ships two built-in presets:
+
+- **`simple`** (default) — arrow-key navigation, mnemonic action keys, no chords. Best for new reviewers.
+- **`vim`** — j/k navigation, `[` / `]` queue cycle, `g d` / `g g` chords, `:` palette. Best for vim users.
+
+Select via [`keys.preset`](./config.md#keys) in `labellens.config.json`. Custom presets are also configurable there. The tables below show every preset's binding for each command; bindings under `keys.overrides` win over the preset.
+
 <a href="../media/notes-undo-history.webm">
   <img src="../media/notes-undo-history.gif" alt="Adding a note, making decisions, and undoing through review history" width="800">
 </a>
@@ -10,7 +17,7 @@ LabelLens scopes its keymap by screen / overlay. Press `?` in any scope for the 
 
 The default scope when no overlay or screen is open.
 
-### Decisions
+### Decisions (both presets)
 
 | Key | Action | Notes |
 |---|---|---|
@@ -27,26 +34,26 @@ The default scope when no overlay or screen is open.
 
 ### Navigation
 
-| Key | Action | Notes |
+| Action | `simple` | `vim` |
 |---|---|---|
-| `j` | Next record | Walks the active cursor. With `navigation.smartNext`, opens the signal-weighted `smart-pending` cursor when the queue is `pending`. |
-| `k` | Previous record | Same. |
-| `shift+j` | Next in document order | Escape hatch when `smartNext` is on. Plain document index. |
-| `shift+k` | Previous in document order | Same. |
-| `[` | Previous queue | Cycles built-in queues. Cursors are memoised so re-entering resumes position. |
-| `]` | Next queue | Same. |
+| Next record | `↓` | `j` |
+| Previous record | `↑` | `k` |
+| Next in document order | `shift+↓` | `shift+j` |
+| Previous in document order | `shift+↑` | `shift+k` |
+| Next queue | `→` | `]` |
+| Previous queue | `←` | `[` |
 
 ### Surfaces
 
-| Key | Action |
-|---|---|
-| `:` | Command palette |
-| `?` | Help overlay (contextual; lists every binding for the active scope) |
-| `t` | Stats overlay |
-| `g d` | Document view (boundary task) |
-| `g g` | Guidelines viewer |
-| `Q` (`shift+q`) | Queue overlay |
-| `q` | Quit |
+| Action | `simple` | `vim` |
+|---|---|---|
+| Command palette | `ctrl+p` | `:` |
+| Help overlay | `?` | `?` |
+| Stats overlay | `t` | `t` |
+| Document view (boundary task) | `d` | `g d` |
+| Guidelines viewer | `g` | `g g` |
+| Queue overlay | `shift+q` | `shift+q` |
+| Quit | `q` | `q` |
 
 ## Relabel picker (`r`)
 
@@ -86,30 +93,30 @@ Paste works via bracketed paste (`Cmd+V`, `Ctrl+Shift+V`). Control chars strippe
 | `shift+Enter` | Insert newline |
 | `Esc` | Cancel |
 
-## Queue overlay (`Q`)
+## Queue overlay (`shift+q`)
 
-| Key | Action |
-|---|---|
-| `j` / `k` | Navigate queue list |
-| `Enter` | Switch to selected queue |
-| `Esc` | Cancel |
+| Action | `simple` | `vim` |
+|---|---|---|
+| Navigate queue list | `↑` / `↓` | `j` / `k` (also `↑` / `↓`) |
+| Switch to selected queue | `Enter` | `Enter` |
+| Cancel | `Esc` | `Esc` |
 
 ## Stats overlay (`t`)
 
-| Key | Action |
-|---|---|
-| `j` / `k` | Navigate stat row |
-| `Enter` | Drill into queue for the focused row |
-| `Esc` | Close |
+| Action | `simple` | `vim` |
+|---|---|---|
+| Navigate stat row | `↑` / `↓` | `j` / `k` (also `↑` / `↓`) |
+| Drill into queue | `Enter` | `Enter` |
+| Close | `Esc` | `Esc` |
 
-## Doc view (`g d`, boundary task)
+## Doc view
 
-| Key | Action |
-|---|---|
-| `j` / `k` | Scroll one row |
-| `space` / `pgdn` | Scroll one page |
-| `b` / `pgup` | Scroll one page back |
-| `Esc` | Back to review |
+| Action | `simple` | `vim` |
+|---|---|---|
+| Scroll one row | `↑` / `↓` | `j` / `k` (also `↑` / `↓`) |
+| Scroll one page | `pgup` / `pgdn` | `ctrl+u` / `ctrl+d` (also `pgup` / `pgdn`) |
+| Jump to top / bottom | `home` / `end` | `g g` / `shift+g` |
+| Back to review | `Esc` or `q` | `Esc` or `q` |
 
 ## Help overlay (`?`)
 
@@ -131,12 +138,12 @@ Reviewers who prefer paginated reading can open guidelines in `less` via `:help 
 
 ## Reserved keys (per-label `key` validation)
 
-Any of these keys is rejected as a per-label `config.labels[].key` because it would shadow a built-in:
+A per-label `config.labels[].key` is rejected when it would shadow a built-in binding under the **active preset**. The reserved set is derived from the resolved command registry at startup (`reservedReviewKeys()` in `src/actions/registry.ts`), so switching presets or adding `keys.overrides` changes what's reserved without manual tracking.
+
+Under `simple`, examples of reserved single-char keys:
 
 - Decisions: `a`, `x`, `s`, `r`, `m`, `n`, `u`, `i`
-- Navigation: `j`, `k`
 - Digits: `1`–`9`
-- Surfaces: `:`, `?`, `t`, `q`
-- Chord starters: `g`
+- Surfaces: `?`, `t`, `q`, `d`, `g`
 
-The full set is derived from the command registry at startup (`reservedReviewKeys()` in `src/actions/registry.ts`), so if a new built-in command lands the validation auto-updates.
+Under `vim`, additionally: `j`, `k`, `:`, `[`, `]`, plus chord starter `g`.

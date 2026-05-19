@@ -63,7 +63,7 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 80x30 1`] = `
                                                                                 
                                                                                 
                                                                                 
-  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊… 
+  [↑↓] scroll  [esc] close                                                      
                                                                                 
 "
 `;
@@ -165,7 +165,7 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 120x30 1`] = `
                                                                                     Signals ──────────────────────────  
                                                                                                                         
                                                                                     ●  label_issue                   1  
-  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note    [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
+  [↑↓] scroll  [esc] close                                                                                              
                                                                                                                         
 "
 `;
@@ -267,7 +267,7 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 160x30 1`] = `
                                                                                                                 Signals ──────────────────────────────────────  
                                                                                                                                                                 
                                                                                                                 ●  label_issue                               1  
-  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note                                            [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
+  [↑↓] scroll  [esc] close                                                                                                                                      
                                                                                                                                                                 
 "
 `;

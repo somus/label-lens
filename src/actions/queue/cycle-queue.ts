@@ -28,7 +28,7 @@ function step(ctx: AppContext, delta: 1 | -1): void {
 export const nextQueue: Command = {
   name: "queue.next",
   scope: "review",
-  binding: "]",
+  bindings: { vim: "]", simple: "right" },
   // Cycle keys aren't standalone footer entries — they'd cost ~22ch on a
   // 120-col row. `[Q] queues  [/]` (see open-screen.ts) advertises the
   // pair next to the queue-screen binding.
@@ -39,7 +39,7 @@ export const nextQueue: Command = {
 export const prevQueue: Command = {
   name: "queue.prev",
   scope: "review",
-  binding: "[",
+  bindings: { vim: "[", simple: "left" },
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => step(ctx, -1),
 };
