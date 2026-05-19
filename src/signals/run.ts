@@ -23,7 +23,7 @@ import {
   purgeComputedIssues,
   purgeComputedIssuesOfType,
 } from "../store/issues.ts";
-import { predictions, recordsWithPrimary } from "../store/schema.ts";
+import { predictions, records } from "../store/schema.ts";
 import { disagreementScore, duplicateScore, lowConfidenceScore } from "./compute.ts";
 import {
   DEFAULT_LOW_CONFIDENCE,
@@ -68,22 +68,48 @@ function defaultThresholds(): LowConfidenceThresholds {
   return { default: DEFAULT_LOW_CONFIDENCE, bySource: [] };
 }
 
-type PrimaryRow = {
-  id: string;
-  text: string;
-  primaryConfidence: number | null;
-  primarySource: string | null;
-};
+type RecordRow = { id: string; text: string };
+type PrimaryByRecord = Map<string, { confidence: number | null; source: string | null }>;
+
+/**
+ * Pick the primary Prediction for each record in a single pass over the
+ * predictions table. Mirrors the `records_with_primary` view's semantics
+ * (PRD §11.4 + ADR 0001): highest confidence wins, NULL loses to any
+ * numeric, ties broken by predictions.id ASC (earliest insertion wins).
+ *
+ * We compute in JS rather than reading the view because the view's window
+ * function is measurably slower on the signals hot path; the view exists
+ * for queue queries where the JOIN is unavoidable.
+ */
+function buildPrimaryMap(
+  predRows: { recordId: string; confidence: number | null; source: string }[],
+): PrimaryByRecord {
+  const out: PrimaryByRecord = new Map();
+  for (const p of predRows) {
+    const cur = out.get(p.recordId);
+    if (cur === undefined) {
+      out.set(p.recordId, { confidence: p.confidence, source: p.source });
+      continue;
+    }
+    const beat =
+      (cur.confidence === null && p.confidence !== null) ||
+      (cur.confidence !== null && p.confidence !== null && p.confidence > cur.confidence);
+    if (beat) out.set(p.recordId, { confidence: p.confidence, source: p.source });
+  }
+  return out;
+}
 
 function computeLowConfidenceIssues(
-  rows: PrimaryRow[],
+  rows: RecordRow[],
+  primaryByRecord: PrimaryByRecord,
   thresholds: LowConfidenceThresholds,
 ): ComputedIssueInput[] {
   const out: ComputedIssueInput[] = [];
   for (const r of rows) {
-    if (r.primaryConfidence === null) continue;
-    const threshold = resolveThreshold(r.primarySource, thresholds);
-    const score = lowConfidenceScore(r.primaryConfidence, threshold);
+    const primary = primaryByRecord.get(r.id);
+    if (!primary || primary.confidence === null) continue;
+    const threshold = resolveThreshold(primary.source, thresholds);
+    const score = lowConfidenceScore(primary.confidence, threshold);
     if (score === null) continue;
     out.push({ recordId: r.id, type: "low_confidence", score });
   }
@@ -98,22 +124,17 @@ export function runSignals(db: Db, options: RunSignalsOptions = {}): RunSignalsR
   const duplicateEnabled = enabled === null || enabled.has("duplicate");
   const isCancelled = options.isCancelled ?? (() => false);
 
-  const primaryRows = db
-    .select({
-      id: recordsWithPrimary.id,
-      text: recordsWithPrimary.text,
-      primaryConfidence: recordsWithPrimary.primaryConfidence,
-      primarySource: recordsWithPrimary.primarySource,
-    })
-    .from(recordsWithPrimary)
-    .orderBy(asc(recordsWithPrimary.rowIndex))
+  const recordRows = db
+    .select({ id: records.id, text: records.text })
+    .from(records)
+    .orderBy(asc(records.rowIndex))
     .all();
-  const total = primaryRows.length;
+  const total = recordRows.length;
   if (total === 0) return { written: 0, cancelled: false };
 
   const dupGroups = new Map<string, string[]>();
   if (duplicateEnabled) {
-    for (const r of primaryRows) {
+    for (const r of recordRows) {
       const key = normalize(r.text);
       const bucket = dupGroups.get(key);
       if (bucket) bucket.push(r.id);
@@ -121,34 +142,47 @@ export function runSignals(db: Db, options: RunSignalsOptions = {}): RunSignalsR
     }
   }
 
-  let predsByRecord: Map<string, string[]> | null = null;
-  if (disagreementEnabled) {
-    predsByRecord = new Map();
+  // Single predictions scan feeds both the primary-prediction map (used by
+  // low_confidence) and the per-record label lists (used by source_disagreement).
+  // Ordering by id ASC matches the view's tie-break — earliest insertion wins.
+  let primaryByRecord: PrimaryByRecord | null = null;
+  let labelsByRecord: Map<string, string[]> | null = null;
+  if (lowConfEnabled || disagreementEnabled) {
     const predRows = db
-      .select({ recordId: predictions.recordId, label: predictions.label })
+      .select({
+        recordId: predictions.recordId,
+        label: predictions.label,
+        confidence: predictions.confidence,
+        source: predictions.source,
+      })
       .from(predictions)
+      .orderBy(asc(predictions.id))
       .all();
-    for (const p of predRows) {
-      const list = predsByRecord.get(p.recordId);
-      if (list) list.push(p.label);
-      else predsByRecord.set(p.recordId, [p.label]);
+    if (lowConfEnabled) primaryByRecord = buildPrimaryMap(predRows);
+    if (disagreementEnabled) {
+      labelsByRecord = new Map();
+      for (const p of predRows) {
+        const list = labelsByRecord.get(p.recordId);
+        if (list) list.push(p.label);
+        else labelsByRecord.set(p.recordId, [p.label]);
+      }
     }
   }
 
   const pending: ComputedIssueInput[] = [];
 
-  if (lowConfEnabled) {
-    pending.push(...computeLowConfidenceIssues(primaryRows, thresholds));
+  if (lowConfEnabled && primaryByRecord) {
+    pending.push(...computeLowConfidenceIssues(recordRows, primaryByRecord, thresholds));
   }
 
   let processed = 0;
-  for (const r of primaryRows) {
+  for (const r of recordRows) {
     if (processed % BATCH_SIZE === 0 && processed > 0 && isCancelled()) {
       return { written: 0, cancelled: true };
     }
 
-    if (disagreementEnabled && predsByRecord) {
-      const labels = predsByRecord.get(r.id) ?? [];
+    if (disagreementEnabled && labelsByRecord) {
+      const labels = labelsByRecord.get(r.id) ?? [];
       const dScore = disagreementScore(labels);
       if (dScore !== null && dScore > 0) {
         pending.push({ recordId: r.id, type: "source_disagreement", score: dScore });
@@ -193,17 +227,23 @@ export function recomputeLowConfidence(
   db: Db,
   thresholds: LowConfidenceThresholds,
 ): { written: number } {
-  const primaryRows = db
-    .select({
-      id: recordsWithPrimary.id,
-      text: recordsWithPrimary.text,
-      primaryConfidence: recordsWithPrimary.primaryConfidence,
-      primarySource: recordsWithPrimary.primarySource,
-    })
-    .from(recordsWithPrimary)
-    .orderBy(asc(recordsWithPrimary.rowIndex))
+  const recordRows = db
+    .select({ id: records.id, text: records.text })
+    .from(records)
+    .orderBy(asc(records.rowIndex))
     .all();
-  const pending = computeLowConfidenceIssues(primaryRows, thresholds);
+  const predRows = db
+    .select({
+      recordId: predictions.recordId,
+      label: predictions.label,
+      confidence: predictions.confidence,
+      source: predictions.source,
+    })
+    .from(predictions)
+    .orderBy(asc(predictions.id))
+    .all();
+  const primaryByRecord = buildPrimaryMap(predRows);
+  const pending = computeLowConfidenceIssues(recordRows, primaryByRecord, thresholds);
   db.transaction((tx: TxOrDb) => {
     purgeComputedIssuesOfType(tx, "low_confidence");
     for (let i = 0; i < pending.length; i += BATCH_SIZE) {
