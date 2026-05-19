@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { ConfigCliError, runConfigCli } from "./cli/config.ts";
 import { ExportCliError, runExportCli } from "./cli/export.ts";
 import { printGuide } from "./cli/guide.ts";
 import { printHelp } from "./cli/help.ts";
@@ -49,6 +50,19 @@ async function main(): Promise<void> {
     } catch (err) {
       if (err instanceof ExportCliError) {
         console.error(`labellens export: ${err.message}`);
+        process.exit(err.code);
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (cmd === "config") {
+    try {
+      await runConfigCli({ args: rest, cwd: process.cwd() });
+    } catch (err) {
+      if (err instanceof ConfigCliError) {
+        console.error(`labellens config: ${err.message}`);
         process.exit(err.code);
       }
       throw err;

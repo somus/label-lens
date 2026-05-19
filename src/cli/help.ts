@@ -16,6 +16,10 @@ USAGE
   labellens export [format] [flags]   export reviewed data
   labellens migrate --rename <from>:<to>
                                       rename a label across the DB
+  labellens config set signals.lowConfidence.default <v>
+                                      tune the low-confidence threshold
+  labellens config set signals.lowConfidence.bySource <pat>=<v> [...]
+                                      override threshold per Prediction source
   labellens guide                     print the quickstart tutorial
   labellens --version                 print version
   labellens --help                    print this help
@@ -62,6 +66,9 @@ EXAMPLES
 
   Rename a label after deciding to consolidate:
     labellens migrate --rename shopping:utility
+
+  Tune the low-confidence threshold for a noisy regex source:
+    labellens config set signals.lowConfidence.bySource "regex.*=0.3"
 
 DOCS
   Tutorial:  https://github.com/somus/label-lens/blob/main/docs/tutorial.md

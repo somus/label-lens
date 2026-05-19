@@ -200,13 +200,39 @@ const AssistantConfigSchema = Type.Object(
   { description: "Optional LLM assistant (PRD §10.5). Off by default." },
 );
 
+const LowConfidenceConfigSchema = Type.Object(
+  {
+    default: Type.Number({
+      exclusiveMinimum: 0,
+      maximum: 1,
+      description:
+        "Default confidence under which the `low_confidence` signal fires. Validated as 0 < default ≤ 1.",
+    }),
+    bySource: Type.Optional(
+      Type.Record(Type.String(), Type.Number({ exclusiveMinimum: 0, maximum: 1 }), {
+        description:
+          "Per-Source threshold overrides. Keys are exact Prediction sources or `*`-globs (e.g. `regex.*`, `model-*-prod`). Resolution: exact match wins, else most-specific glob (longest non-wildcard prefix), else config order, else default.",
+      }),
+    ),
+  },
+  { description: "Low-confidence threshold tuning." },
+);
+
 const SignalsConfigSchema = Type.Object(
   {
+    lowConfidence: Type.Optional(LowConfidenceConfigSchema),
+    /**
+     * Legacy v0.11 shape. Accepted on read for backwards compatibility and
+     * migrated to `lowConfidence.default` by `loadConfig` / persisted-write
+     * paths. Do not author new configs against this field — `bun run schema`
+     * still emits it as optional so older configs validate.
+     */
     lowConfidenceThreshold: Type.Optional(
       Type.Number({
-        minimum: 0,
+        exclusiveMinimum: 0,
         maximum: 1,
-        description: "Confidence under which the `low_confidence` signal fires. Default 0.5.",
+        description:
+          "Deprecated alias for `lowConfidence.default`. Migrated on load and on the first persisted write.",
       }),
     ),
     enable: Type.Optional(
@@ -333,6 +359,7 @@ export type BoundaryConfig = Static<typeof BoundaryConfigSchema>;
 export type ClassificationConfig = Static<typeof ClassificationConfigSchema>;
 export type AssistantConfig = Static<typeof AssistantConfigSchema>;
 export type SignalsConfig = Static<typeof SignalsConfigSchema>;
+export type LowConfidenceConfig = Static<typeof LowConfidenceConfigSchema>;
 export type OutputConfig = Static<typeof OutputConfigSchema>;
 export type OutputFieldOverrides = Static<typeof OutputFieldOverridesSchema>;
 export type NotesConfig = Static<typeof NotesConfigSchema>;

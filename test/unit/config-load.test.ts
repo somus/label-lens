@@ -41,6 +41,37 @@ describe("loadConfig", () => {
     }
   });
 
+  test("migrates legacy signals.lowConfidenceThreshold to nested shape", async () => {
+    const path = writeTmp(
+      JSON.stringify({
+        task: "classification",
+        labels: ["food"],
+        input: { path: "./x.jsonl", format: "jsonl", fields: { text: "text" } },
+        output: { path: "./out.jsonl", format: "jsonl" },
+        signals: { lowConfidenceThreshold: 0.7 },
+      }),
+    );
+    const config = await loadConfig(path);
+    expect(config.signals?.lowConfidence?.default).toBe(0.7);
+    expect(
+      (config.signals as { lowConfidenceThreshold?: number }).lowConfidenceThreshold,
+    ).toBeUndefined();
+  });
+
+  test("nested signals.lowConfidence wins when both legacy and nested present", async () => {
+    const path = writeTmp(
+      JSON.stringify({
+        task: "classification",
+        labels: ["food"],
+        input: { path: "./x.jsonl", format: "jsonl", fields: { text: "text" } },
+        output: { path: "./out.jsonl", format: "jsonl" },
+        signals: { lowConfidenceThreshold: 0.4, lowConfidence: { default: 0.7 } },
+      }),
+    );
+    const config = await loadConfig(path);
+    expect(config.signals?.lowConfidence?.default).toBe(0.7);
+  });
+
   test("$schema field round-trips without rejecting validation", async () => {
     const path = writeTmp(
       JSON.stringify({

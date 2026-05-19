@@ -48,11 +48,11 @@ Effective `final_label` (if reviewed) or `primary_label` (if not). Reviewer-set 
 
 `EXISTS (issues WHERE type = <t>)`. Built-in issue types:
 
-- `low_confidence` — primary confidence below the threshold (default 0.5).
+- `low_confidence` — primary Prediction's confidence below the threshold resolved for its source. Threshold defaults to `0.5`; `signals.lowConfidence.bySource` overrides it per source (exact match or `*`-glob — see [config reference](./config.md#signals)). Tune via `labellens config set signals.lowConfidence.…`; membership and `smart-pending` ordering recompute against the new thresholds without a re-ingest.
 - `source_disagreement` — multiple sources predict different labels.
 - `exact_duplicate` — text identical to another record in the dataset.
 
-Imported issues from the JSONL `issues[]` array land here too (e.g. Cleanlab-style flags).
+Imported issues from the JSONL `issues[]` array land here too (e.g. Cleanlab-style flags) and survive threshold recomputes — only LabelLens-computed `low_confidence` rows are rewritten.
 
 ### `by-correction:<from>:<to>`
 

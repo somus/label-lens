@@ -64,6 +64,50 @@ describe("validateConfigSchema", () => {
     expect(validateConfigSchema(cfg)).toEqual([]);
   });
 
+  test("accepts nested signals.lowConfidence.default", () => {
+    const cfg = makeValid({
+      signals: { lowConfidence: { default: 0.7 } },
+    });
+    expect(validateConfigSchema(cfg)).toEqual([]);
+  });
+
+  test("accepts nested signals.lowConfidence.bySource overrides", () => {
+    const cfg = makeValid({
+      signals: {
+        lowConfidence: {
+          default: 0.5,
+          bySource: { "regex.*": 0.3, "llm:gpt-4": 0.6 },
+        },
+      },
+    });
+    expect(validateConfigSchema(cfg)).toEqual([]);
+  });
+
+  test("rejects signals.lowConfidence.default of 0 (exclusive lower bound)", () => {
+    const bad = makeValid({ signals: { lowConfidence: { default: 0 } } });
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("accepts signals.lowConfidence.default of 1 (inclusive upper bound)", () => {
+    const cfg = makeValid({ signals: { lowConfidence: { default: 1 } } });
+    expect(validateConfigSchema(cfg)).toEqual([]);
+  });
+
+  test("rejects signals.lowConfidence.default above 1", () => {
+    const bad = makeValid({ signals: { lowConfidence: { default: 1.1 } } });
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("rejects bySource override of 0 (exclusive lower bound)", () => {
+    const bad = makeValid({
+      signals: { lowConfidence: { default: 0.5, bySource: { "regex.*": 0 } } },
+    });
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
   test("rejects unknown signal kind", () => {
     const bad = makeValid({
       signals: { enable: ["lowConfidence", "magic-vibes"] as unknown as never },

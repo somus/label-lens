@@ -17,7 +17,11 @@ const config: LabellensConfig = {
 describe("review screen — issue badges", () => {
   test("renders PRD §10.4 wording for low_confidence and source_disagreement", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
-    runSignals(store.db, { lowConfidenceThreshold: 0.5 });
+    // Coffee at Blue Tokai: primary `food` at 0.81 from `llm:gpt-4`. Bump the
+    // default so the primary trips the low-confidence threshold; the record
+    // also carries a secondary `regex.simple` prediction that drives
+    // source_disagreement, giving both badges on the same row.
+    runSignals(store.db, { lowConfidence: { default: 0.9, bySource: [] } });
 
     const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
       width: 120,
@@ -30,8 +34,6 @@ describe("review screen — issue badges", () => {
       requestRender: () => {},
       onQuit: () => {},
     });
-    // Multi-source row "Coffee at Blue Tokai" is in this queue and carries
-    // both low_confidence (0.45 < 0.5) and source_disagreement.
     mountReviewScreen({ renderer, app, initialQueueId: "by-issue:source_disagreement" });
     await renderOnce();
 
@@ -45,7 +47,7 @@ describe("review screen — issue badges", () => {
 
   test("renders exact_duplicate copy on a duplicate-cluster member", async () => {
     using store = await openTmpStore({ ingest: "duplicates.jsonl" });
-    runSignals(store.db, { lowConfidenceThreshold: 0.5 });
+    runSignals(store.db, { lowConfidence: { default: 0.5, bySource: [] } });
 
     const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
       width: 120,

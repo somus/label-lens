@@ -22,6 +22,8 @@ import { mountReingestPrompt, type ReingestChoice } from "../screens/reingest-pr
 import { mountReviewScreen, type ReviewScreenHandle } from "../screens/review.ts";
 import { mountSplash } from "../screens/splash.ts";
 import { runSignals } from "../signals/run.ts";
+import { applyThresholdsOnStartup, recordAppliedThresholds } from "../signals/startup.ts";
+import { type LowConfidenceThresholds, thresholdsFromConfig } from "../signals/threshold.ts";
 import { type Db, openDb } from "../store/db.ts";
 import { findUnknownLabels } from "../store/labels.ts";
 import { chooseInitialScreen } from "./initial-screen.ts";
@@ -144,6 +146,8 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     return resolvedDisplay;
   };
 
+  const thresholds: LowConfidenceThresholds = thresholdsFromConfig(config.signals?.lowConfidence);
+
   if (isEmpty) {
     console.error(`Ingesting ${inputPath}...`);
     const result = await ingestFile(db, inputPath, config.input.fields);
@@ -151,6 +155,7 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     console.error("Computing prioritization signals...");
     const signals = runSignals(db, signalsOptions(config));
     console.error(`  wrote ${signals.written} issue rows`);
+    recordAppliedThresholds(db, thresholds);
     writeFingerprint(db, inputPath, current);
   } else if (!stored) {
     // Legacy DB from before slice 9 (no fingerprint row). Trust existing data;
@@ -175,14 +180,22 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
       }
       if (choice === "fresh") {
         db = await freshReingest(db, stateDir, stateDbPath, inputPath, config);
+        recordAppliedThresholds(db, thresholds);
         writeFingerprint(db, inputPath, current);
       } else {
         applyDiff(db, diff);
         runSignals(db, signalsOptions(config));
+        recordAppliedThresholds(db, thresholds);
         writeFingerprint(db, inputPath, current);
       }
     }
   }
+
+  // After ingest settles, check whether the stored threshold fingerprint
+  // matches the current config. Different (or unset) → re-evaluate
+  // low_confidence Issues against the new thresholds without a full re-ingest.
+  // Same → cheap no-op (one meta read).
+  applyThresholdsOnStartup(db, thresholds);
 
   const unknown = findUnknownLabels(db, config.labels);
   if (unknown.length > 0) {
@@ -347,7 +360,7 @@ async function freshReingest(
 
 function signalsOptions(config: LabellensConfig): import("../signals/run.ts").RunSignalsOptions {
   return {
-    lowConfidenceThreshold: config.signals?.lowConfidenceThreshold,
+    lowConfidence: thresholdsFromConfig(config.signals?.lowConfidence),
     enabled: config.signals?.enable,
   };
 }

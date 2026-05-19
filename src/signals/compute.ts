@@ -1,7 +1,7 @@
 export function lowConfidenceScore(confidence: number | null, threshold: number): number | null {
   if (confidence === null) return null;
   if (confidence >= threshold) return null;
-  return 1 - confidence;
+  return (threshold - confidence) / threshold;
 }
 
 export function duplicateScore(groupSize: number, totalRecords: number): number {

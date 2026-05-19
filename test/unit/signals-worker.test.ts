@@ -27,7 +27,11 @@ describe("signals worker (Bun Worker)", () => {
 
     const worker = new Worker(WORKER_URL);
     const terminal = awaitTerminal(worker);
-    const start: WorkerInbound = { kind: "start", dbPath, lowConfidenceThreshold: 0.5 };
+    const start: WorkerInbound = {
+      kind: "start",
+      dbPath,
+      lowConfidence: { default: 0.5, bySource: [] },
+    };
     worker.postMessage(start);
 
     const result = await terminal;

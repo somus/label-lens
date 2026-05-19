@@ -6,8 +6,10 @@ import {
 } from "../../src/signals/compute.ts";
 
 describe("lowConfidenceScore", () => {
-  test("emits 1 - confidence when below threshold", () => {
-    expect(lowConfidenceScore(0.3, 0.5)).toBeCloseTo(0.7, 10);
+  test("normalized gap (threshold - confidence) / threshold when below threshold", () => {
+    expect(lowConfidenceScore(0.3, 0.5)).toBeCloseTo(0.4, 10);
+    expect(lowConfidenceScore(0.5, 0.7)).toBeCloseTo((0.7 - 0.5) / 0.7, 10);
+    expect(lowConfidenceScore(0, 0.5)).toBeCloseTo(1, 10);
   });
 
   test("returns null when confidence is null (no measurement)", () => {
