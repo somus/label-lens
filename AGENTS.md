@@ -1,6 +1,6 @@
 # LabelLens — agent orientation
 
-Terminal-first review tool for noisy text training data. You're inside the repo. This file is the map.
+Terminal-first review tool for noisy text training data. Reviews pre-labeled records — not a general annotation platform, not for blank-data labeling, not a team workforce tool (PRD §5). You're inside the repo. This file is the map.
 
 ## Read in this order
 
@@ -33,10 +33,18 @@ These are the ones agents get wrong most often. The full set with examples lives
 - **Source data is immutable.** Never write back to the user's JSONL. State lives in `.labellens/state.db`.
 - **Source-of-truth = `human+assistant`** whenever the assistant panel was viewed for a record, not only when accepted. [ADR 0004](./docs/adr/0004-source-of-truth-includes-viewing.md) / [explanation](./docs/explanation/assistant-audit.md).
 - **"Current" Review state always reads from `effective_reviews`.** Never re-derive the "non-undone, non-compensated" predicate inline. [ADR 0007](./docs/adr/0007-effective-review-entry.md) / [explanation](./docs/explanation/effective-review.md). Audit-log surfaces (history strip, `labellens export log`) intentionally read raw `reviews`. Exports that need per-record current state should use `latestEffectiveByRecord` (one bulk query) over per-row `currentReview` calls — see [`src/export/jsonl.ts`](./src/export/jsonl.ts).
-- **Modal sub-surfaces go through the Overlay seam.** Picker, Note, Assistant, Configure-Assistant share [`src/overlay/`](./src/overlay/): a pure reducer per overlay + an `applyEffects` interpreter against AppContext. Don't add bespoke key handlers in screens.
+- **Modal sub-surfaces go through the Overlay seam.** Picker, Note, Assistant, Configure-Assistant share [`src/overlay/`](./src/overlay/): a pure reducer per overlay + an `applyEffects` interpreter against AppContext. Adding a modal surface = new reducer in `src/overlay/`, registered in `reduce.ts`. Async provider/timer results re-enter through events/effects. NEVER add bespoke key handlers in screens.
 - **No native modules besides `bun:sqlite`.** Pure-TS deps only — keeps the compiled binary clean.
 - **Heavy CPU work runs in a Bun `Worker`.** Hashing, signal computation, embeddings. Main thread stays responsive.
 - **Streaming JSONL ingest.** Never load the full file into memory.
+- **Stop before changing load-bearing shape.** AppContext shape, Overlay reducer base type, `effective_reviews` semantics, render primitive surface ([ADR 0010](./docs/adr/0010-render-primitives-vs-composites.md)), and schema migration shape need a written proposal or superseding ADR before code. Don't bypass with `--no-verify` or a sibling helper that re-derives the rule.
+
+## Verify
+
+- `bun run typecheck && bun run lint && bun test` — pre-commit gate (lefthook runs the same).
+- `bun run schema` — after editing [`src/config/config.ts`](./src/config/config.ts).
+
+"Done" = exit codes 0. Not "I think it works."
 
 ## Where things live
 
@@ -62,6 +70,9 @@ These are the ones agents get wrong most often. The full set with examples lives
 - Conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`). Reference issues with `closes #N`.
 - No Claude / agent attribution in commits, PR bodies, or code comments. Author is the human.
 - No backwards-compat shims, no dead-code comments, no feature flags. Just change the code.
-- Default to no comments. If the WHY is non-obvious, one short line.
+
+## Compaction
+
+When compacting, preserve: modified file paths, the Verify commands run with their results, and ADR numbers referenced by changed code.
 
 Long-form workflow ([CONTRIBUTING.md](./CONTRIBUTING.md)) covers the rest.
