@@ -138,6 +138,10 @@ Review the diff before committing — a snapshot churn that wasn't intended is a
 
 `test/perf/*.perf.ts` runs the envelope from PRD §16.1 (queue switch <200ms at 50K, ingest <30s at 10K, etc.). Shared fixtures live in `test/fixtures/` and are deterministic (issue #14). Baselines committed at `test/perf/baselines.json`; CI fails on >20% regression. Refresh with `bun run perf:update-baselines` and commit the diff manually. The `perf` job in `.github/workflows/ci.yml` enforces this on every PR.
 
+Each perf test wraps its timed span in `measureMedian` (see [`test/perf/_util.ts`](./perf/_util.ts)) — one warmup iteration is discarded, the next three are sorted and the median is asserted against the baseline. This collapses single-shot CI noise; first-run JIT, filesystem-cache, and module-init costs no longer push a measurement past the headroom. When a perf test isn't idempotent (`ingest`, `signals`) the closure rebuilds or resets state per sample.
+
+Baselines are captured on a developer machine but the **envelope** (baseline × 1.2) must accommodate CI variance. If your local refresh produces baselines materially faster than the GHA runner records, leave the existing baselines and let CI continue to enforce them — committing local numbers would tighten the limit below CI's typical range and cause flaky failures.
+
 ## SSH path
 
 The test renderer doesn't simulate transport loss. Manually verify any rendering changes over a real SSH session before declaring a slice done. See PRD §14.5 test matrix and `docs/releases/TEMPLATE.md` for the per-release smoke checklist.
