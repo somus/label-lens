@@ -45,7 +45,7 @@ A prioritization signal attached to a record per type, with score. Multiple coex
 _Avoid_: Error, problem (overclaims; LabelLens never asserts label-correctness verdicts).
 
 **Source of truth**:
-Audit tag on each review entry: `human` or `human+assistant`. Tagged `human+assistant` whenever the assistant panel was viewed for that record before the action — not only when the suggestion was accepted.
+Audit tag on each review entry: `human` or `human+assistant`. Tagged `human+assistant` whenever the assistant Overlay was viewed for that record before the action — not only when the suggestion was accepted.
 
 **Orphan**:
 A record whose content-hash id no longer matches anything in the current ingest (because source text or context changed and the id shifted). Stored as `records.orphan = 1`. Predictions, reviews, and tags stay attached — orphans are preserved, not destroyed. Excluded from every built-in queue except `orphans`. Set during smart re-ingest (ADR 0002, PRD §13). Users needing stable identity across text edits provide an explicit `id` field in the JSONL (ADR 0001).
@@ -72,8 +72,8 @@ Read-only full-document view entered via `g d` chord on the review screen. Shows
 _Avoid_: Source view, raw view, file view.
 
 **Overlay**:
-A modal sub-surface that captures keypresses while open and commits an action when it closes. Relabel **Picker** (`r`), **Note** prompt (`n`), **Assistant** panel (`i`, slice 11), Queue, Help, Guidelines, and Stats all use this seam. Each Overlay owns its state, accepts a uniform `OverlayEvent` (key, stream token, cancel, commit), and emits data **Effects** (`close`, `commitDecision`, `updateNote`, `markAssistantViewed`) the screen interprets against the AppContext. Text-input Overlays capture all keys; read-only and picker-style Overlays may explicitly propagate unclaimed keys back to the active command path.
-_Avoid_: Modal, dialog, popup. "Panel" is reserved for the assistant's internal panel structure.
+A modal sub-surface that captures keypresses while open and commits an action when it closes. Relabel **Picker** (`r`), **Note** prompt (`n`), **Assistant** (`i`, slice 11), Queue, Help, Guidelines, and Stats all use this seam. Each Overlay owns its state, accepts a uniform `OverlayEvent` (key, stream token, cancel, commit), and emits data **Effects** (`close`, `commitDecision`, `updateNote`, `markAssistantViewed`) the screen interprets against the AppContext. Text-input Overlays capture all keys; read-only and picker-style Overlays may explicitly propagate unclaimed keys back to the active command path.
+_Avoid_: Modal, dialog, popup. (Pre-ADR-0009 docs called the assistant surface a "panel"; the current shape is an inline-footer Overlay — ADR 0009.)
 
 ## Relationships
 
@@ -91,7 +91,7 @@ _Avoid_: Modal, dialog, popup. "Panel" is reserved for the assistant's internal 
 > **Domain expert:** "Yes — a re-ingest where only `predictions[]` changed refreshes predictions and keeps reviews. We never throw away an **Annotation** because an upstream **Prediction** changed."
 >
 > **Dev:** "What if the reviewer presses `i`, reads the suggestion, then disagrees and presses `x`?"
-> **Domain expert:** "**Source of truth** is `human+assistant` for that **Review entry** — they were exposed to the assistant. `human` is reserved for actions taken without ever opening the panel."
+> **Domain expert:** "**Source of truth** is `human+assistant` for that **Review entry** — they were exposed to the assistant. `human` is reserved for actions taken without ever opening the assistant Overlay."
 >
 > **Dev:** "Skipped records — pending or reviewed?"
 > **Domain expert:** "Neither. Skipped is its own **Review state**. It has its own queue. Don't lump it into pending."
