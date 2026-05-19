@@ -11,13 +11,15 @@ export type CursorEvents = {
 export class Cursor extends EventEmitter<CursorEvents> {
   private records: RecordWithPrimaryPrediction[];
   private index: number;
+  private definition: QueueDefinition;
 
   constructor(
     private readonly db: Db,
-    private readonly definition: QueueDefinition,
+    private readonly factory: () => QueueDefinition,
   ) {
     super();
-    this.records = queueRecords(db, definition.query);
+    this.definition = factory();
+    this.records = queueRecords(db, this.definition.query);
     this.index = 0;
   }
 
@@ -60,6 +62,7 @@ export class Cursor extends EventEmitter<CursorEvents> {
 
   refresh(): void {
     const previousId = this.current()?.id;
+    this.definition = this.factory();
     this.records = queueRecords(this.db, this.definition.query);
     if (previousId !== undefined) {
       const newIndex = this.records.findIndex((r) => r.id === previousId);
@@ -105,6 +108,6 @@ export class Cursor extends EventEmitter<CursorEvents> {
   }
 }
 
-export function openCursor(db: Db, queueId: QueueId): Cursor {
-  return new Cursor(db, resolveQueue(queueId));
+export function openCursor(db: Db, queueId: QueueId, factory?: () => QueueDefinition): Cursor {
+  return new Cursor(db, factory ?? (() => resolveQueue(queueId)));
 }

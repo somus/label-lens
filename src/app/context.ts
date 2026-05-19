@@ -1,6 +1,7 @@
 import type { CommandRegistry } from "../actions/command.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
+import { createSmartLearning, type SmartLearning } from "../learning/smart-learning.ts";
 import type { Overlay } from "../overlay/types.ts";
 import {
   createMotionController,
@@ -11,7 +12,8 @@ import {
 import type { ResolvedDisplay } from "../render/capability.ts";
 import type { Db } from "../store/db.ts";
 import { recentReviewsWithText } from "../store/queries.ts";
-import type { QueueId } from "../store/queues/registry.ts";
+import type { QueueDefinition, QueueId } from "../store/queues/registry.ts";
+import { buildSmartPendingQuery } from "../store/queues/smart-pending.ts";
 import { queueProgress, type SidebarData, signalCounts, statsTotals } from "./sidebar-data.ts";
 
 /**
@@ -145,6 +147,13 @@ export type AppContext = {
   commandRegistry?: CommandRegistry;
   /** Active scope for palette + help filtering (review / queue / stats). */
   activeScope?: import("../keymap/engine.ts").Scope;
+  /**
+   * Session-local active learning for the smart-pending Queue (issue #93).
+   * Tracks `relabeled` decisions per built-in Issue type and re-weights the
+   * cursor's score expression on the next decision-driven refresh. Resets on
+   * app relaunch — never persisted.
+   */
+  smartLearning: SmartLearning;
 };
 
 export const PALETTE_HISTORY_LIMIT = 50;
@@ -164,6 +173,18 @@ export function createAppContext(args: {
   let inputPendingUntil = 0;
   let lastObservedProgress: number | null = null;
   let ctx: AppContext;
+  const smartLearning = createSmartLearning({
+    rerankInterval: args.config.navigation?.rerankInterval ?? 25,
+    rerankColdStart: args.config.navigation?.rerankColdStart ?? 50,
+  });
+  function factoryFor(queueId: QueueId): (() => QueueDefinition) | undefined {
+    if (queueId !== "smart-pending") return undefined;
+    return () => ({
+      id: "smart-pending",
+      label: "Pending (smart)",
+      query: buildSmartPendingQuery({ weights: smartLearning.weights() }),
+    });
+  }
   const motion = createMotionController({
     enabled: args.display.motion,
     requestRender: () => ctx.requestRender(),
@@ -242,7 +263,7 @@ export function createAppContext(args: {
     getCursor(queueId) {
       let cursor = cursors.get(queueId);
       if (!cursor) {
-        cursor = openCursor(args.db, queueId);
+        cursor = openCursor(args.db, queueId, factoryFor(queueId));
         cursor.on("change", () => ctx.requestRender());
         cursors.set(queueId, cursor);
       }
@@ -321,6 +342,7 @@ export function createAppContext(args: {
     },
     localOnly: args.localOnly ?? false,
     configPath: args.configPath,
+    smartLearning,
     pushPaletteHistory(entry) {
       const trimmed = entry.trim();
       if (trimmed.length === 0) return;
