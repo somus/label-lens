@@ -89,6 +89,16 @@ describe("reducePicker selection", () => {
     result = reducePicker(picker, key("return"));
     expect(result.kind).toBe("noop");
   });
+
+  test("cancel returns to palette browse mode without selecting", () => {
+    const picker = openPicker("p", "source", ["llm"]);
+    expect(reducePicker(picker, { kind: "cancel" }).kind).toBe("back");
+  });
+
+  test("non-key events are noops", () => {
+    const picker = openPicker("p", "source", ["llm"]);
+    expect(reducePicker(picker, { kind: "streamToken", token: "x" }).kind).toBe("noop");
+  });
 });
 
 describe("reducePicker correction two-step", () => {

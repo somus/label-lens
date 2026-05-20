@@ -145,6 +145,43 @@ describe("filter builder overlay", () => {
     expect(state.activeRow).toBe(1);
   });
 
+  test("backspace outside the value cell removes the active row without committing", () => {
+    let state = openFilterBuilder(data());
+    state = reduceFilterBuilder(state, key("+")).overlay!.state as FilterBuilderState;
+    expect(state.rows).toHaveLength(2);
+
+    const result = reduceFilterBuilder(state, key("backspace"));
+    const next = result.overlay!.state as FilterBuilderState;
+    expect(next.rows).toHaveLength(1);
+    expect(next.activeRow).toBe(0);
+    expect(result.effects).toEqual([
+      {
+        kind: "scheduleFilterPreview",
+        predicate: stateToPredicate(next)!,
+        revision: next.revision,
+      },
+    ]);
+  });
+
+  test("backspace in an in-operator value cell removes the highlighted selected value", () => {
+    let state = openFilterBuilder(data());
+    state = reduceFilterBuilder(state, key("right")).overlay!.state as FilterBuilderState;
+    state = reduceFilterBuilder(state, key("down")).overlay!.state as FilterBuilderState;
+    state = reduceFilterBuilder(state, key("down")).overlay!.state as FilterBuilderState;
+    state = reduceFilterBuilder(state, key("right")).overlay!.state as FilterBuilderState;
+    state = reduceFilterBuilder(state, key("down")).overlay!.state as FilterBuilderState;
+    state = reduceFilterBuilder(state, key("space")).overlay!.state as FilterBuilderState;
+    expect(state.rows[0]!.values).toEqual(["llm:gpt-4", "regex.simple"]);
+
+    state = reduceFilterBuilder(state, key("backspace")).overlay!.state as FilterBuilderState;
+    expect(state.rows[0]!.values).toEqual(["llm:gpt-4"]);
+    expect(stateToPredicate(state)).toEqual({
+      kind: "in",
+      column: "source",
+      values: ["llm:gpt-4"],
+    });
+  });
+
   test("invalid commit keeps builder open with inline error", () => {
     let state = openFilterBuilder(data());
     state = {

@@ -12,6 +12,27 @@ const cmds: Command[] = [
   { name: "record.accept", scope: "review", binding: "a", run: noop },
 ];
 
+function paletteData() {
+  return {
+    counts: new Map([["pending", 3]]),
+    sources: ["llm:gpt-4"],
+    labels: ["food"],
+    reasons: ["low_confidence"],
+    issueTypes: ["label_issue"],
+    corrections: [
+      { from: "food", to: "travel", count: 2 },
+      { from: "food", to: "utility", count: 1 },
+    ],
+    sourceCounts: new Map([["llm:gpt-4", 3]]),
+    labelCounts: new Map([["food", 2]]),
+    topics: ["queues"],
+    formats: ["jsonl"],
+    queueNames: ["pending"],
+    filterValues: { finalLabels: [], prevLabels: [], confidences: [] },
+    totalRecords: 10,
+  };
+}
+
 describe("openPalette", () => {
   test("seeds entries from commands with a palette field, excluding hidden", () => {
     const s = openPalette({ commands: cmds, history: [], scope: "review" });
@@ -257,5 +278,64 @@ describe("reducePalette commit", () => {
     const r = reducePalette(s, { kind: "cancel" });
     expect(r.overlay).toBeNull();
     expect(r.effects).toEqual([{ kind: "close" }]);
+  });
+});
+
+describe("reducePalette picker-backed commands", () => {
+  test.each([
+    ["label", "palette.by-label", ":by-label", "food"],
+    ["reason", "palette.by-reason", ":by-reason", "low_confidence"],
+    ["issue", "palette.by-issue", ":by-issue", "label_issue"],
+    ["topic", "palette.help", ":help", "queues"],
+    ["format", "palette.export", ":export", "jsonl"],
+    ["queue", "palette.queue", ":queue", "pending"],
+  ] as const)("%s picker uses the matching palette data source", (_kind, name, palette, first) => {
+    const command: Command = {
+      name,
+      scope: "global",
+      palette,
+      paletteMetadata: { arity: 1, pickerKind: _kind },
+      run: noop,
+    };
+    const state = {
+      ...openPalette({ commands: [command], history: [], scope: "review" }),
+      pickerOptions: paletteData(),
+    };
+
+    const result = reducePalette(state, { kind: "commit" });
+    expect(result.overlay?.kind).toBe("palette");
+    const next = result.overlay!.state as PaletteState;
+    expect(next.mode).toBe("pick");
+    expect(next.picker?.candidates[0]).toBe(first);
+  });
+
+  test("correction picker populates valid to-labels after selecting from-label", () => {
+    const command: Command = {
+      name: "palette.by-correction",
+      scope: "global",
+      palette: ":by-correction",
+      paletteMetadata: { arity: 1, pickerKind: "correction" },
+      run: noop,
+    };
+    let state: PaletteState = {
+      ...openPalette({ commands: [command], history: [], scope: "review" }),
+      pickerOptions: paletteData(),
+    };
+
+    state = reducePalette(state, { kind: "commit" }).overlay!.state as PaletteState;
+    expect(state.picker?.step).toBe("from");
+    expect(state.picker?.candidates).toEqual(["food"]);
+
+    const afterFrom = reducePalette(state, key("return")).overlay!.state as PaletteState;
+    expect(afterFrom.picker?.step).toBe("to");
+    expect(afterFrom.picker?.selectedFrom).toBe("food");
+    expect(afterFrom.picker?.candidates).toEqual(["travel", "utility"]);
+
+    const result = reducePalette(afterFrom, key("return"));
+    expect(result.effects).toContainEqual({
+      kind: "runCommand",
+      commandName: "palette.by-correction",
+      argument: "food:travel",
+    });
   });
 });
