@@ -42,10 +42,13 @@ export function latestEffectiveFinalLabel(label: string): SQL {
 
 // Set-membership variant for multi-label tasks. Latest effective review's
 // `final_label` is a JSON array text; matches when `label` appears in the
-// set. Scalar single-label data isn't a JSON array, so the
-// `CASE WHEN json_valid... THEN x ELSE '[]' END` guard keeps `json_each`
-// from erroring on bareword text — the empty array yields no rows and the
-// branch contributes nothing under single-label storage.
+// set. SQLite's `json_valid` also accepts objects and scalar JSON values
+// (e.g. a quoted string or a number), so guarding with `json_valid` alone
+// would let a stringified object like `{"a":1}` slip through json_each
+// and spuriously match. Restrict to JSON arrays via `json_type(...) =
+// 'array'` so only true multi-label payloads participate. Single-label
+// bareword text fails both checks and short-circuits via the `'[]'`
+// fallback (no rows).
 export function latestEffectiveFinalLabelContains(label: string): SQL {
   return sql`EXISTS (
     SELECT 1 FROM json_each(CASE
@@ -53,7 +56,11 @@ export function latestEffectiveFinalLabelContains(label: string): SQL {
         SELECT er.final_label FROM effective_reviews er
         WHERE er.record_id = ${recordsWithPrimary.id}
         ORDER BY er.id DESC LIMIT 1
-      )) THEN (
+      )) AND json_type((
+        SELECT er.final_label FROM effective_reviews er
+        WHERE er.record_id = ${recordsWithPrimary.id}
+        ORDER BY er.id DESC LIMIT 1
+      )) = 'array' THEN (
         SELECT er.final_label FROM effective_reviews er
         WHERE er.record_id = ${recordsWithPrimary.id}
         ORDER BY er.id DESC LIMIT 1
@@ -66,12 +73,15 @@ export function latestEffectiveFinalLabelContains(label: string): SQL {
 
 // Set-membership check on records_with_primary.primary_label JSON array
 // text. Used by `by-label:<l>` to match unreviewed multi-label records
-// whose Prediction set contains `<l>`. Scalar primary labels short-circuit
-// via the empty-array guard, same as the review variant above.
+// whose Prediction set contains `<l>`. Same array-only guard as the
+// review variant: `json_valid` accepts non-array scalars and objects,
+// which would otherwise satisfy json_each spuriously.
 export function primaryLabelContains(label: string): SQL {
   return sql`EXISTS (
     SELECT 1 FROM json_each(CASE
-      WHEN json_valid(${recordsWithPrimary.primaryLabel}) THEN ${recordsWithPrimary.primaryLabel}
+      WHEN json_valid(${recordsWithPrimary.primaryLabel})
+        AND json_type(${recordsWithPrimary.primaryLabel}) = 'array'
+      THEN ${recordsWithPrimary.primaryLabel}
       ELSE '[]'
     END)
     WHERE json_each.value = ${label}

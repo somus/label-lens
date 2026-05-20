@@ -167,6 +167,7 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
         wrapMode: "word",
       }),
     ),
+    Text({ content: " " }),
     Text({
       content: segmentsToStyledText(hintSegments, display),
       attributes: TextAttributes.DIM,

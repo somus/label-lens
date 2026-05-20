@@ -64,3 +64,29 @@ test("by-label:toxicity matches multi-label set membership", async () => {
     store.dispose();
   }
 });
+
+test("by-label: a stringified JSON object primary_label does not spuriously match", async () => {
+  // Regression guard: SQLite's `json_valid` returns true for objects and
+  // bare scalars, not just arrays. Without a `json_type(...)='array'`
+  // guard, a stray `{"spam":1}` payload would satisfy `EXISTS (... FROM
+  // json_each(...) WHERE value = 'spam')` because json_each over an
+  // object iterates its values. The predicate must skip non-array JSON.
+  const store = await makeStore();
+  try {
+    // Replace one record's primary prediction label with a stringified JSON
+    // object whose value contains the literal label name. If the predicate
+    // does not restrict to arrays, this row would match by-label:spam
+    // because json_each iterates an object's values. `primary_label` is
+    // sourced from `predictions.label` via the records_with_primary view.
+    store.db.$client
+      .prepare(
+        "UPDATE predictions SET label = ? WHERE record_id = (SELECT id FROM records WHERE text = ?)",
+      )
+      .run('{"k":"spam"}', "tox only");
+    const q = resolveQueue("by-label:spam");
+    const rows = queueRecords(store.db, q.query);
+    expect(rows.map((r) => r.text)).toEqual(["spam+tox"]);
+  } finally {
+    store.dispose();
+  }
+});
