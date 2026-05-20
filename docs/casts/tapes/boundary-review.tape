@@ -40,19 +40,17 @@ Enter
 Sleep 1800ms
 
 # Move to a low-confidence boundary prediction in the middle of document context.
-Type "j"
+Down
 Sleep 1800ms
 
 # Inspect the whole document without changing the active review cursor.
-Type "g"
-Sleep 300ms
 Type "d"
 Sleep 1800ms
-Type "j"
+Down
 Sleep 900ms
-Type "j"
+Down
 Sleep 900ms
-Type "j"
+Down
 Sleep 900ms
 Escape
 Sleep 1500ms

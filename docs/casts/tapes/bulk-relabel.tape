@@ -39,8 +39,8 @@ Sleep 2500ms
 Enter
 Sleep 1800ms
 
-# Narrow to all current shopping records.
-Type ":"
+# Narrow to all current shopping records (palette opens via ctrl+p under simple).
+Ctrl+P
 Sleep 800ms
 Type "by-label shopping"
 Sleep 1000ms
