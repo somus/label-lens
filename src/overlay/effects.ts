@@ -103,6 +103,12 @@ export function applyEffects(
           prev_label: effect.prevLabel,
           source_of_truth: effect.sourceOfTruth,
         });
+        // Any commit decision against this record retires the in-progress
+        // multi-label draft. Picker commit, `a`, `x`, `s`, assistant — all
+        // funnel through here so one clear covers every path.
+        if (app.multiLabelDraft?.recordId === effect.recordId) {
+          app.clearMultiLabelDraft();
+        }
         const cursor = refreshQueue(app, queueId);
         if (effect.status === "accepted") {
           app.motion.play("footer.accept", flash(80, "success"));

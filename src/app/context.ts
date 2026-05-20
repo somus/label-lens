@@ -127,6 +127,15 @@ export type AppContext = {
   viewedAssistant: Set<string>;
   clearViewedAssistant(): void;
   /**
+   * Multi-label task only: in-progress label set the reviewer is building
+   * via digit / per-label-key toggles. `Enter` commits this set as the
+   * Annotation (status follows set equality with the primary Prediction).
+   * Cleared on record navigation so each focus session starts from the
+   * primary Prediction view, not someone else's stale draft.
+   */
+  multiLabelDraft: { recordId: string; selected: Set<string> } | null;
+  clearMultiLabelDraft(): void;
+  /**
    * In-flight assistant stream's AbortController. Set by `record.openAssistant`
    * when a query fires; cleared (and aborted) by `cancelAssistantStream` when
    * the reviewer dismisses the overlay or navigates to a different record so
@@ -347,6 +356,10 @@ export function createAppContext(args: {
       // wastes quota and risks tokens arriving after the overlay was already
       // dismissed.
       ctx.cancelAssistantStream();
+    },
+    multiLabelDraft: null,
+    clearMultiLabelDraft() {
+      ctx.multiLabelDraft = null;
     },
     assistantAbort: null,
     cancelAssistantStream() {

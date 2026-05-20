@@ -232,11 +232,16 @@ export function mountReviewScreen(args: {
       marked,
       contentWidth,
     });
+    const draftForRecord =
+      app.multiLabelDraft && record && app.multiLabelDraft.recordId === record.id
+        ? app.multiLabelDraft.selected
+        : undefined;
     const decision = taskRenderer.renderDecision({
       record,
       labels: app.config.labels,
       display: app.display,
       contentWidth,
+      ...(draftForRecord ? { multiLabelDraft: draftForRecord } : {}),
     });
     const historyStrip = sidebarVisible
       ? Box({})

@@ -24,7 +24,13 @@ import { paletteAssistant, paletteReload } from "./palette/stubs.ts";
 import { nextQueue, prevQueue } from "./queue/cycle-queue.ts";
 import { openQueueScreen } from "./queue/open-screen.ts";
 import { queueSwitchCommands } from "./queue/switch.ts";
-import { accept, reject, relabelByIndexCommands, skip } from "./record/decisions.ts";
+import {
+  accept,
+  commitMultiLabelDraft,
+  reject,
+  relabelByIndexCommands,
+  skip,
+} from "./record/decisions.ts";
 import { next } from "./record/next.ts";
 import { nextOriginal, prevOriginal } from "./record/next-original.ts";
 import { openAssistantCommand } from "./record/open-assistant.ts";
@@ -50,6 +56,7 @@ export const ALL_COMMANDS: Command[] = [
   openNoteCommand,
   openRelabelPicker,
   ...relabelByIndexCommands,
+  commitMultiLabelDraft,
   nextQueue,
   prevQueue,
   openQueueScreen,

@@ -34,6 +34,11 @@ export type OpenMultiLabelPickerArgs = {
   predicted: string[];
   predictedConfidence: number | null;
   assistantViewed?: boolean;
+  /** Pre-existing inline draft set the reviewer was building via `1`–`9` /
+   * per-label-key toggles before opening the picker. When provided, the
+   * picker seeds `selected` from this instead of mirroring `predicted` so
+   * the picker continues the in-progress edit rather than resetting it. */
+  initialSelected?: string[];
 };
 
 function buildCandidates(
@@ -65,7 +70,9 @@ function sortByConfig(allLabels: PickerLabel[], items: string[]): string[] {
 
 export function openMultiLabelPicker(args: OpenMultiLabelPickerArgs): MultiLabelPickerState {
   const predicted = sortByConfig(args.allLabels, args.predicted);
-  const selected = predicted.slice();
+  const selected = args.initialSelected
+    ? sortByConfig(args.allLabels, args.initialSelected)
+    : predicted.slice();
   const candidates = buildCandidates(args.allLabels, "", predicted, selected);
   return {
     recordId: args.recordId,

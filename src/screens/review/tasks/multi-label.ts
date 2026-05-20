@@ -1,5 +1,5 @@
 import { labelKey, labelName } from "../../../config/config.ts";
-import { decodeLabelSet } from "../../../labels/label-set.ts";
+import { decodeLabelSet, labelSetsEqual } from "../../../labels/label-set.ts";
 import { Box } from "../../../render/box.ts";
 import type { Segment } from "../../../render/chrome/status-bar.ts";
 import { segmentsToStyledText } from "../../../render/chrome/status-bar.ts";
@@ -26,15 +26,56 @@ export function createMultiLabelTask(args: {
   };
 }
 
+type DiffKind = "kept" | "added" | "removed" | "none";
+
+function classify(name: string, predicted: Set<string>, draft: Set<string> | undefined): DiffKind {
+  const inPred = predicted.has(name);
+  if (!draft) return inPred ? "kept" : "none";
+  const inDraft = draft.has(name);
+  if (inPred && inDraft) return "kept";
+  if (!inPred && inDraft) return "added";
+  if (inPred && !inDraft) return "removed";
+  return "none";
+}
+
+function diffGlyph(kind: DiffKind, draftActive: boolean): { text: string; tone: Segment["tone"] } {
+  if (!draftActive) {
+    return kind === "kept" ? { text: "◆", tone: "accent" } : { text: " ", tone: "default" };
+  }
+  switch (kind) {
+    case "kept":
+      return { text: "=", tone: "accent" };
+    case "added":
+      return { text: "+", tone: "success" };
+    case "removed":
+      return { text: "-", tone: "danger" };
+    case "none":
+      return { text: " ", tone: "default" };
+  }
+}
+
+function richGlyph(
+  g: { text: string; tone: Segment["tone"] },
+  rich: boolean,
+): {
+  text: string;
+  tone: Segment["tone"];
+} {
+  if (rich) return g;
+  // Mono / 16-color: `◆` falls back to `*`; diff glyphs are ASCII already.
+  if (g.text === "◆") return { text: "*", tone: g.tone };
+  return g;
+}
+
 function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof Box> {
-  const { record, labels, display, contentWidth } = args;
+  const { record, labels, display, contentWidth, multiLabelDraft } = args;
   if (!record) return Box({});
   const predictedSet = record.primaryPrediction
     ? new Set(decodeLabelSet(record.primaryPrediction.label))
     : new Set<string>();
   const confidence = record.primaryPrediction?.confidence ?? null;
   const rich = display.color === "truecolor" || display.color === "256";
-  const predictedGlyph = rich ? "◆" : "*";
+  const draftActive = multiLabelDraft !== undefined;
   const visible = labels.slice(0, 9);
   const rows: Segment[][] = [];
   let current: Segment[] = [];
@@ -42,7 +83,7 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
   for (let i = 0; i < visible.length; i++) {
     const entry = visible[i]!;
     const name = labelName(entry);
-    const isPredicted = predictedSet.has(name);
+    const kind = classify(name, predictedSet, multiLabelDraft);
     if (inRow === MAX_LABELS_PER_ROW) {
       rows.push(current);
       current = [];
@@ -50,17 +91,17 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
     }
     if (inRow > 0) current.push({ text: "   ", tone: "default" });
     current.push({ text: " ", tone: "default" });
-    current.push({
-      text: isPredicted ? predictedGlyph : " ",
-      tone: isPredicted ? "accent" : "default",
-    });
+    const glyph = richGlyph(diffGlyph(kind, draftActive), rich);
+    current.push({ text: glyph.text, tone: glyph.tone });
     current.push({ text: " ", tone: "default" });
+    const chipTone: Segment["tone"] = kind === "kept" || kind === "added" ? "accent" : "accentDeep";
     current.push({
       text: labelChipText({ index: i, key: labelKey(entry), mode: display.labelChip }),
-      tone: isPredicted ? "accent" : "accentDeep",
+      tone: chipTone,
     });
     current.push({ text: "  ", tone: "default" });
-    for (const seg of foldNamespace(name, isPredicted ? "default" : "muted")) {
+    const nameTone: Segment["tone"] = kind === "kept" || kind === "added" ? "default" : "muted";
+    for (const seg of foldNamespace(name, nameTone)) {
       current.push(seg);
     }
     inRow += 1;
@@ -85,9 +126,9 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
     else rows.push(hint);
   }
 
-  if (confidence !== null && rows.length > 0) {
-    const pct = Math.round(confidence * 100);
-    rows[rows.length - 1]!.push({ text: `   ${pct}%`, tone: "muted" });
+  const trailing = trailingStatus(predictedSet, multiLabelDraft, confidence);
+  if (trailing.length > 0 && rows.length > 0) {
+    rows[rows.length - 1]!.push(...trailing);
   }
 
   return Box(
@@ -102,4 +143,45 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
       }),
     ),
   );
+}
+
+function trailingStatus(
+  predicted: Set<string>,
+  draft: Set<string> | undefined,
+  confidence: number | null,
+): Segment[] {
+  if (!draft) {
+    if (confidence === null) return [];
+    const pct = Math.round(confidence * 100);
+    return [{ text: `   ${pct}%`, tone: "muted" }];
+  }
+  const draftArr = [...draft];
+  const predArr = [...predicted];
+  if (draftArr.length === 0) {
+    return [
+      { text: "   ", tone: "default" },
+      { text: "empty — Enter refused", tone: "warning" },
+      { text: "  ", tone: "default" },
+      { text: "[x]", tone: "accent" },
+      { text: " reject", tone: "muted" },
+    ];
+  }
+  if (labelSetsEqual(draftArr, predArr)) {
+    return [
+      { text: "   ", tone: "default" },
+      { text: "accept", tone: "success" },
+      { text: "  ", tone: "default" },
+      { text: "[enter]", tone: "accent" },
+    ];
+  }
+  let added = 0;
+  let removed = 0;
+  for (const d of draftArr) if (!predicted.has(d)) added++;
+  for (const p of predArr) if (!draft.has(p)) removed++;
+  return [
+    { text: "   ", tone: "default" },
+    { text: `relabel (-${removed} +${added})`, tone: "accent" },
+    { text: "  ", tone: "default" },
+    { text: "[enter]", tone: "accent" },
+  ];
 }

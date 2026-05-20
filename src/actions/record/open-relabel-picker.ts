@@ -21,12 +21,17 @@ export const openRelabelPicker: Command = {
       const predicted = record.primaryPrediction
         ? decodeLabelSet(record.primaryPrediction.label)
         : [];
+      const draft =
+        ctx.multiLabelDraft && ctx.multiLabelDraft.recordId === record.id
+          ? [...ctx.multiLabelDraft.selected]
+          : undefined;
       const state = openMultiLabelPicker({
         recordId: record.id,
         allLabels,
         predicted,
         predictedConfidence: record.primaryPrediction?.confidence ?? null,
         assistantViewed: ctx.viewedAssistant.has(record.id),
+        ...(draft ? { initialSelected: draft } : {}),
       });
       ctx.openOverlay({ kind: "multi-label-picker", state });
       return;

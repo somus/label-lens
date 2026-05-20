@@ -134,8 +134,9 @@ Single-string Prediction labels under `task: "multi-label"` are invalid — the 
 Review actions:
 
 - `a` accepts the primary Prediction set verbatim.
-- `r` opens the multi-label picker. `Space` toggles the focused label; `Enter` commits the current selected set; `Esc` cancels. An empty selected set cannot be committed — use `x` (reject) for "no valid labels."
-- Status follows the set comparison: `accepted` when the committed set equals the primary Prediction set, `relabeled` when it differs.
+- `1`–`9` (and configured per-label `key` shortcuts) toggle the label at that position in / out of an in-progress *draft set*, right on the chip rail. The first toggle on a fresh record seeds the draft from the primary Prediction set so keystrokes edit against the prediction, not against `{}`. Diff glyphs (`=` kept, `+` added, `-` removed) replace the predicted `◆` while the draft is active.
+- `Enter` commits the draft set. Status follows the set comparison: `accepted` when the draft equals the primary Prediction set, `relabeled` when it differs. Empty draft is refused — use `x` (reject) for "no valid labels."
+- `r` opens the multi-label picker overlay (full filter / search). Seeded from the current draft when one exists, otherwise from the primary Prediction set. `Space` toggles, `Enter` commits, `Esc` cancels.
 - The Assistant (`i`) returns a complete suggested set; `Enter` commits the validated set with `human+assistant` audit semantics.
 
 Effective Review and undo semantics keep working with one current Review per Record. The `by-label:<l>` queue matches Records whose current Review's set (or, for unreviewed Records, the primary Prediction set) contains `<l>`. Exports decode the set: JSONL emits `label` as `string[]`, CSV joins the set with `output.csvMultiLabelSeparator` (default `;`).

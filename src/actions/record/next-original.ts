@@ -27,6 +27,7 @@ function stepOriginal(ctx: import("../../app/context.ts").AppContext, direction:
     // the assistant tag. cursor.seek() is synchronous today; any future
     // async navigation must clear the Set before yielding.
     ctx.clearViewedAssistant();
+    ctx.clearMultiLabelDraft();
   }
 }
 

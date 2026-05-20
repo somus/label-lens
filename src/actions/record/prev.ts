@@ -14,6 +14,9 @@ export const prev: Command = {
     // record and must preserve the assistant tag. cursor.prev() is
     // synchronous today; any future async navigation must clear the Set
     // before yielding.
-    if (before !== after) ctx.clearViewedAssistant();
+    if (before !== after) {
+      ctx.clearViewedAssistant();
+      ctx.clearMultiLabelDraft();
+    }
   },
 };
