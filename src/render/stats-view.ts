@@ -1,9 +1,5 @@
 import { bg as bgFn, fg as fgFn, StyledText, type TextChunk } from "@opentui/core";
-import {
-  DEFAULT_STATS_PAGE_SIZE,
-  type StatsOverlayState,
-  withStatsPageSize,
-} from "../overlay/stats-overlay.ts";
+import { type StatsOverlayState, withStatsPageSize } from "../overlay/stats-overlay.ts";
 import { Box } from "./box.ts";
 import type { ResolvedDisplay } from "./capability.ts";
 import type { Segment } from "./chrome/index.ts";
