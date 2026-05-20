@@ -126,14 +126,26 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
     else rows.push(hint);
   }
 
-  const trailing = trailingStatus(predictedSet, multiLabelDraft, confidence);
-  if (trailing.length > 0 && rows.length > 0) {
-    rows[rows.length - 1]!.push(...trailing);
+  // Confidence stays inline on the chip rail when no draft is active so
+  // reviewers reading the rail at rest still see signal strength. Commit-
+  // intent status moves to the section header's right slot when a draft
+  // is active.
+  if (!draftActive && confidence !== null && rows.length > 0) {
+    const pct = Math.round(confidence * 100);
+    rows[rows.length - 1]!.push({ text: `   ${pct}%`, tone: "muted" });
   }
+  const headerTrailing = draftActive
+    ? commitIntentSegments(predictedSet, multiLabelDraft!)
+    : undefined;
 
   return Box(
     { flexDirection: "column", marginTop: 1, flexShrink: 0 },
-    SectionHeader({ display, label: "labels", width: contentWidth }),
+    SectionHeader({
+      display,
+      label: "labels",
+      width: contentWidth,
+      ...(headerTrailing && headerTrailing.length > 0 ? { trailing: headerTrailing } : {}),
+    }),
     Text({ content: " " }),
     ...rows.map((segs, idx) =>
       Text({
@@ -145,21 +157,11 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
   );
 }
 
-function trailingStatus(
-  predicted: Set<string>,
-  draft: Set<string> | undefined,
-  confidence: number | null,
-): Segment[] {
-  if (!draft) {
-    if (confidence === null) return [];
-    const pct = Math.round(confidence * 100);
-    return [{ text: `   ${pct}%`, tone: "muted" }];
-  }
+function commitIntentSegments(predicted: Set<string>, draft: Set<string>): Segment[] {
   const draftArr = [...draft];
   const predArr = [...predicted];
   if (draftArr.length === 0) {
     return [
-      { text: "   ", tone: "default" },
       { text: "empty — Enter refused", tone: "warning" },
       { text: "  ", tone: "default" },
       { text: "[x]", tone: "accent" },
@@ -168,7 +170,6 @@ function trailingStatus(
   }
   if (labelSetsEqual(draftArr, predArr)) {
     return [
-      { text: "   ", tone: "default" },
       { text: "accept", tone: "success" },
       { text: "  ", tone: "default" },
       { text: "[enter]", tone: "accent" },
@@ -179,7 +180,6 @@ function trailingStatus(
   for (const d of draftArr) if (!predicted.has(d)) added++;
   for (const p of predArr) if (!draft.has(p)) removed++;
   return [
-    { text: "   ", tone: "default" },
     { text: `relabel (-${removed} +${added})`, tone: "accent" },
     { text: "  ", tone: "default" },
     { text: "[enter]", tone: "accent" },
