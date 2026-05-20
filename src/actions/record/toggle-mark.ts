@@ -14,10 +14,16 @@ export const toggleMark: Command = {
     // Increment session counter only on the on-edge, to match what reviewers
     // expect ("how many marks did I add this session"). Re-querying after
     // toggle keeps the counter aligned with the actual stored state.
-    if (hasTag(ctx.db, record.id, "marked")) {
+    const nowMarked = hasTag(ctx.db, record.id, "marked");
+    if (nowMarked) {
       ctx.sessionCounters.marked += 1;
       ctx.motion.play("sidebar.counter.marked", flash(200, "accent"));
     }
+    // Refresh the cursor so the marked queue (whose WHERE clause filters on
+    // the `marked` tag) reflects the toggle without requiring a queue switch
+    // round-trip. Other queues are insensitive to marked but pay a tiny
+    // re-query — acceptable for the consistency win.
+    ctx.cursor?.refresh();
     ctx.requestRender();
   },
 };

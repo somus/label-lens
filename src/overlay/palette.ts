@@ -82,7 +82,17 @@ function filteredEntries(entries: PaletteEntry[], filter: string): PaletteEntry[
   const stem = sp === -1 ? filter : filter.slice(0, sp);
   if (stem.length === 0) return entries.slice();
   const needle = stem.toLowerCase();
-  return entries.filter((e) => stemOf(e.palette).toLowerCase().startsWith(needle));
+  // Substring match so `:bulk-accept` surfaces when the reviewer types
+  // `accept` (or any infix), not only on prefix. Prefix matches rank above
+  // infix matches so the historical "type the start" muscle memory wins
+  // when both apply. Ties keep their original category-flatten order.
+  const matched = entries.filter((e) => stemOf(e.palette).toLowerCase().includes(needle));
+  matched.sort((a, b) => {
+    const aPrefix = stemOf(a.palette).toLowerCase().startsWith(needle) ? 0 : 1;
+    const bPrefix = stemOf(b.palette).toLowerCase().startsWith(needle) ? 0 : 1;
+    return aPrefix - bPrefix;
+  });
+  return matched;
 }
 
 function stemOf(palette: string): string {

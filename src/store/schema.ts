@@ -93,6 +93,7 @@ export const reviews = sqliteTable(
       (): AnySQLiteColumn => reviews.id,
     ),
     note: text("note"),
+    batchId: text("batch_id"),
   },
   (t) => [
     index("idx_reviews_record").on(t.recordId),
@@ -100,6 +101,7 @@ export const reviews = sqliteTable(
     index("idx_reviews_final").on(t.finalLabel),
     index("idx_reviews_prev").on(t.prevLabel),
     index("idx_reviews_compensates").on(t.compensatesReviewId),
+    index("idx_reviews_batch").on(t.batchId),
   ],
 );
 
@@ -165,6 +167,7 @@ export const effectiveReviews = sqliteView("effective_reviews", {
   }).notNull(),
   compensatesReviewId: integer("compensates_review_id"),
   note: text("note"),
+  batchId: text("batch_id"),
 }).existing();
 
 /**

@@ -70,6 +70,7 @@ export function insertReview(
     final_label: string | null;
     prev_label: string | null;
     source_of_truth: SourceOfTruth;
+    batch_id?: string | null;
   },
 ): void {
   const noteRow = db
@@ -86,6 +87,7 @@ export function insertReview(
       reviewedAt: new Date().toISOString(),
       sourceOfTruth: args.source_of_truth,
       note: noteRow?.note ?? null,
+      batchId: args.batch_id ?? null,
     })
     .run();
 }

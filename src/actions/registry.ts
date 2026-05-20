@@ -5,6 +5,7 @@ import { DOC_VIEW_COMMANDS } from "./doc/doc-view-commands.ts";
 import { exportCommand, paletteExportCommand } from "./export/run.ts";
 import { guidelinesShow } from "./guidelines/show.ts";
 import { helpShow } from "./help/show.ts";
+import { bulkCommands } from "./palette/bulk.ts";
 import { paletteGuidelines } from "./palette/guidelines.ts";
 import { paletteHelp } from "./palette/help.ts";
 import { paletteOpen } from "./palette/open.ts";
@@ -78,6 +79,7 @@ export const ALL_COMMANDS: Command[] = [
   paletteAssistant,
   paletteReload,
   paletteToggleSidebar,
+  ...bulkCommands,
   quit,
 ];
 

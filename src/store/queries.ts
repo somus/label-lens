@@ -111,6 +111,7 @@ function effectiveRowToStored(row: EffectiveRow): StoredReview {
     source_of_truth: row.sourceOfTruth,
     compensates_review_id: row.compensatesReviewId,
     note: row.note,
+    batch_id: row.batchId,
   };
 }
 
@@ -125,6 +126,7 @@ function reviewRowToStored(row: typeof reviews.$inferSelect): StoredReview {
     source_of_truth: row.sourceOfTruth,
     compensates_review_id: row.compensatesReviewId,
     note: row.note,
+    batch_id: row.batchId,
   };
 }
 
@@ -255,12 +257,31 @@ export function latestReview(db: TxOrDb): StoredReview | null {
 }
 
 /**
+ * Every currently-effective review sharing a `batch_id`. Drives batch undo:
+ * the caller iterates the result, writing one compensating row per member.
+ * Returns rows newest-first so callers can index latest-first if needed.
+ */
+export function effectiveReviewsInBatch(db: TxOrDb, batchId: string): StoredReview[] {
+  const rows = db
+    .select()
+    .from(effectiveReviews)
+    .where(eq(effectiveReviews.batchId, batchId))
+    .orderBy(desc(effectiveReviews.id))
+    .all();
+  return rows.map(effectiveRowToStored);
+}
+
+/**
  * Insert a compensating review row that undoes the current effective review.
  * Returns the new row's id, or null if there is nothing to undo.
  */
 export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
   const target = currentReview(db, recordId);
   if (!target) return null;
+  // Propagate batch_id so the audit log + the history-strip collapser see
+  // the per-record undo rows as members of the same logical undo, mirroring
+  // how their compensated targets shared one batch_id. Single-record undo
+  // inherits NULL and behaves unchanged.
   const inserted = db
     .insert(reviews)
     .values({
@@ -272,6 +293,7 @@ export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
       sourceOfTruth: "human",
       compensatesReviewId: target.id,
       note: null,
+      batchId: target.batch_id,
     })
     .returning({ id: reviews.id })
     .get();

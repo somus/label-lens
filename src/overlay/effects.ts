@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { switchQueue } from "../actions/queue/switch.ts";
+import { commitBatch, commitBulkUnmark } from "../actions/record/bulk.ts";
 import { type AppContext, effectiveQueueId } from "../app/context.ts";
 import { type BuiltinIssueType, isBuiltinIssueType } from "../learning/smart-learning.ts";
 import { flash } from "../render/anim.ts";
@@ -179,6 +180,52 @@ export function applyEffects(
       case "pushPaletteHistory":
         app.pushPaletteHistory(effect.entry);
         break;
+      case "commitBatch": {
+        // Single-session invariant: nothing else can mutate Review state
+        // between bulk-confirm opening and Enter, so the `eligible` list
+        // captured at overlay-open time is still authoritative here — no
+        // re-validation needed. A future async path (background ingest,
+        // multi-pane) would have to add that check back.
+        const result = commitBatch(app, queueId, {
+          action: effect.action,
+          eligible: effect.eligible,
+          label: effect.label,
+        });
+        if (!result.ok) {
+          const msg =
+            result.reason === "no-prediction"
+              ? "Cannot bulk accept: at least one record has no prediction"
+              : result.reason === "unknown-label"
+                ? `Bulk relabel: label "${effect.label ?? ""}" not configured`
+                : result.reason === "missing-label"
+                  ? "Bulk relabel requires a label"
+                  : "Bulk action: nothing to commit";
+          app.setFlash(msg, "error");
+          break;
+        }
+        const cursor = refreshQueue(app, queueId);
+        const verb =
+          effect.action === "accept"
+            ? "accepted"
+            : effect.action === "relabel"
+              ? "relabeled"
+              : effect.action === "reject"
+                ? "rejected"
+                : "skipped";
+        app.setFlash(`Bulk: ${verb} ${result.affected} record(s)`, "success");
+        if (effect.action !== "skip") app.sessionCounters.reviewed += result.affected;
+        else app.sessionCounters.skipped += result.affected;
+        if (cursor.total === 0 && app.display.motion) {
+          app.setFlash("queue complete", "success");
+        }
+        break;
+      }
+      case "commitBulkUnmark": {
+        const cleared = commitBulkUnmark(app, effect.eligible);
+        refreshQueue(app, queueId);
+        app.setFlash(`Bulk: cleared marked from ${cleared} record(s)`, "success");
+        break;
+      }
       case "scheduleFilterPreview":
         setTimeout(() => {
           const overlay = app.overlay;

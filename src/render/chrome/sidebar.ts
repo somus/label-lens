@@ -466,13 +466,32 @@ function historyRow(
   const glyph = statusGlyph(entry.status, display);
   const glyphCells = visualWidth(glyph);
   const glyphColumn = Math.max(2, glyphCells + 1);
-  const labelBudget = Math.min(12, Math.max(6, Math.floor((innerWidth - glyphColumn) / 3)));
-  const labelText = truncateEndSafe(entry.label ?? "—", labelBudget);
+  // Reserve room for the ` ×N` batch suffix when present so the label itself
+  // doesn't truncate inside the column. Conservative — widest `×9999` is 6
+  // cells including the leading space; small enough to absorb without
+  // starving the label cap.
+  const suffixReserve =
+    entry.batchCount && entry.batchCount > 1 ? ` ×${entry.batchCount}`.length : 0;
+  const labelBudget = Math.min(
+    12,
+    Math.max(6, Math.floor((innerWidth - glyphColumn - suffixReserve) / 3)),
+  );
+  const labelBase = entry.label ?? "—";
+  // Truncate the base label only; the ×N suffix is appended afterward so it
+  // never gets cut off mid-character. Full column width = labelBudget +
+  // suffixReserve so the alignment of the record-text column is preserved.
+  const baseTruncated = truncateEndSafe(labelBase, labelBudget);
+  const labelText = suffixReserve > 0 ? `${baseTruncated} ×${entry.batchCount}` : baseTruncated;
+  const labelColumnWidth = labelBudget + suffixReserve;
   const labelCells = visualWidth(labelText);
-  const labelPad = Math.max(0, labelBudget - labelCells);
-  const used = glyphColumn + labelBudget + 1; // 1ch gap to record-text
+  const labelPad = Math.max(0, labelColumnWidth - labelCells);
+  const used = glyphColumn + labelColumnWidth + 1; // 1ch gap to record-text
   const textBudget = Math.max(4, innerWidth - used);
   const textTone: Segment["tone"] = "muted";
+  const recordTextDisplay =
+    entry.batchCount && entry.batchCount > 1
+      ? `${entry.recordText} (+${entry.batchCount - 1} more)`
+      : entry.recordText;
   return fixedRow(
     innerWidth,
     Text({
@@ -482,7 +501,7 @@ function historyRow(
           { text: " ".repeat(glyphColumn - glyphCells), tone: "default" },
           { text: labelText, tone: "default" },
           { text: " ".repeat(labelPad + 1), tone: "default" },
-          { text: truncateEndSafe(entry.recordText, textBudget), tone: textTone },
+          { text: truncateEndSafe(recordTextDisplay, textBudget), tone: textTone },
         ],
         display,
       ),

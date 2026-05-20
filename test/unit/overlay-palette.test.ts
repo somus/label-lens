@@ -100,6 +100,34 @@ describe("reducePalette filter", () => {
     expect(s.entries.length).toBe(2);
   });
 
+  test("infix match surfaces entries when the needle is mid-stem", () => {
+    const infixCmds: Command[] = [
+      ...cmds,
+      { name: "palette.bulk-accept", scope: "global", palette: ":bulk-accept", run: noop },
+      { name: "palette.bulk-reject", scope: "global", palette: ":bulk-reject", run: noop },
+    ];
+    let s = openPalette({ commands: infixCmds, history: [], scope: "review" });
+    for (const ch of "accept") {
+      s = reducePalette(s, key(ch)).overlay!.state as PaletteState;
+    }
+    expect(s.entries.map((e) => e.commandName)).toContain("palette.bulk-accept");
+  });
+
+  test("prefix match ranks above infix match for the same needle", () => {
+    const mixCmds: Command[] = [
+      { name: "palette.bulk-accept", scope: "global", palette: ":bulk-accept", run: noop },
+      { name: "palette.accept-all", scope: "global", palette: ":accept-all", run: noop },
+    ];
+    let s = openPalette({ commands: mixCmds, history: [], scope: "review" });
+    for (const ch of "accept") {
+      s = reducePalette(s, key(ch)).overlay!.state as PaletteState;
+    }
+    expect(s.entries.map((e) => e.commandName)).toEqual([
+      "palette.accept-all",
+      "palette.bulk-accept",
+    ]);
+  });
+
   test("space inside filter is preserved (palette args separator)", () => {
     let s = openPalette({ commands: cmds, history: [], scope: "review" });
     s = reducePalette(s, key("q")).overlay!.state as PaletteState;
