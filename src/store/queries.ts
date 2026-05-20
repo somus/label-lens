@@ -278,6 +278,10 @@ export function effectiveReviewsInBatch(db: TxOrDb, batchId: string): StoredRevi
 export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
   const target = currentReview(db, recordId);
   if (!target) return null;
+  // Propagate batch_id so the audit log + the history-strip collapser see
+  // the per-record undo rows as members of the same logical undo, mirroring
+  // how their compensated targets shared one batch_id. Single-record undo
+  // inherits NULL and behaves unchanged.
   const inserted = db
     .insert(reviews)
     .values({
@@ -289,6 +293,7 @@ export function insertUndoEntry(db: TxOrDb, recordId: string): number | null {
       sourceOfTruth: "human",
       compensatesReviewId: target.id,
       note: null,
+      batchId: target.batch_id,
     })
     .returning({ id: reviews.id })
     .get();
