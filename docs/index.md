@@ -53,5 +53,5 @@ Not user-facing, but listed here so you know where to look if you contribute:
 
 - [`PRD.md`](../PRD.md) — full product spec (v2.9).
 - [`CONTEXT.md`](../CONTEXT.md) — domain glossary.
-- [`docs/adr/`](./adr/) — architecture decision records (ADRs 0001 – 0013).
+- [`docs/adr/`](./adr/) — architecture decision records (ADRs 0001 – 0015).
 - [`AGENTS.md`](../AGENTS.md) — orientation for AI agents working on the repo (symlinked to `CLAUDE.md`).

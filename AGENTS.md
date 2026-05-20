@@ -7,7 +7,7 @@ Terminal-first review tool for noisy text training data. Reviews pre-labeled rec
 1. [`PRD.md`](./PRD.md) — full product spec (v2.9). Authoritative for behaviour.
 2. [`CONTEXT.md`](./CONTEXT.md) — domain glossary. Use these terms in code, comments, commit messages, PRs. Each `_Avoid_` line lists the alternatives to refuse.
 3. [`docs/explanation/architecture.md`](./docs/explanation/architecture.md) — module layout, data flow, key seams, diagrams. The map.
-4. [`docs/adr/`](./docs/adr/) — load-bearing decisions, ADRs 0001 – 0013. Don't relitigate without superseding.
+4. [`docs/adr/`](./docs/adr/) — load-bearing decisions, ADRs 0001 – 0015. Don't relitigate without superseding.
 5. [`docs/`](./docs/index.md) — user-facing reference (config schema, keybindings, queue grammar, CLI flags, output formats). The same content the README links to.
 6. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — dev loop, paseo worktrees, testing, commit conventions.
 

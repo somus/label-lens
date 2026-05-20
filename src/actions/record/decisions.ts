@@ -20,8 +20,13 @@ function toggleMultiLabelDraft(
 ): void {
   let draft = ctx.multiLabelDraft;
   if (!draft || draft.recordId !== record.id) {
+    // Filter the seeded set against the live config so a stale Prediction
+    // (e.g. a label removed from config after ingest) cannot ride into a
+    // committed Annotation. findUnknownLabels gates this at boot; this is
+    // belt-and-braces for mid-session edits.
+    const configured = new Set(ctx.config.labels.map((e) => labelName(e)));
     const predicted = record.primaryPrediction
-      ? decodeLabelSet(record.primaryPrediction.label)
+      ? decodeLabelSet(record.primaryPrediction.label).filter((l) => configured.has(l))
       : [];
     draft = { recordId: record.id, selected: new Set(predicted) };
     ctx.multiLabelDraft = draft;

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { dispatch } from "../../src/actions/dispatch.ts";
+import { relabelByKeyCommand } from "../../src/actions/record/decisions.ts";
 import { defaultRegistry } from "../../src/actions/registry.ts";
 import { type AppContext, createAppContext, enterReview } from "../../src/app/context.ts";
 import type { LabellensConfig } from "../../src/config/config.ts";
@@ -176,6 +177,113 @@ test("commitDraft is a no-op when no draft exists (and Enter on empty draft does
     expect(currentReview(store.db, id)).toBeNull();
   } finally {
     store.dispose();
+  }
+});
+
+test("per-label-key relabelByKey toggles the multi-label draft (does not commit)", async () => {
+  // Mirrors the digit-toggle path test above but exercises the per-label-key
+  // accelerator (config.labels[].key). Under multi-label, the key MUST land
+  // in toggleMultiLabelDraft and NOT emit a commitDecision.
+  const keyedCfg: LabellensConfig = {
+    task: "multi-label",
+    labels: [
+      { name: "spam", key: "p" },
+      { name: "toxicity", key: "t" },
+      { name: "promotion", key: "o" },
+    ],
+    input: { path: "x.jsonl", format: "jsonl", fields: DEFAULT_FIELDS },
+    output: { path: "/tmp/out.jsonl", format: "jsonl" },
+  } as unknown as LabellensConfig;
+  const dir = tmpdir({ prefix: "labellens-draft-key-" });
+  const db = openDb(join(dir.path, "state.db"));
+  try {
+    const jsonl = join(dir.path, "in.jsonl");
+    writeFileSync(
+      jsonl,
+      `${[
+        { text: "a", predictions: [{ label: ["spam", "toxicity"], confidence: 0.9, source: "m" }] },
+      ]
+        .map((l) => JSON.stringify(l))
+        .join("\n")}\n`,
+      "utf8",
+    );
+    await ingestFile(db, jsonl, DEFAULT_FIELDS, ingestTaskOptionsFromConfig(keyedCfg));
+    const app = createAppContext({
+      db,
+      config: keyedCfg,
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    enterReview(app, "pending");
+    const id = app.cursor!.current()!.id;
+    // Build the per-label key command for "promotion" and invoke directly —
+    // production wires these via cli/run.ts, not defaultRegistry.
+    const cmd = relabelByKeyCommand(keyedCfg.labels[2]!);
+    expect(cmd).not.toBeNull();
+    cmd!.run(app);
+    // Seed = predicted set ∪ toggled label.
+    expect([...app.multiLabelDraft!.selected].sort()).toEqual(
+      ["promotion", "spam", "toxicity"].sort(),
+    );
+    // No review committed.
+    expect(currentReview(db, id)).toBeNull();
+    // Second press removes promotion.
+    cmd!.run(app);
+    expect([...app.multiLabelDraft!.selected].sort()).toEqual(["spam", "toxicity"]);
+    expect(currentReview(db, id)).toBeNull();
+  } finally {
+    db.$client.close();
+    dir[Symbol.dispose]();
+  }
+});
+
+test("draft seed filters out predicted labels not in the live config", async () => {
+  // Defense-in-depth: if a record's primary Prediction references a label
+  // that the live config has dropped (mid-session edit, or a corner-case
+  // re-ingest), toggleMultiLabelDraft must not seed it into the draft.
+  const dir = tmpdir({ prefix: "labellens-stale-" });
+  const db = openDb(join(dir.path, "state.db"));
+  try {
+    const jsonl = join(dir.path, "in.jsonl");
+    // Ingest with the full label set so the prediction "toxicity" survives.
+    const ingestCfg: LabellensConfig = {
+      task: "multi-label",
+      labels: CONFIGURED,
+      input: { path: "x.jsonl", format: "jsonl", fields: DEFAULT_FIELDS },
+      output: { path: "/tmp/out.jsonl", format: "jsonl" },
+    } as unknown as LabellensConfig;
+    writeFileSync(
+      jsonl,
+      `${[
+        { text: "a", predictions: [{ label: ["spam", "toxicity"], confidence: 0.9, source: "m" }] },
+      ]
+        .map((l) => JSON.stringify(l))
+        .join("\n")}\n`,
+      "utf8",
+    );
+    await ingestFile(db, jsonl, DEFAULT_FIELDS, ingestTaskOptionsFromConfig(ingestCfg));
+    // Now run the app with a narrower live config — toxicity has been removed.
+    const liveCfg: LabellensConfig = {
+      task: "multi-label",
+      labels: ["spam", "promotion"],
+      input: { path: "x.jsonl", format: "jsonl", fields: DEFAULT_FIELDS },
+      output: { path: "/tmp/out.jsonl", format: "jsonl" },
+    } as unknown as LabellensConfig;
+    const app = createAppContext({
+      db,
+      config: liveCfg,
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    enterReview(app, "pending");
+    // Press [2] → seeds from filtered predicted set, then toggles in promotion.
+    await dispatch(defaultRegistry(), "review", app, "record.relabelByIndex.2");
+    expect([...app.multiLabelDraft!.selected].sort()).toEqual(["promotion", "spam"]);
+  } finally {
+    db.$client.close();
+    dir[Symbol.dispose]();
   }
 });
 

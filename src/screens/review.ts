@@ -1190,9 +1190,11 @@ function renderMultiLabelPicker(
   const rich = display.color === "truecolor" || display.color === "256";
   const checkOn = rich ? "[x]" : "[x]";
   const checkOff = rich ? "[ ]" : "[ ]";
+  const confSuffix =
+    state.predictedConfidence !== null ? `  (${Math.round(state.predictedConfidence * 100)}%)` : "";
   const headerTitle =
     state.predicted.length > 0
-      ? `Relabel  ◇ ${state.predicted.join(", ")}  →  ?`
+      ? `Relabel  ◇ ${state.predicted.join(", ")}${confSuffix}  →  ?`
       : "Relabel (multi-label)";
   return modalBox(
     display,
