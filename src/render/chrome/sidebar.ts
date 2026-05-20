@@ -466,14 +466,26 @@ function historyRow(
   const glyph = statusGlyph(entry.status, display);
   const glyphCells = visualWidth(glyph);
   const glyphColumn = Math.max(2, glyphCells + 1);
-  const labelBudget = Math.min(12, Math.max(6, Math.floor((innerWidth - glyphColumn) / 3)));
+  // Reserve room for the ` ×N` batch suffix when present so the label itself
+  // doesn't truncate inside the column. Conservative — widest `×9999` is 6
+  // cells including the leading space; small enough to absorb without
+  // starving the label cap.
+  const suffixReserve =
+    entry.batchCount && entry.batchCount > 1 ? ` ×${entry.batchCount}`.length : 0;
+  const labelBudget = Math.min(
+    12,
+    Math.max(6, Math.floor((innerWidth - glyphColumn - suffixReserve) / 3)),
+  );
   const labelBase = entry.label ?? "—";
-  const labelWithBatch =
-    entry.batchCount && entry.batchCount > 1 ? `${labelBase} ×${entry.batchCount}` : labelBase;
-  const labelText = truncateEndSafe(labelWithBatch, labelBudget);
+  // Truncate the base label only; the ×N suffix is appended afterward so it
+  // never gets cut off mid-character. Full column width = labelBudget +
+  // suffixReserve so the alignment of the record-text column is preserved.
+  const baseTruncated = truncateEndSafe(labelBase, labelBudget);
+  const labelText = suffixReserve > 0 ? `${baseTruncated} ×${entry.batchCount}` : baseTruncated;
+  const labelColumnWidth = labelBudget + suffixReserve;
   const labelCells = visualWidth(labelText);
-  const labelPad = Math.max(0, labelBudget - labelCells);
-  const used = glyphColumn + labelBudget + 1; // 1ch gap to record-text
+  const labelPad = Math.max(0, labelColumnWidth - labelCells);
+  const used = glyphColumn + labelColumnWidth + 1; // 1ch gap to record-text
   const textBudget = Math.max(4, innerWidth - used);
   const textTone: Segment["tone"] = "muted";
   const recordTextDisplay =

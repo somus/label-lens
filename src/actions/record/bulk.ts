@@ -138,6 +138,10 @@ export function commitBatch(
   const batchId = randomUUID();
   app.db.transaction((tx) => {
     for (const plan of plans) {
+      // ADR 0004 exception: bulk Review entries always carry
+      // `source_of_truth = 'human'` regardless of the per-record
+      // `viewedAssistant` set. There is no focused record at batch-commit
+      // time, so assistant exposure does not propagate to members.
       insertReview(tx, {
         record_id: plan.recordId,
         status: plan.status,
@@ -160,6 +164,11 @@ export function commitBatch(
       .run();
   });
 
+  // Order invariant: smart-learning credits run AFTER the DB transaction
+  // commits, mirroring the single-record path in `overlay/effects.ts`. If
+  // `recordDecision` ever grows a failure mode, the sampler may drift from
+  // `effective_reviews` for that one decision — rare and bounded; cheaper
+  // than wrapping the in-memory sampler in transaction-like ceremony.
   for (const plan of plans) {
     if (plan.status !== "skipped") {
       app.smartLearning.recordDecision(plan.status, plan.issueTypes);
@@ -176,14 +185,15 @@ export function commitBatch(
 export function commitBulkUnmark(app: AppContext, records: RecordWithPrimaryPrediction[]): number {
   if (records.length === 0) return 0;
   const ids = records.map((r) => r.id);
-  const before = app.db
-    .select({ recordId: recordTags.recordId })
-    .from(recordTags)
-    .where(and(eq(recordTags.tag, "marked"), inArray(recordTags.recordId, ids)))
-    .all();
-  app.db
-    .delete(recordTags)
-    .where(and(eq(recordTags.tag, "marked"), inArray(recordTags.recordId, ids)))
-    .run();
-  return before.length;
+  return app.db.transaction((tx) => {
+    const before = tx
+      .select({ recordId: recordTags.recordId })
+      .from(recordTags)
+      .where(and(eq(recordTags.tag, "marked"), inArray(recordTags.recordId, ids)))
+      .all();
+    tx.delete(recordTags)
+      .where(and(eq(recordTags.tag, "marked"), inArray(recordTags.recordId, ids)))
+      .run();
+    return before.length;
+  });
 }

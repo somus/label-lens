@@ -252,9 +252,11 @@ export function createAppContext(args: {
       const queueTotal = cursor?.total ?? 0;
       const queuePosition = cursor && cursor.total > 0 ? cursor.position + 1 : 0;
       const ids = cursor ? cursor.recordIds() : null;
-      // Fetch a wider window than the on-screen cap so the batch collapser
-      // has room to fold a many-row batch into one summary without losing
-      // unrelated history rows behind it.
+      // Fetch ~10× the on-screen cap (5) so the batch collapser has room to
+      // fold a many-row batch into a single summary without pushing unrelated
+      // history rows out of the window. Bumps to 100+ if batches routinely
+      // exceed 50 members — query is indexed on `reviews.id DESC`, so the
+      // wider read stays cheap.
       const history = collapseHistoryByBatch(recentReviewsWithText(args.db, 50)).slice(0, 5);
       return {
         mode: "queue",

@@ -181,6 +181,11 @@ export function applyEffects(
         app.pushPaletteHistory(effect.entry);
         break;
       case "commitBatch": {
+        // Single-session invariant: nothing else can mutate Review state
+        // between bulk-confirm opening and Enter, so the `eligible` list
+        // captured at overlay-open time is still authoritative here — no
+        // re-validation needed. A future async path (background ingest,
+        // multi-pane) would have to add that check back.
         const result = commitBatch(app, queueId, {
           action: effect.action,
           eligible: effect.eligible,

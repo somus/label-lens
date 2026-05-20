@@ -40,11 +40,13 @@ export const undo: Command = {
     // member gets its own compensating Review row so the audit log stays
     // honest and per-record. Smart-learning reverses per non-skipped member.
     if (target.batch_id) {
-      const members = effectiveReviewsInBatch(ctx.db, target.batch_id);
-      ctx.db.transaction((tx) => {
-        for (const member of members) {
+      const batchId = target.batch_id;
+      const members = ctx.db.transaction((tx) => {
+        const rows = effectiveReviewsInBatch(tx, batchId);
+        for (const member of rows) {
           insertUndoEntry(tx, member.record_id);
         }
+        return rows;
       });
       for (const member of members) reverseLearning(ctx, member);
       ctx.cursor?.refresh();

@@ -12,6 +12,11 @@ function gather(app: AppContext): {
   reviewed: Set<string>;
 } {
   const marked = queueRecords(app.db, resolveQueue("marked").query);
+  // `reviewed` includes every effective Review status — accepted, relabeled,
+  // rejected, AND skipped. By design (ADR 0003): skipped is its own Review
+  // state, not pending. A marked+skipped record is therefore excluded from
+  // bulk review actions; the reviewer must `u` the skip first if they want
+  // to re-decide it in a batch.
   const reviewed = new Set(latestEffectiveByRecord(app.db).keys());
   return { marked, reviewed };
 }
@@ -23,7 +28,9 @@ function openConfirm(app: AppContext, action: BulkAction, argument?: string): vo
     return;
   }
   const { eligible, excluded } = selectBulkTargets({ action, marked, reviewed });
-  if (eligible.length === 0) {
+  // `:bulk-unmark` operates on every marked record regardless of Review
+  // state — the eligibility refusal below only applies to review actions.
+  if (action !== "unmark" && eligible.length === 0) {
     app.setFlash("Bulk: no eligible records (all marked already reviewed)", "warning");
     return;
   }
