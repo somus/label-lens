@@ -19,7 +19,7 @@ export type GeneratedRecord = {
 };
 
 export type GeneratedPrediction = {
-  label: string;
+  label: string | string[];
   confidence?: number;
   source: string;
   reason?: string;
@@ -263,6 +263,146 @@ export function generateBoundary(opts: BoundaryOptions): GeneratedSet {
     }
   }
   return { records, truth };
+}
+
+/**
+ * Multi-label content-moderation fixture. Labels overlap on the same row
+ * (a comment can be both spam + toxicity, or promotion + spam) so the
+ * relabel picker's Space-toggle / Enter-commit flow exercises and the
+ * by-label:<l> set-membership predicate has real hits.
+ */
+export const MULTI_LABELS = [
+  "spam",
+  "toxicity",
+  "promotion",
+  "off-topic",
+  "harassment",
+  "self-promo",
+] as const;
+export type MultiLabel = (typeof MULTI_LABELS)[number];
+
+type MultiLabelTemplate = { text: string; truth: MultiLabel[] };
+
+const MULTI_LABEL_TEMPLATES: MultiLabelTemplate[] = [
+  { text: "buy cheap watches now www.cheap-watches.example", truth: ["spam", "promotion"] },
+  { text: "you are a complete idiot, nobody likes you", truth: ["toxicity", "harassment"] },
+  { text: "discount code XYZ at checkout, limited time!!!", truth: ["promotion", "spam"] },
+  { text: "this is so dumb, the author should be fired", truth: ["toxicity"] },
+  { text: "great recipe, will try this weekend", truth: [] },
+  { text: "check my channel youtube.com/@me for similar content", truth: ["self-promo"] },
+  { text: "what does this have to do with the original post?", truth: ["off-topic"] },
+  {
+    text: "morons like you should not be allowed to comment, get a brain",
+    truth: ["toxicity", "harassment"],
+  },
+  {
+    text: "FREE iPhone giveaway just click here ===> sketchy.link",
+    truth: ["spam", "promotion"],
+  },
+  { text: "I disagree but appreciate the perspective", truth: [] },
+  { text: "subscribe to my newsletter for more tips", truth: ["self-promo", "promotion"] },
+  {
+    text: "off-topic but has anyone tried the new burger place downtown",
+    truth: ["off-topic"],
+  },
+  { text: "go kill yourself you absolute waste", truth: ["toxicity", "harassment"] },
+  { text: "thanks for sharing, this was helpful", truth: [] },
+  { text: "DM me for crypto signals 50% return guaranteed", truth: ["spam", "promotion"] },
+];
+
+export type MultiLabelOptions = {
+  seed: number;
+  count: number;
+};
+
+/**
+ * Two seeded multi-label sources:
+ *   - moderator:gpt   ≈ 75% exact-set match, noisy on edges (adds spurious
+ *                       label ~15%, drops a true label ~10%)
+ *   - heuristic.rules ≈ 50% exact-set match, present on ~40% of records,
+ *                       no confidence
+ */
+export function generateMultiLabel(opts: MultiLabelOptions): GeneratedSet {
+  const rand = rng(opts.seed);
+  const records: GeneratedRecord[] = [];
+  const truth: string[] = [];
+
+  for (let i = 0; i < opts.count; i++) {
+    const tpl = pick(rand, MULTI_LABEL_TEMPLATES);
+    const ts = Math.floor(rand() * 1e10)
+      .toString()
+      .padStart(10, "0");
+    const text = `[${ts}] ${tpl.text}`;
+    const primary = mutateSet(rand, tpl.truth, 0.75, 0.1, 0.15);
+    const primaryConf = clamp(0.5 + (setEquals(primary, tpl.truth) ? rand() * 0.5 : -rand() * 0.3));
+    const predictions: GeneratedPrediction[] = [
+      {
+        label: canonicalise(primary),
+        confidence: round(primaryConf, 2),
+        source: "moderator:gpt",
+      },
+    ];
+    if (rand() < 0.4) {
+      const secondary = mutateSet(rand, tpl.truth, 0.5, 0.2, 0.25);
+      predictions.push({
+        label: canonicalise(secondary),
+        source: "heuristic.rules",
+      });
+    }
+    if (rand() < 0.05) {
+      records.push({
+        text,
+        predictions,
+        issues: [
+          {
+            type: pick(rand, ["ambiguous", "edge_case", "label_issue"] as const),
+            score: round(0.5 + rand() * 0.5, 2),
+          },
+        ],
+      });
+    } else {
+      records.push({ text, predictions });
+    }
+    truth.push(JSON.stringify(canonicalise(tpl.truth)));
+  }
+  return { records, truth };
+}
+
+function canonicalise(set: readonly MultiLabel[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const name of MULTI_LABELS) {
+    if (set.includes(name) && !seen.has(name)) {
+      seen.add(name);
+      out.push(name);
+    }
+  }
+  return out;
+}
+
+function setEquals(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const s = new Set(a);
+  for (const v of b) if (!s.has(v)) return false;
+  return true;
+}
+
+function mutateSet(
+  rand: () => number,
+  truth: readonly MultiLabel[],
+  exactRate: number,
+  dropRate: number,
+  addRate: number,
+): MultiLabel[] {
+  if (rand() < exactRate) return [...truth];
+  const set = new Set<MultiLabel>(truth);
+  for (const t of truth) {
+    if (rand() < dropRate) set.delete(t);
+  }
+  for (const l of MULTI_LABELS) {
+    if (!set.has(l) && rand() < addRate) set.add(l);
+  }
+  return [...set];
 }
 
 /**
