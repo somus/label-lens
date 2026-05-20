@@ -312,16 +312,38 @@ const NotesConfigSchema = Type.Object(
   { description: "Note-overlay config." },
 );
 
-const KeysOverridesSchema = Type.Record(
-  Type.String(),
-  Type.String({
-    minLength: 1,
-    maxLength: 1,
-    description: "Single-character key. Modifiers and chords are not supported here.",
-  }),
+const BindingValueSchema = Type.Union(
+  [Type.String({ minLength: 1 }), Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })],
   {
     description:
-      "Per-command keybinding overrides. Keys are command names (e.g. `record.accept`); values are single-character key strings (e.g. `y`). Reserved keys (digits, chord starters, label keys) are still off-limits. Chord overrides (`g d`) and modifier overrides (`ctrl+x`) are intentionally out of scope.",
+      "A keybinding string (e.g. `y`, `ctrl+x`, `g d`) or an array of such strings to bind several keys to the same command.",
+  },
+);
+
+const PresetMapSchema = Type.Record(Type.String(), BindingValueSchema, {
+  description: "Map of command name to binding string(s).",
+});
+
+const KeysConfigSchema = Type.Object(
+  {
+    preset: Type.Optional(
+      Type.String({
+        description:
+          "Which preset to load: `simple` (default), `vim`, or the name of a custom preset under `keys.presets`.",
+      }),
+    ),
+    overrides: Type.Optional(PresetMapSchema),
+    presets: Type.Optional(
+      Type.Record(Type.String(), PresetMapSchema, {
+        description:
+          "Project-defined presets. Each inherits from the `vim` baseline for unspecified commands. Selected by name via `keys.preset`.",
+      }),
+    ),
+  },
+  {
+    additionalProperties: false,
+    description:
+      "Keybinding configuration. Use `preset` to pick built-in or custom mapping; `overrides` to retune individual commands.",
   },
 );
 
@@ -356,7 +378,7 @@ export const LabellensConfigSchema = Type.Object(
     assistant: Type.Optional(AssistantConfigSchema),
     signals: Type.Optional(SignalsConfigSchema),
     notes: Type.Optional(NotesConfigSchema),
-    keys: Type.Optional(KeysOverridesSchema),
+    keys: Type.Optional(KeysConfigSchema),
   },
   {
     $id: "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
@@ -377,7 +399,7 @@ export type LowConfidenceConfig = Static<typeof LowConfidenceConfigSchema>;
 export type OutputConfig = Static<typeof OutputConfigSchema>;
 export type OutputFieldOverrides = Static<typeof OutputFieldOverridesSchema>;
 export type NotesConfig = Static<typeof NotesConfigSchema>;
-export type KeysOverrides = Static<typeof KeysOverridesSchema>;
+export type KeysConfig = Static<typeof KeysConfigSchema>;
 export type SignalKindName = Static<typeof SignalKind>;
 
 export const CONFIG_SCHEMA_URL =
@@ -484,6 +506,7 @@ export function defaultConfig(args: {
       smartNext: false,
     },
     assistant: { enabled: false },
+    keys: { preset: "simple" },
   };
 }
 

@@ -197,23 +197,56 @@ Each call rewrites `labellens.config.json` in the nested shape (dropping the leg
 
 ## `keys`
 
-Per-command keybinding overrides. The key is a command name (see [keybindings](./keybindings.md) for the action vocabulary); the value is the new key.
+Keybinding configuration. Three fields, all optional:
+
+| Field | Meaning |
+|---|---|
+| `preset` | Which keymap to load. Built-in: `simple` (default — arrow-key friendly) or `vim` (today's j/k bindings). Custom names resolve against `keys.presets`. |
+| `overrides` | Per-command tweaks applied on top of the preset. Last-write-wins. |
+| `presets` | Project-defined presets, each inheriting from the `vim` baseline for unspecified commands. |
 
 ```jsonc
 "keys": {
-  "record.accept": "y",
-  "record.reject": "n"
+  "preset": "simple",
+  "overrides": {
+    "record.accept": "y",
+    "record.next":   ["j", "down"]
+  },
+  "presets": {
+    "dvorak": { "record.accept": ";" }
+  }
 }
 ```
 
-Rules:
+Binding values are strings or arrays of strings. Each string supports the same syntax as built-in bindings: plain characters (`y`), modifiers (`ctrl+x`, `shift+q`), or two-key chords (`g d`). Arrays bind several keys to the same command.
 
-- Override key must be a single character.
-- Override key cannot collide with another built-in binding (after applying all overrides) or with any configured `labels[].key`.
-- Override key cannot already be claimed by another `keys` entry.
-- Vacated keys (e.g. the original `a` for `record.accept`) become free to reuse — for a label key, or for another override in the same config.
+**Built-in presets:**
 
-Validation runs at startup; failures exit 2 with a list of conflicts.
+- `simple` (default) — arrow keys for navigation (`down`/`up`, `right`/`left`), `d` for doc-view, `ctrl+p` for the palette, `g` for guidelines. Mnemonic action keys (`a`, `r`, `x`, `s`, `m`, `n`, `u`, `i`, `t`, `?`, `q`, `shift+q`) and label digits (`1`..`9`) stay the same.
+- `vim` — preserves the original bindings: `j`/`k` to navigate records, `]`/`[` to cycle queues, `g d` for doc-view, `g g` for guidelines, `:` for the palette, etc.
+
+Merge order: vim baseline → selected preset deltas → `keys.overrides`. Validation runs at startup; failures exit 2 with a list of conflicts.
+
+### Migration from the legacy flat shape
+
+Pre-2026 configs used a flat `keys: { "<command>": "<key>" }` map. This shape is no longer accepted — startup emits:
+
+```
+labellens.config.json: keys.record.accept: flat per-command keys are no longer accepted.
+  Move 'record.accept', 'record.reject' under `keys.overrides` (see docs/reference/config.md#keys).
+```
+
+Move every entry under `keys.overrides`:
+
+```jsonc
+// before
+"keys": { "record.accept": "y" }
+
+// after
+"keys": { "overrides": { "record.accept": "y" } }
+```
+
+Adding `keys.preset: "vim"` is optional but recommended if you want to keep the historical bindings; new configs default to `simple`.
 
 ## Validation
 

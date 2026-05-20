@@ -119,9 +119,16 @@ export type Overlay =
 
 export type OverlayKind = Overlay["kind"];
 
+/**
+ * Active keymap preset for overlay-local nav. `vim` aliases `j/k` to
+ * `down/up`; `simple` honours only the arrow keys. Reducers reach this via
+ * the `key` event so reducer logic stays pure (no AppContext access).
+ */
+export type OverlayKeyPreset = "vim" | "simple";
+
 /** Uniform event union — keystrokes, async stream tokens, lifecycle. */
 export type OverlayEvent =
-  | { kind: "key"; event: KeyEvent }
+  | { kind: "key"; event: KeyEvent; preset?: OverlayKeyPreset }
   | { kind: "paste"; text: string }
   | { kind: "streamToken"; token: string }
   | { kind: "streamEnd"; response?: AssistantResponse }

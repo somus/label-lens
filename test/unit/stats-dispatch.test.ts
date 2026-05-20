@@ -20,7 +20,7 @@ describe("stats command + palette wiring", () => {
   test("stats.show is registered with binding 't' in review scope", () => {
     const reg = defaultRegistry();
     const cmd = reg.get("stats.show");
-    expect(cmd).toBe(statsShow);
+    expect(cmd?.name).toBe(statsShow.name);
     expect(cmd?.scope).toBe("review");
     expect(cmd?.binding).toBe("t");
   });

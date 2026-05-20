@@ -40,7 +40,7 @@ export function __getAssistantQueryFn(): typeof queryFn {
 export const openAssistantCommand: Command = {
   name: "record.openAssistant",
   scope: "review",
-  binding: "i",
+  bindings: { vim: "i" },
   // Short footer label keeps the row scannable on 120-col terminals; `?`
   // help spells it out as "inquire (LLM assistant)".
   footer: { label: "ask", order: 25 },

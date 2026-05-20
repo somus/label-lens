@@ -21,7 +21,7 @@ function delta(ctx: AppContext, d: number): void {
 export const docNext: Command = {
   name: "doc.next",
   scope: "doc-view",
-  binding: ["j", "down"],
+  bindings: { vim: ["j", "down"], simple: "down" },
   footer: { label: "scroll ↓", order: 10 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, 1),
@@ -30,7 +30,7 @@ export const docNext: Command = {
 export const docPrev: Command = {
   name: "doc.prev",
   scope: "doc-view",
-  binding: ["k", "up"],
+  bindings: { vim: ["k", "up"], simple: "up" },
   footer: { label: "scroll ↑", order: 20 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, -1),
@@ -39,7 +39,7 @@ export const docPrev: Command = {
 export const docPageDown: Command = {
   name: "doc.page-down",
   scope: "doc-view",
-  binding: ["ctrl+d", "pagedown"],
+  bindings: { vim: ["ctrl+d", "pagedown"], simple: "pagedown" },
   footer: { label: "page ↓", order: 30 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, HALF_PAGE_LINES),
@@ -48,7 +48,7 @@ export const docPageDown: Command = {
 export const docPageUp: Command = {
   name: "doc.page-up",
   scope: "doc-view",
-  binding: ["ctrl+u", "pageup"],
+  bindings: { vim: ["ctrl+u", "pageup"], simple: "pageup" },
   footer: { label: "page ↑", order: 40 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => delta(ctx, -HALF_PAGE_LINES),
@@ -57,7 +57,7 @@ export const docPageUp: Command = {
 export const docTop: Command = {
   name: "doc.top",
   scope: "doc-view",
-  binding: "g g",
+  bindings: { vim: "g g", simple: "home" },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => setScroll(ctx, 0),
 };
@@ -65,7 +65,7 @@ export const docTop: Command = {
 export const docBottom: Command = {
   name: "doc.bottom",
   scope: "doc-view",
-  binding: "shift+g",
+  bindings: { vim: "shift+g", simple: "end" },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => {
     const lines = loadDocLines(ctx);
@@ -77,7 +77,7 @@ export const docBottom: Command = {
 export const docClose: Command = {
   name: "doc.close",
   scope: "doc-view",
-  binding: ["escape", "q"],
+  bindings: { vim: ["escape", "q"] },
   footer: { label: "close", order: 50 },
   enabled: (ctx) => ctx.docView !== null,
   run: (ctx) => {

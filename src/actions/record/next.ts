@@ -3,7 +3,10 @@ import type { Command } from "../command.ts";
 export const next: Command = {
   name: "record.next",
   scope: "review",
-  binding: "j",
+  bindings: { vim: "j", simple: "down" },
+  // Footer renderer pairs this with `record.prev` so the entry shows both
+  // keys (vim: `[j/k]`, simple: `[↓/↑]`) under a single `nav` label.
+  footer: { label: "nav", order: 5 },
   enabled: (ctx) => ctx.cursor !== null,
   run: (ctx) => {
     const before = ctx.cursor?.current()?.id;

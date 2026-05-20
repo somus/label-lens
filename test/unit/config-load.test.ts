@@ -72,6 +72,45 @@ describe("loadConfig", () => {
     expect(config.signals?.lowConfidence?.default).toBe(0.7);
   });
 
+  test("flat 'keys' object is rejected with a migration error", async () => {
+    const path = writeTmp(
+      JSON.stringify({
+        task: "classification",
+        labels: ["food"],
+        input: { path: "./x.jsonl", format: "jsonl", fields: { text: "text" } },
+        output: { path: "./out.jsonl", format: "jsonl" },
+        keys: { "record.accept": "y" },
+      }),
+    );
+    try {
+      await loadConfig(path);
+      throw new Error("expected loadConfig to reject");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigLoadError);
+      const msg = (err as ConfigLoadError).errors.join("\n");
+      expect(msg).toContain("keys.overrides");
+    }
+  });
+
+  test("structured 'keys' shape parses successfully", async () => {
+    const path = writeTmp(
+      JSON.stringify({
+        task: "classification",
+        labels: ["food"],
+        input: { path: "./x.jsonl", format: "jsonl", fields: { text: "text" } },
+        output: { path: "./out.jsonl", format: "jsonl" },
+        keys: {
+          preset: "simple",
+          overrides: { "record.accept": "y" },
+          presets: { dvorak: { "record.accept": ";" } },
+        },
+      }),
+    );
+    const config = await loadConfig(path);
+    expect(config.keys?.preset).toBe("simple");
+    expect(config.keys?.overrides?.["record.accept"]).toBe("y");
+  });
+
   test("$schema field round-trips without rejecting validation", async () => {
     const path = writeTmp(
       JSON.stringify({

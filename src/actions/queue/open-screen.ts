@@ -4,11 +4,12 @@ import type { Command } from "../command.ts";
 export const openQueueScreen: Command = {
   name: "queue.openScreen",
   scope: "review",
-  binding: "shift+q",
+  bindings: { vim: "shift+q" },
   hidden: true,
-  // `[/]` suffix hints at the prev/next queue cycle keys (`[`, `]`) next
-  // to the queue-screen binding — keeps both discoverable in one row.
-  footer: { label: "queues [/]", order: 95, group: "utility" },
+  // Footer label is bare "queues"; the action-footer renderer appends the
+  // resolved `queue.prev` / `queue.next` cycle keys as a `[‹/›]` suffix so
+  // both presets stay accurate (vim: `[/]`, simple: `[←/→]`).
+  footer: { label: "queues", order: 95, group: "utility" },
   enabled: () => true,
   run: (ctx) => {
     ctx.openOverlay({ kind: "queue", state: openQueue(ctx) });

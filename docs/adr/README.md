@@ -25,3 +25,4 @@ Load-bearing design decisions for LabelLens. Each ADR captures the context, the 
 | [0011](./0011-cursor-not-a-deepening-target.md) | `Cursor` is not a deepening target | Accepted   |
 | [0012](./0012-where-dsl-excludes-orphans-by-default.md) | `where:` DSL excludes orphans by default | Accepted   |
 | [0013](./0013-overlay-key-propagation.md) | Overlay key propagation | Accepted   |
+| [0014](./0014-keybinding-presets.md) | Keybinding presets (simple/vim + custom) | Accepted   |

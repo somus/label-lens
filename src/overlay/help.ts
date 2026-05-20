@@ -1,5 +1,6 @@
 import type { Command } from "../actions/command.ts";
 import type { Scope } from "../keymap/engine.ts";
+import { isOverlayNext, isOverlayPrev } from "./key-match.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
 
 export const HELP_PAGE = 30;
@@ -74,7 +75,7 @@ export function reduceHelp(state: HelpState, event: OverlayEvent): ReduceResult 
   if (name === "escape" || name === "?" || name === "return") {
     return { overlay: null, effects: [{ kind: "close" }] };
   }
-  if (name === "down") {
+  if (isOverlayNext(event.event, event.preset)) {
     const max = Math.max(state.entries.length - HELP_PAGE, 0);
     return {
       overlay: packed({ ...state, scroll: Math.min(state.scroll + 1, max) }),
@@ -94,7 +95,7 @@ export function reduceHelp(state: HelpState, event: OverlayEvent): ReduceResult 
       effects: [],
     };
   }
-  if (name === "up") {
+  if (isOverlayPrev(event.event, event.preset)) {
     return { overlay: packed({ ...state, scroll: Math.max(state.scroll - 1, 0) }), effects: [] };
   }
   return { overlay: packed(state), effects: [], propagated: true };

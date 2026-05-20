@@ -10,7 +10,7 @@ export function openStats(ctx: import("../../app/context.ts").AppContext): void 
 export const statsShow: Command = {
   name: "stats.show",
   scope: "review",
-  binding: "t",
+  bindings: { vim: "t" },
   hidden: true,
   footer: { label: "stats", order: 120, group: "utility" },
   run: openStats,

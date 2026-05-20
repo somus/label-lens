@@ -1,3 +1,4 @@
+import { isOverlayNext, isOverlayPrev } from "./key-match.ts";
 import type { OverlayEvent } from "./types.ts";
 
 export type PickerField = {
@@ -103,7 +104,7 @@ export function reducePicker(picker: PickerField, event: OverlayEvent): PickerRe
     };
   }
 
-  if (name === "down") {
+  if (isOverlayNext(event.event, event.preset)) {
     if (picker.candidates.length === 0) return { kind: "noop" };
     return {
       kind: "updated",
@@ -114,7 +115,7 @@ export function reducePicker(picker: PickerField, event: OverlayEvent): PickerRe
     };
   }
 
-  if (name === "up") {
+  if (isOverlayPrev(event.event, event.preset)) {
     if (picker.candidates.length === 0) return { kind: "noop" };
     return {
       kind: "updated",

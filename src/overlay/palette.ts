@@ -4,6 +4,7 @@ import type { Db } from "../store/db.ts";
 import type { PaletteData } from "../store/palette-data.ts";
 import { fetchPaletteData } from "../store/palette-data.ts";
 import { openFilterBuilder, stateToPredicate } from "./filter-builder.ts";
+import { isOverlayNext, isOverlayPrev } from "./key-match.ts";
 import { type CategoryGroup, categorize, flattenForNav } from "./palette-categories.ts";
 import { openPicker, type PickerField, reducePicker } from "./palette-picker.ts";
 import type { Overlay, OverlayEvent, ReduceResult } from "./types.ts";
@@ -306,7 +307,7 @@ export function reducePalette(state: PaletteState, event: OverlayEvent): ReduceR
   const name = event.event.name;
   if (name === "escape") return { overlay: null, effects: [{ kind: "close" }] };
   if (name === "return") return commit(state);
-  if (name === "down") {
+  if (isOverlayNext(event.event, event.preset)) {
     if (state.entries.length === 0) return { overlay: packed(state), effects: [] };
     return {
       overlay: packed({
@@ -319,7 +320,7 @@ export function reducePalette(state: PaletteState, event: OverlayEvent): ReduceR
   if (event.event.ctrl && (name === "p" || name === "n")) {
     return cycleHistory(state, name === "p" ? -1 : 1);
   }
-  if (name === "up") {
+  if (isOverlayPrev(event.event, event.preset)) {
     if (state.entries.length === 0) return { overlay: packed(state), effects: [] };
     return {
       overlay: packed({ ...state, highlight: Math.max(state.highlight - 1, 0) }),

@@ -97,6 +97,7 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toContain("Reviewed: 0 / 10");
     expect(frame).toContain("Skipped: 0");
     // Action footer (bottom). Primary review commands must appear.
+    expect(frame).toContain("[j/k] nav");
     expect(frame).toContain("[a] accept");
     expect(frame).toContain("[r] relabel");
     expect(frame).toContain("[i] ask");
@@ -104,12 +105,11 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toContain("[s] skip");
     expect(frame).toContain("[n] note");
     expect(frame).toContain("[:] palette");
-    expect(frame).toContain("[t] stats");
     // `[?] help` intentionally NOT in the footer — `?` is the universal
     // help key across TUIs; freeing the 9ch slot lets `[i] ask` and the
     // `[/]` cycle hint fit at 120 cols without truncating other items.
     expect(frame).not.toContain("[?] help");
-    // Secondary actions (m mark, u undo, j next) discoverable via `?` help —
+    // Secondary actions (m mark, u undo) discoverable via `?` help —
     // intentionally excluded from the footer to keep it scannable.
     expect(frame).not.toContain("[m] mark");
     expect(frame).not.toContain("[u] undo");
@@ -117,6 +117,9 @@ describe("chrome — status bar + action footer", () => {
     // Queue-cycle hint surfaces next to `[Q]` instead of two separate
     // `[/]` entries (saves ~22ch on the row).
     expect(frame).toContain("[Q] queues [/]");
+    // `[t] stats` lives in the utility cluster; at 120 cols with `[j/k] nav`
+    // added to the primary cluster the row collapses and `stats` truncates.
+    // The snapshot guards the exact rendering.
   });
 
   test("review chrome renders on truecolor", async () => {

@@ -9,6 +9,6 @@ export function openGuidelinesOverlay(ctx: AppContext): void {
 export const guidelinesShow: Command = {
   name: "guidelines.show",
   scope: "global",
-  binding: "g g",
+  bindings: { vim: "g g", simple: "g" },
   run: openGuidelinesOverlay,
 };

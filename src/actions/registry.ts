@@ -1,3 +1,4 @@
+import { resolvePreset } from "../keymap/preset.ts";
 import { quit } from "./app/quit.ts";
 import { bindingsFor, buildRegistry, type Command, type CommandRegistry } from "./command.ts";
 import { DOC_VIEW_COMMANDS } from "./doc/doc-view-commands.ts";
@@ -80,8 +81,15 @@ export const ALL_COMMANDS: Command[] = [
   quit,
 ];
 
+/**
+ * Build a registry with the vim preset applied. Used by tests and by the
+ * fallback path when callers don't supply their own resolved command list.
+ * Production callers (`src/cli/run.ts`) skip this and call `resolvePreset`
+ * with the user's `keys` config so the user's chosen preset wins.
+ */
 export function defaultRegistry(): CommandRegistry {
-  return buildRegistry(ALL_COMMANDS);
+  const { commands } = resolvePreset(ALL_COMMANDS, { preset: "vim" });
+  return buildRegistry(commands);
 }
 
 /**

@@ -44,21 +44,21 @@ Type "s"
 Sleep 1800ms
 
 # Move explicitly into the skipped queue.
-Type "]"
+Right
 Sleep 1800ms
 
 # Return to pending, then open the queue overlay with live counts.
-Type "["
+Left
 Sleep 1500ms
 Type "Q"
 Sleep 1800ms
 
 # Move through queues at an observable pace, then pick low-confidence.
-Type "j"
+Down
 Sleep 900ms
-Type "j"
+Down
 Sleep 900ms
-Type "j"
+Down
 Sleep 900ms
 Enter
 Sleep 1800ms

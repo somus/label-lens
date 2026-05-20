@@ -61,10 +61,10 @@ labellens init data.jsonl   # infer schema, write labellens.config.json
 labellens                   # open the review screen
 ```
 
-In the TUI:
+In the TUI (default `simple` preset — arrow keys; see [docs/reference/keybindings.md](./docs/reference/keybindings.md) for the full table covering both `simple` and `vim` presets):
 
 - `a` accept · `r` relabel · `1`–`9` quick-relabel · `x` reject · `s` skip
-- `j` / `k` navigate · `[` / `]` cycle queues
+- `↓` / `↑` navigate · `→` / `←` cycle queues
 - `i` LLM assistant (configures on first press) · `t` stats · `?` help · `q` quit
 
 When done:

@@ -29,7 +29,7 @@ exports[`queue overlay e2e renders all built-in queues with counts 1`] = `
                                                                                                     
                                                                                                     
                                                                                                     
-  [a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] … 
+  [j/k] navigate  [enter] select  [esc] cancel                                                      
                                                                                                     
 "
 `;

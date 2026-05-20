@@ -16,7 +16,7 @@ export function openContextualHelp(ctx: AppContext): void {
 export const helpShow: Command = {
   name: "help.show",
   scope: "global",
-  binding: "?",
+  bindings: { vim: "?" },
   // No footer entry — `?` is universally "help" across TUIs. Freeing the
   // 9ch slot lets `[i] ask` (assistant) and `[Q] queues [/]` (queues +
   // cycle hint) fit at 120 cols without truncating other primary items.

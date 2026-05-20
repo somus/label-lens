@@ -2,7 +2,7 @@ import { accessSync, existsSync, constants as fsConstants, renameSync } from "no
 import { dirname, join, resolve } from "node:path";
 import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { sql } from "drizzle-orm";
-import { applyKeyOverrides, buildRegistry, type Command } from "../actions/command.ts";
+import { buildRegistry, type Command } from "../actions/command.ts";
 import { relabelByKeyCommand } from "../actions/record/decisions.ts";
 import { ALL_COMMANDS, reservedReviewKeys } from "../actions/registry.ts";
 import { createAppContext } from "../app/context.ts";
@@ -16,6 +16,7 @@ import { ConfigLoadError, loadConfig } from "../config/load.ts";
 import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
 import { ingestFile } from "../ingest/ingest.ts";
 import { applyDiff, type DiffResult, diffIngest } from "../ingest/reingest.ts";
+import { resolvePreset } from "../keymap/preset.ts";
 import { openQueue } from "../overlay/queue.ts";
 import { bootstrapDisplay } from "../render/capability.ts";
 import { mountReingestPrompt, type ReingestChoice } from "../screens/reingest-prompt.ts";
@@ -67,16 +68,15 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     throw err;
   }
 
-  const overrideTargets = new Set(Object.keys(config.keys ?? {}));
-  const reservedForLabels = reservedReviewKeys(ALL_COMMANDS, overrideTargets);
-  // Label keys join `reservedForLabels` so they participate in override
-  // validation: an override key that collides with a configured label key is
-  // rejected the same way a built-in collision is.
-  const reservedForOverrides = new Set(reservedForLabels);
-  for (const entry of config.labels) {
-    const k = typeof entry === "string" ? null : (entry.key ?? null);
-    if (k) reservedForOverrides.add(k);
+  const presetResult = resolvePreset(ALL_COMMANDS, config.keys);
+  if (presetResult.errors.length > 0) {
+    console.error("labellens: invalid config.keys");
+    for (const line of presetResult.errors) console.error(`  ${line}`);
+    process.exit(2);
   }
+  const allCommands = presetResult.commands;
+
+  const reservedForLabels = reservedReviewKeys(allCommands);
   const keyError = validateLabelKeys(config, reservedForLabels);
   if (keyError) {
     console.error("labellens: invalid config.labels[].key");
@@ -90,14 +90,6 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     for (const line of fieldOverridesError.split("\n")) console.error(`  ${line}`);
     process.exit(2);
   }
-
-  const overrideResult = applyKeyOverrides(ALL_COMMANDS, config.keys, reservedForOverrides);
-  if (overrideResult.errors.length > 0) {
-    console.error("labellens: invalid config.keys");
-    for (const line of overrideResult.errors) console.error(`  ${line}`);
-    process.exit(2);
-  }
-  const allCommands = overrideResult.commands;
 
   const localOnlyError = validateLocalOnly(config, localOnly);
   if (localOnlyError) {

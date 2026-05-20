@@ -1,24 +1,28 @@
 import { describe, expect, test } from "bun:test";
 import type { Command } from "../../src/actions/command.ts";
-import { ALL_COMMANDS, reservedReviewKeys } from "../../src/actions/registry.ts";
+import { defaultRegistry, reservedReviewKeys } from "../../src/actions/registry.ts";
+
+function resolvedCommands(): Command[] {
+  return [...defaultRegistry().values()];
+}
 
 describe("reservedReviewKeys", () => {
   test("includes single-char review-scope bindings from real registry", () => {
-    const reserved = reservedReviewKeys(ALL_COMMANDS);
+    const reserved = reservedReviewKeys(resolvedCommands());
     for (const k of ["a", "x", "s", "r", "j", "k", "m", "u", "n"]) {
       expect(reserved.has(k)).toBe(true);
     }
   });
 
   test("includes digit-accelerator bindings 1-9", () => {
-    const reserved = reservedReviewKeys(ALL_COMMANDS);
+    const reserved = reservedReviewKeys(resolvedCommands());
     for (const k of ["1", "2", "3", "4", "5", "6", "7", "8", "9"]) {
       expect(reserved.has(k)).toBe(true);
     }
   });
 
   test("includes global-scope quit binding q", () => {
-    const reserved = reservedReviewKeys(ALL_COMMANDS);
+    const reserved = reservedReviewKeys(resolvedCommands());
     expect(reserved.has("q")).toBe(true);
   });
 

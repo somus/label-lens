@@ -34,9 +34,17 @@ export type PaletteMetadata = {
     | "queue";
 };
 
+export type CommandBindings = {
+  vim?: string | string[];
+  simple?: string | string[];
+};
+
 export type Command<Ctx extends ActionContext = ActionContext> = {
   name: string;
   scope: Scope;
+  /** Source-of-truth per-preset bindings. Resolved at startup; `binding` is the post-resolve value consumers read. */
+  bindings?: CommandBindings;
+  /** Post-resolve, populated by `resolvePreset`. Hand-set only in legacy code being migrated. */
   binding?: string | string[];
   palette?: string;
   paletteMetadata?: PaletteMetadata;
@@ -49,60 +57,6 @@ export type Command<Ctx extends ActionContext = ActionContext> = {
 };
 
 export type CommandRegistry = Map<string, Command>;
-
-/**
- * Replace a command's `binding` with the per-command override pulled from
- * `config.keys`. Commands not mentioned in `overrides` pass through untouched;
- * `reserved` is the post-override-aware reserved set (every built-in binding
- * + label keys minus the keys currently bound to the commands being
- * overridden), so an override key collides only with keys still in use after
- * the swap. Errors are aggregated so the reviewer fixes them in one pass.
- */
-export function applyKeyOverrides(
-  commands: Command[],
-  overrides: Record<string, string> | undefined,
-  reserved: Set<string>,
-): { commands: Command[]; errors: string[] } {
-  if (!overrides || Object.keys(overrides).length === 0) {
-    return { commands, errors: [] };
-  }
-  const byName = new Map(commands.map((cmd) => [cmd.name, cmd] as const));
-  const errors: string[] = [];
-  const claimed = new Map<string, string>();
-  for (const [name, key] of Object.entries(overrides)) {
-    if (!byName.has(name)) {
-      errors.push(`keys.${name}: no command with that name exists`);
-      continue;
-    }
-    if (key.length === 0) {
-      errors.push(`keys.${name}: override key must not be empty`);
-      continue;
-    }
-    if (key.length !== 1) {
-      // Schema enforces this already, but the runtime check shields callers
-      // that bypass the loader (tests, future config sources). Chord overrides
-      // (`g d`) would silently bypass the chord-starter collision logic in
-      // `reservedReviewKeys`; modifier overrides (`ctrl+x`) lack a keymap
-      // story today. Out of scope for MVP.
-      errors.push(`keys.${name}: override key '${key}' must be a single character`);
-      continue;
-    }
-    if (reserved.has(key)) {
-      errors.push(`keys.${name}: '${key}' is reserved by a built-in command or chord starter`);
-    }
-    const prior = claimed.get(key);
-    if (prior !== undefined) {
-      errors.push(`keys.${name}: '${key}' is also assigned to ${prior}`);
-    }
-    claimed.set(key, name);
-  }
-  if (errors.length > 0) return { commands, errors };
-  const out = commands.map((cmd) => {
-    const override = overrides[cmd.name];
-    return override === undefined ? cmd : { ...cmd, binding: override };
-  });
-  return { commands: out, errors: [] };
-}
 
 export function buildRegistry(commands: Command[]): CommandRegistry {
   const registry: CommandRegistry = new Map();

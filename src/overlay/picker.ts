@@ -1,5 +1,6 @@
 import { filterLabels } from "../picker/filter.ts";
 import { keepPrintableInputChars } from "./input-filter.ts";
+import { isOverlayNext, isOverlayPrev } from "./key-match.ts";
 import type {
   Effect,
   Overlay,
@@ -91,7 +92,7 @@ export function reducePicker(state: PickerState, event: OverlayEvent): ReduceRes
     case "commit":
       return commit(state);
     case "key":
-      return reduceKey(state, event.event.name);
+      return reduceKey(state, event);
     case "streamToken":
     case "streamEnd":
     case "streamError":
@@ -113,17 +114,18 @@ export function reducePicker(state: PickerState, event: OverlayEvent): ReduceRes
   }
 }
 
-function reduceKey(state: PickerState, name: string): ReduceResult {
+function reduceKey(state: PickerState, evt: Extract<OverlayEvent, { kind: "key" }>): ReduceResult {
+  const name = evt.event.name;
   if (name === "escape") return { overlay: null, effects: [{ kind: "close" }] };
   if (name === "return") return commit(state);
-  if (name === "up") {
+  if (isOverlayPrev(evt.event, evt.preset)) {
     if (state.candidates.length === 0) return { overlay: packed(state), effects: [] };
     return {
       overlay: packed({ ...state, highlight: Math.max(state.highlight - 1, 0) }),
       effects: [],
     };
   }
-  if (name === "down") {
+  if (isOverlayNext(evt.event, evt.preset)) {
     if (state.candidates.length === 0) return { overlay: packed(state), effects: [] };
     return {
       overlay: packed({

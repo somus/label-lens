@@ -150,7 +150,7 @@ function isFormat(s: string): s is ExportFormat {
 export const exportCommand: Command = {
   name: "export.run",
   scope: "global",
-  binding: "e",
+  bindings: { vim: "e" },
   run: (ctx) => {
     const format = ctx.config.output.format === "csv" ? "csv" : "jsonl";
     try {

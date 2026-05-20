@@ -5,7 +5,7 @@ import type { Command } from "../command.ts";
 export const toggleMark: Command = {
   name: "record.toggleMark",
   scope: "review",
-  binding: "m",
+  bindings: { vim: "m" },
   enabled: (ctx) => ctx.cursor?.current() != null,
   run: (ctx) => {
     const record = ctx.cursor?.current();

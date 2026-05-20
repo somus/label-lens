@@ -59,7 +59,7 @@ describe("validateConfigSchema", () => {
         fieldOverrides: { label: "category" },
       },
       notes: { presets: ["needs-help", "ambiguous"] },
-      keys: { "record.accept": "y" },
+      keys: { preset: "vim", overrides: { "record.accept": "y" } },
     });
     expect(validateConfigSchema(cfg)).toEqual([]);
   });
@@ -125,10 +125,24 @@ describe("validateConfigSchema", () => {
     expect(errors.join("\n")).toMatch(/csvMultiLabelSeparator|minLength/);
   });
 
-  test("rejects multi-character keys.<command> override (no chord / modifier overrides)", () => {
-    const bad = makeValid({ keys: { "record.accept": "g d" } });
+  test("rejects flat keys.<command> shape (legacy pre-preset configs)", () => {
+    const bad = makeValid({ keys: { "record.accept": "y" } as unknown as never });
     const errors = validateConfigSchema(bad);
     expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("accepts chord and modifier strings under keys.overrides", () => {
+    const cfg = makeValid({
+      keys: { overrides: { "record.accept": "ctrl+y", "record.show-doc": "g x" } },
+    });
+    expect(validateConfigSchema(cfg)).toEqual([]);
+  });
+
+  test("accepts array bindings under keys.overrides", () => {
+    const cfg = makeValid({
+      keys: { overrides: { "record.next": ["j", "down"] } },
+    });
+    expect(validateConfigSchema(cfg)).toEqual([]);
   });
 
   test("rejects label.key longer than one character", () => {
