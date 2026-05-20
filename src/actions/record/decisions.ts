@@ -28,6 +28,10 @@ function toggleMultiLabelDraft(
   }
   if (draft.selected.has(label)) draft.selected.delete(label);
   else draft.selected.add(label);
+  // Toggle bypasses `applyEffects` (no Review write), so it owns the
+  // render trigger itself — otherwise the chip rail diff glyphs only
+  // refresh on the next unrelated keystroke.
+  ctx.requestRender();
 }
 
 /**
