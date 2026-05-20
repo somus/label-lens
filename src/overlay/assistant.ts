@@ -187,13 +187,24 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
           effects: [],
         };
       }
-      if ("suggestedLabels" in r) {
-        // Multi-label response — normalise against configured labels so the
-        // committed set matches the picker's invariants (config-order, no
-        // unknowns, deduped). Reducer is pure; configuredLabels comes from
-        // the open-assistant action via AssistantBase.multiLabel.
-        const configured = state.multiLabel?.configuredLabels ?? [];
-        const norm = normalizeLabelSet(r.suggestedLabels, configured);
+      // Gate on the task mode the overlay was opened for, NOT the response
+      // shape. TypeBox `Type.Object` is open by default, so a single-label
+      // response that happens to carry an extra `suggestedLabels` key would
+      // otherwise be misrouted to the multi-label branch.
+      if (state.multiLabel) {
+        if (!("suggestedLabels" in r)) {
+          return {
+            overlay: packed({
+              ...baseOf(state),
+              status: "error",
+              errorMessage: "Assistant returned a single-label response for a multi-label task.",
+            }),
+            effects: [],
+          };
+        }
+        // Normalise against configured labels so the committed set matches
+        // the picker's invariants (config-order, no unknowns, deduped).
+        const norm = normalizeLabelSet(r.suggestedLabels, state.multiLabel.configuredLabels);
         return {
           overlay: packed({
             ...baseOf(state),
@@ -203,6 +214,16 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
             confidence: r.confidence,
             recommendedAction: r.recommendedAction,
             reason: r.reasoning,
+          }),
+          effects: [],
+        };
+      }
+      if (!("suggestedLabel" in r)) {
+        return {
+          overlay: packed({
+            ...baseOf(state),
+            status: "error",
+            errorMessage: "Assistant returned a multi-label response for a single-label task.",
           }),
           effects: [],
         };

@@ -84,6 +84,51 @@ test("multi-label empty set + recommendedAction=accept keeps overlay packed", ()
   expect(r1.effects.some((e) => e.kind === "commitDecision")).toBe(false);
 });
 
+test("single-label task: response with stray suggestedLabels is rejected, not misrouted", () => {
+  // Regression guard: TypeBox Type.Object is open by default, so a
+  // single-label response could carry an extra `suggestedLabels` key. The
+  // reducer must gate on the overlay's task mode (state.multiLabel), NOT on
+  // response shape, to avoid committing finalLabel="" via the multi-label
+  // branch with no state.multiLabel set.
+  const s0 = openAssistant("rec-1", "spam");
+  // No options.multiLabel → state.multiLabel undefined (single-label task).
+  const malformed = {
+    suggestedLabel: "spam",
+    suggestedLabels: ["spam", "toxicity"],
+    confidence: "high",
+    reasoning: "x",
+    evidenceFor: [],
+    evidenceAgainst: [],
+    recommendedAction: "accept",
+  } as unknown as AssistantMultiLabelResponse;
+  const r0 = reduceAssistant(s0, { kind: "streamEnd", response: malformed });
+  const s1 = (r0.overlay as { state: typeof s0 }).state;
+  // Should land in done state with suggestion = "spam" (single-label path),
+  // NOT in done with empty suggestion via the multi-label branch.
+  expect(s1.status).toBe("done");
+  if (s1.status === "done") {
+    expect(s1.suggestion).toBe("spam");
+    expect(s1.suggestionSet).toBeUndefined();
+  }
+});
+
+test("multi-label task: response missing suggestedLabels surfaces an error", () => {
+  const s0 = openAssistant("rec-1", null, {
+    multiLabel: { configuredLabels: CONFIGURED, predicted: ["spam"] },
+  });
+  const wrongShape = {
+    suggestedLabel: "spam",
+    confidence: "high",
+    reasoning: "x",
+    evidenceFor: [],
+    evidenceAgainst: [],
+    recommendedAction: "accept",
+  } as unknown as AssistantMultiLabelResponse;
+  const r0 = reduceAssistant(s0, { kind: "streamEnd", response: wrongShape });
+  const s1 = (r0.overlay as { state: typeof s0 }).state;
+  expect(s1.status).toBe("error");
+});
+
 test("multi-label empty set + recommendedAction=reject still commits a reject", () => {
   // Reject path runs BEFORE the empty-set bailout — an empty suggestion is a
   // valid reject (rejected reviews carry final_label=null, prev=encoded
