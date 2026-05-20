@@ -3,7 +3,7 @@ import type { Box } from "../../../render/box.ts";
 import type { ResolvedDisplay } from "../../../render/capability.ts";
 import type { RecordWithPrimaryPrediction } from "../../../types.ts";
 
-export type TaskKind = "classification" | "boundary";
+export type TaskKind = "classification" | "boundary" | "multi-label";
 
 export type DecisionRenderArgs = {
   record: RecordWithPrimaryPrediction | null;

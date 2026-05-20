@@ -1,3 +1,4 @@
+import { encodeLabelSet, labelSetsEqual, normalizeLabelSet } from "../labels/label-set.ts";
 import type {
   AssistantBase,
   AssistantState,
@@ -7,6 +8,13 @@ import type {
   ReduceResult,
 } from "./types.ts";
 
+export type OpenAssistantOptions = {
+  multiLabel?: {
+    configuredLabels: string[];
+    predicted: string[];
+  };
+};
+
 /**
  * Build an assistant overlay state for `record.openAssistant`. Stays in
  * `loading` until the first streamToken flips it to `streaming`, then to
@@ -15,12 +23,21 @@ import type {
 export function openAssistant(
   recordId: string,
   predictedLabel: string | null = null,
+  options?: OpenAssistantOptions,
 ): AssistantState {
   return {
     recordId,
     predictedLabel,
     reasoningExpanded: false,
     status: "loading",
+    ...(options?.multiLabel
+      ? {
+          multiLabel: {
+            configuredLabels: options.multiLabel.configuredLabels,
+            predictedSet: options.multiLabel.predicted,
+          },
+        }
+      : {}),
   };
 }
 
@@ -33,6 +50,7 @@ function baseOf(state: AssistantState): AssistantBase {
     recordId: state.recordId,
     predictedLabel: state.predictedLabel,
     reasoningExpanded: state.reasoningExpanded,
+    ...(state.multiLabel ? { multiLabel: state.multiLabel } : {}),
   };
 }
 
@@ -57,6 +75,9 @@ function commit(state: AssistantState): ReduceResult {
   if (state.status !== "done") {
     return { overlay: packed(state), effects: [] };
   }
+  if (state.suggestionSet && state.multiLabel) {
+    return commitMultiLabel(state);
+  }
   const status = actionToStatus(state.recommendedAction);
   // prev_label follows the same convention as picker / decision commands:
   // record the predicted label on relabel + reject, null on accept + skip.
@@ -74,6 +95,59 @@ function commit(state: AssistantState): ReduceResult {
     { kind: "close" },
   ];
   return { overlay: null, effects };
+}
+
+function commitMultiLabel(state: Extract<AssistantState, { status: "done" }>): ReduceResult {
+  if (!state.suggestionSet || !state.multiLabel) {
+    return { overlay: packed(state), effects: [] };
+  }
+  const action = state.recommendedAction;
+  const baseStatus = actionToStatus(action);
+  if (baseStatus === "rejected" || baseStatus === "skipped") {
+    const prevLabel =
+      baseStatus === "rejected" && state.multiLabel.predictedSet.length > 0
+        ? encodeLabelSet(state.multiLabel.predictedSet)
+        : null;
+    return {
+      overlay: null,
+      effects: [
+        { kind: "markAssistantViewed", recordId: state.recordId },
+        {
+          kind: "commitDecision",
+          recordId: state.recordId,
+          status: baseStatus,
+          finalLabel: null,
+          prevLabel,
+          sourceOfTruth: "human+assistant",
+        },
+        { kind: "close" },
+      ],
+    };
+  }
+  // Empty normalised set is invalid — keep the overlay open so the reviewer
+  // can dismiss with Esc instead of committing nothing.
+  if (state.suggestionSet.length === 0) {
+    return { overlay: packed(state), effects: [] };
+  }
+  const matchesPredicted = labelSetsEqual(state.suggestionSet, state.multiLabel.predictedSet);
+  const status = matchesPredicted ? "accepted" : "relabeled";
+  const finalLabel = encodeLabelSet(state.suggestionSet);
+  const prevLabel = status === "relabeled" ? encodeLabelSet(state.multiLabel.predictedSet) : null;
+  return {
+    overlay: null,
+    effects: [
+      { kind: "markAssistantViewed", recordId: state.recordId },
+      {
+        kind: "commitDecision",
+        recordId: state.recordId,
+        status,
+        finalLabel,
+        prevLabel,
+        sourceOfTruth: "human+assistant",
+      },
+      { kind: "close" },
+    ],
+  };
 }
 
 function dismiss(state: AssistantState): ReduceResult {
@@ -109,6 +183,26 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
             ...baseOf(state),
             status: "error",
             errorMessage: "Assistant stream ended without a structured response.",
+          }),
+          effects: [],
+        };
+      }
+      if ("suggestedLabels" in r) {
+        // Multi-label response — normalise against configured labels so the
+        // committed set matches the picker's invariants (config-order, no
+        // unknowns, deduped). Reducer is pure; configuredLabels comes from
+        // the open-assistant action via AssistantBase.multiLabel.
+        const configured = state.multiLabel?.configuredLabels ?? [];
+        const norm = normalizeLabelSet(r.suggestedLabels, configured);
+        return {
+          overlay: packed({
+            ...baseOf(state),
+            status: "done",
+            suggestion: "",
+            suggestionSet: norm.set,
+            confidence: r.confidence,
+            recommendedAction: r.recommendedAction,
+            reason: r.reasoning,
           }),
           effects: [],
         };

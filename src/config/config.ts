@@ -350,9 +350,12 @@ const KeysConfigSchema = Type.Object(
 export const LabellensConfigSchema = Type.Object(
   {
     $schema: Type.Optional(Type.String({ description: "URI of this config's JSON Schema." })),
-    task: Type.Union([Type.Literal("classification"), Type.Literal("boundary")], {
-      description: "Task kind.",
-    }),
+    task: Type.Union(
+      [Type.Literal("classification"), Type.Literal("boundary"), Type.Literal("multi-label")],
+      {
+        description: "Task kind.",
+      },
+    ),
     labels: Type.Array(LabelConfigEntrySchema, {
       minItems: 1,
       description: "Configured label set. Used for review, queues, and exports.",

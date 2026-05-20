@@ -14,7 +14,7 @@ Read [Prediction vs annotation](./prediction-vs-annotation.md) first if those te
 |---|---|---|
 | One category per row, such as topic, intent, merchant type, or sentiment | `classification` | Supported |
 | One structural label per line or document segment, where nearby lines matter | `boundary` | Supported |
-| Several independent labels can be true for the same row | `multi-label` | Planned |
+| Several independent labels can be true for the same row | `multi-label` | Supported |
 | Structured fields to correct, such as names, dates, or amounts | Extraction review | Planned |
 | Two outputs to compare or rank | Pairwise / preference | Planned later |
 | Character spans to add, delete, or resize | NER / span review | Planned later |
@@ -99,9 +99,50 @@ Multiple prediction sources are not a separate task type. They work with both su
 
 Each entry is stored as a prediction. The highest-confidence prediction becomes the primary prediction, and records with conflicting predicted labels appear in the `disagreements` queue. Exports still use the human annotation as the reviewed result.
 
-## Planned task types
+## Multi-label classification
 
-`multi-label` will review records where multiple labels can be true at once. The planned UI is toggle-based instead of single-choice.
+Use `multi-label` when multiple labels can be true for the same row at once — content moderation, multi-intent triage, multi-topic tagging.
+
+Good fits:
+
+- Content moderation: a comment can be both `spam` and `toxicity`.
+- Multi-intent support tickets: `refund` + `account-access`.
+- Multi-topic tagging: an article can be `politics` and `economy`.
+
+Minimal config shape:
+
+```jsonc
+{
+  "task": "multi-label",
+  "labels": ["spam", "toxicity", "promotion"],
+  "input": {
+    "path": "./data.jsonl",
+    "format": "jsonl",
+    "fields": { "text": "text" }
+  }
+}
+```
+
+Predictions must supply label arrays:
+
+```jsonl
+{"text":"buy cheap stuff","predictions":[{"label":["spam","toxicity"],"confidence":0.9,"source":"modelA"}]}
+```
+
+Single-string Prediction labels under `task: "multi-label"` are invalid — the ingest pipeline drops that Prediction with a warning. Unknown labels are dropped, duplicates are deduped, and the resulting set is sorted by configured label order before storage. Both the primary Prediction set and committed Annotation set are persisted as canonical JSON array text in the existing `predictions.label` / `reviews.final_label` columns; no schema migration is required.
+
+Review actions:
+
+- `a` accepts the primary Prediction set verbatim.
+- `r` opens the multi-label picker. `Space` toggles the focused label; `Enter` commits the current selected set; `Esc` cancels. An empty selected set cannot be committed — use `x` (reject) for "no valid labels."
+- Status follows the set comparison: `accepted` when the committed set equals the primary Prediction set, `relabeled` when it differs.
+- The Assistant (`i`) returns a complete suggested set; `Enter` commits the validated set with `human+assistant` audit semantics.
+
+Effective Review and undo semantics keep working with one current Review per Record. The `by-label:<l>` queue matches Records whose current Review's set (or, for unreviewed Records, the primary Prediction set) contains `<l>`. Exports decode the set: JSONL emits `label` as `string[]`, CSV joins the set with `output.csvMultiLabelSeparator` (default `;`).
+
+Bulk multi-label operations and exact-set / per-label set correction metrics are not in scope yet — basic totals / status / source stats remain available.
+
+## Planned task types
 
 Extraction review will correct structured fields with a form-like interface. It is for values such as names, dates, amounts, and companies, not character-level span editing.
 

@@ -98,10 +98,17 @@ export function relabelByIndexCommand(n: number): Command {
     name: `record.relabelByIndex.${n}`,
     scope: "review",
     bindings: { vim: String(n) },
-    enabled: (ctx) => ctx.cursor?.current() != null,
+    enabled: (ctx) => ctx.config.task !== "multi-label" && ctx.cursor?.current() != null,
     run: (ctx: AppContext) => {
       const record = ctx.cursor?.current();
       if (!record || !ctx.queueId) return;
+      if (ctx.config.task === "multi-label") {
+        ctx.setFlash(
+          "Use r to open the multi-label picker; 1-9 shortcuts are single-label only",
+          "warning",
+        );
+        return;
+      }
       const entry = ctx.config.labels[n - 1];
       if (!entry) {
         ctx.setFlash(`No label at position ${n}`, "error");
@@ -142,10 +149,14 @@ export function relabelByKeyCommand(entry: LabelConfigEntry): Command | null {
     name: `record.relabelByKey.${label}`,
     scope: "review",
     binding: key,
-    enabled: (ctx) => ctx.cursor?.current() != null,
+    enabled: (ctx) => ctx.config.task !== "multi-label" && ctx.cursor?.current() != null,
     run: (ctx: AppContext) => {
       const record = ctx.cursor?.current();
       if (!record || !ctx.queueId) return;
+      if (ctx.config.task === "multi-label") {
+        ctx.setFlash("Use r to toggle labels under the multi-label picker", "warning");
+        return;
+      }
       const predicted = record.primaryPrediction?.label ?? null;
       const status = predicted === label ? "accepted" : "relabeled";
       const effect: Effect = {

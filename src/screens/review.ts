@@ -10,6 +10,7 @@ import { applyEffects } from "../overlay/effects.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
+import type { MultiLabelPickerState } from "../overlay/multi-label-picker.ts";
 import type { QueueState } from "../overlay/queue.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
 import { withStatsPageSize } from "../overlay/stats-overlay.ts";
@@ -537,6 +538,8 @@ function renderOverlay(
   switch (overlay.kind) {
     case "picker":
       return renderPicker(overlay.state, display, termWidth, termHeight);
+    case "multi-label-picker":
+      return renderMultiLabelPicker(overlay.state, display, termWidth, termHeight);
     case "note":
       return renderNote(overlay.state, display, termWidth, termHeight);
     case "assistant":
@@ -1168,6 +1171,52 @@ function renderPicker(
     Text({ content: "" }),
     Text({
       content: " [1-9] pick · [enter] commit · [esc] cancel",
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function renderMultiLabelPicker(
+  state: MultiLabelPickerState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  const rich = display.color === "truecolor" || display.color === "256";
+  const checkOn = rich ? "[x]" : "[x]";
+  const checkOff = rich ? "[ ]" : "[ ]";
+  const headerTitle =
+    state.predicted.length > 0
+      ? `Relabel  ◇ ${state.predicted.join(", ")}  →  ?`
+      : "Relabel (multi-label)";
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.5,
+    headerTitle,
+    Text({ content: ` > ${state.filter}_`, attributes: TextAttributes.BOLD }),
+    Text({ content: "" }),
+    ...state.candidates.slice(0, 9).map((c, i) => {
+      const cursor = i === state.highlight ? "▸" : " ";
+      const tick = c.selected ? checkOn : checkOff;
+      const predGlyph = c.predicted ? "◆" : " ";
+      const chip = labelChipText({ index: i, key: c.key ?? null, mode: display.labelChip });
+      const segs: Segment[] = [
+        { text: ` ${cursor} `, tone: i === state.highlight ? "accent" : "default" },
+        { text: `${tick} `, tone: c.selected ? "accent" : "muted" },
+        { text: `${predGlyph} `, tone: c.predicted ? "accent" : "default" },
+        { text: `${chip}  `, tone: c.predicted ? "accent" : "accentDeep" },
+        ...foldNamespace(c.label, c.predicted ? "default" : "muted"),
+      ];
+      return Text({
+        content: segmentsToStyledText(segs, display),
+        attributes: i === state.highlight ? TextAttributes.BOLD : TextAttributes.NONE,
+      });
+    }),
+    Text({ content: "" }),
+    Text({
+      content: " [space] toggle · [enter] commit · [esc] cancel",
       attributes: TextAttributes.DIM,
     }),
   );

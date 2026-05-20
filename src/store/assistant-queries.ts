@@ -1,5 +1,9 @@
 import { and, eq, sql } from "drizzle-orm";
-import { type AssistantResponse, isAssistantResponse } from "../assistant/schema.ts";
+import {
+  type AssistantResponseAny,
+  isAssistantMultiLabelResponse,
+  isAssistantResponse,
+} from "../assistant/schema.ts";
 import type { Db } from "./db.ts";
 import { assistantQueries } from "./schema.ts";
 
@@ -13,7 +17,7 @@ export function getCachedAssistantResponse(
   db: Db,
   recordId: string,
   promptHash: string,
-): AssistantResponse | null {
+): AssistantResponseAny | null {
   const rows = db
     .select({ responseJson: assistantQueries.responseJson })
     .from(assistantQueries)
@@ -30,7 +34,9 @@ export function getCachedAssistantResponse(
   } catch {
     return null;
   }
-  return isAssistantResponse(parsed) ? parsed : null;
+  if (isAssistantResponse(parsed)) return parsed;
+  if (isAssistantMultiLabelResponse(parsed)) return parsed;
+  return null;
 }
 
 /**
@@ -42,7 +48,7 @@ export function cacheAssistantResponse(
   db: Db,
   recordId: string,
   promptHash: string,
-  response: AssistantResponse,
+  response: AssistantResponseAny,
 ): void {
   const now = new Date().toISOString();
   const payload = JSON.stringify(response);

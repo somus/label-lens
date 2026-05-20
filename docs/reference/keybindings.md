@@ -57,6 +57,8 @@ The default scope when no overlay or screen is open.
 
 ## Relabel picker (`r`)
 
+Under `task: "classification"` / `"boundary"` (single-label).
+
 | Key | Action |
 |---|---|
 | `1`–`9` | Pick visible candidate at that position |
@@ -66,6 +68,21 @@ The default scope when no overlay or screen is open.
 | `↑` / `↓` | Move highlight |
 | `Enter` | Commit highlighted label |
 | `Esc` | Cancel |
+
+## Multi-label picker (`r` under `task: "multi-label"`)
+
+| Key | Action |
+|---|---|
+| `Space` | Toggle highlighted label in / out of the selected set |
+| `1`–`9` | Move highlight to that position (does not toggle / commit) |
+| `<key>` | Configured per-label key — toggles that label |
+| `<char>` | Type into filter; candidates re-rank |
+| `backspace` | Pop one filter char |
+| `↑` / `↓` | Move highlight |
+| `Enter` | Commit current selected set (`accepted` if set equals primary Prediction, else `relabeled`). Empty selected set is refused — use `x` (reject) instead. |
+| `Esc` | Cancel |
+
+Under `task: "multi-label"`, the review-scope `1`–`9` and per-label-key shortcuts are intentionally disabled (they would otherwise commit a single label and violate the multi-label invariants). Use `r` to open the picker.
 
 ## Assistant overlay (`i`)
 

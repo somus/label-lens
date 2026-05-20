@@ -7,6 +7,7 @@ import {
   queryAssistant,
 } from "../../assistant/provider.ts";
 import { labelKey, labelName } from "../../config/config.ts";
+import { decodeLabelSet } from "../../labels/label-set.ts";
 import { openAssistant } from "../../overlay/assistant.ts";
 import { openConfigureAssistant } from "../../overlay/configure-assistant.ts";
 import { dispatchOverlayEvent } from "../../overlay/effects.ts";
@@ -19,7 +20,7 @@ import type { Command } from "../command.ts";
  * the real implementation; tests reset it in afterEach.
  */
 let queryFn: (args: QueryAssistantArgs) => Promise<{
-  response: import("../../assistant/schema.ts").AssistantResponse;
+  response: import("../../assistant/schema.ts").AssistantResponseAny;
   wasCached: boolean;
 }> = queryAssistant;
 
@@ -61,6 +62,12 @@ export const openAssistantCommand: Command = {
     const fireRecordId = record.id;
     const queueId = ctx.queueId;
     const predictedLabel = record.primaryPrediction?.label ?? null;
+    const isMultiLabel = ctx.config.task === "multi-label";
+    const predictedSet =
+      isMultiLabel && record.primaryPrediction
+        ? decodeLabelSet(record.primaryPrediction.label)
+        : [];
+    const configuredLabels = ctx.config.labels.map((e) => labelName(e));
 
     // Cancel any prior in-flight assistant request before we fire a new one.
     // Otherwise rapid `i` presses across records (each with its own pi-ai
@@ -69,7 +76,11 @@ export const openAssistantCommand: Command = {
     const controller = new AbortController();
     ctx.assistantAbort = { recordId: fireRecordId, controller };
 
-    const state = openAssistant(fireRecordId, predictedLabel);
+    const state = openAssistant(
+      fireRecordId,
+      predictedLabel,
+      isMultiLabel ? { multiLabel: { configuredLabels, predicted: predictedSet } } : undefined,
+    );
     ctx.openOverlay({ kind: "assistant", state });
 
     let model: import("@earendil-works/pi-ai").Model<string>;
@@ -83,7 +94,7 @@ export const openAssistantCommand: Command = {
       return;
     }
 
-    const labelNames = ctx.config.labels.map((e) => labelName(e));
+    const labelNames = configuredLabels;
 
     const promptInput = buildPromptInput({
       record: {
@@ -128,6 +139,7 @@ export const openAssistantCommand: Command = {
       model,
       promptInput,
       labelNames,
+      multiLabel: isMultiLabel,
       signal: controller.signal,
       onToken: (token) => {
         // Only forward tokens while this exact record's panel is still open;

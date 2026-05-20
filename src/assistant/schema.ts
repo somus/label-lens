@@ -36,6 +36,40 @@ export const AssistantResponseSchema = Type.Object({
 export type AssistantResponse = Static<typeof AssistantResponseSchema>;
 
 /**
+ * Multi-label variant — replaces `suggestedLabel: string` with
+ * `suggestedLabels: string[]`. Other fields mirror the single-label schema
+ * so reasoning / confidence / recommendedAction render identically.
+ */
+export const AssistantMultiLabelResponseSchema = Type.Object({
+  suggestedLabels: Type.Array(Type.String(), {
+    description: "Configured labels the assistant recommends for this record (complete set).",
+  }),
+  confidence: Type.Union([Type.Literal("low"), Type.Literal("medium"), Type.Literal("high")], {
+    description: "Assistant's confidence in its own recommendation.",
+  }),
+  reasoning: Type.String({
+    description: "Markdown-formatted explanation of the recommendation.",
+  }),
+  evidenceFor: Type.Array(Type.String(), {
+    description: "Short bullet phrases supporting the suggested set.",
+  }),
+  evidenceAgainst: Type.Array(Type.String(), {
+    description: "Short bullet phrases against the suggested set.",
+  }),
+  recommendedAction: Type.Union(
+    [Type.Literal("accept"), Type.Literal("relabel"), Type.Literal("reject"), Type.Literal("skip")],
+    {
+      description:
+        "How the reviewer should commit: accept the predicted set, relabel to suggestedLabels, reject, or skip.",
+    },
+  ),
+});
+
+export type AssistantMultiLabelResponse = Static<typeof AssistantMultiLabelResponseSchema>;
+
+export type AssistantResponseAny = AssistantResponse | AssistantMultiLabelResponse;
+
+/**
  * Runtime guard: a cached row passed `JSON.parse` but the producer (the LLM
  * or a stale cache) could still emit the wrong shape. Derived from
  * `AssistantResponseSchema` via TypeBox so the validator can never drift
@@ -43,4 +77,10 @@ export type AssistantResponse = Static<typeof AssistantResponseSchema>;
  */
 export function isAssistantResponse(value: unknown): value is AssistantResponse {
   return Value.Check(AssistantResponseSchema, value);
+}
+
+export function isAssistantMultiLabelResponse(
+  value: unknown,
+): value is AssistantMultiLabelResponse {
+  return Value.Check(AssistantMultiLabelResponseSchema, value);
 }

@@ -1,4 +1,6 @@
+import { type LabellensConfig, labelName } from "../config/config.ts";
 import type { FieldMap } from "../config/inference.ts";
+import { encodeLabelSet, normalizeLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { safeIssueSource } from "../store/issues.ts";
 import {
@@ -10,10 +12,24 @@ import type { InputIssue, InputPrediction, InputRecord } from "../types.ts";
 import { contentHashId } from "./id.ts";
 import { streamJsonl } from "./jsonl.ts";
 
+export type IngestTaskOptions = {
+  task: "classification" | "boundary" | "multi-label";
+  /** Configured label names. Required for `task: "multi-label"` normalisation. */
+  labels: string[];
+};
+
 export type IngestResult = {
   ingested: number;
   skipped: number;
+  warnings: string[];
 };
+
+export function ingestTaskOptionsFromConfig(config: LabellensConfig): IngestTaskOptions {
+  return {
+    task: config.task,
+    labels: config.labels.map(labelName),
+  };
+}
 
 type PendingRecord = {
   id: string;
@@ -31,10 +47,14 @@ export async function ingestFile(
   db: Db,
   filePath: string,
   fields: FieldMap,
+  taskOptions?: IngestTaskOptions,
 ): Promise<IngestResult> {
   let ingested = 0;
   let skipped = 0;
+  const warnings: string[] = [];
   let rowIndex = 0;
+  const multiLabel = taskOptions?.task === "multi-label";
+  const configuredLabels = taskOptions?.labels ?? [];
 
   let buffer: PendingRecord[] = [];
 
@@ -63,6 +83,44 @@ export async function ingestFile(
     const predictions = input.predictions ?? [];
     const issuesIn = input.issues ?? [];
 
+    const normalisedPredictions: RecordPredictionInput[] = [];
+    for (const p of predictions) {
+      if (multiLabel) {
+        if (!Array.isArray(p.label)) {
+          warnings.push(
+            `ingest: record ${id} source=${p.source} dropped — multi-label task requires array label, got ${typeof p.label}`,
+          );
+          continue;
+        }
+        const norm = normalizeLabelSet(p.label, configuredLabels);
+        if (norm.dropped.length > 0) {
+          warnings.push(
+            `ingest: record ${id} source=${p.source} dropped unknown labels: ${norm.dropped.join(", ")}`,
+          );
+        }
+        if (norm.duplicates.length > 0) {
+          warnings.push(
+            `ingest: record ${id} source=${p.source} deduped labels: ${norm.duplicates.join(", ")}`,
+          );
+        }
+        normalisedPredictions.push({
+          label: encodeLabelSet(norm.set),
+          confidence: typeof p.confidence === "number" ? p.confidence : null,
+          source: p.source,
+          reason: p.reason ?? null,
+          raw: JSON.stringify(p),
+        });
+        continue;
+      }
+      normalisedPredictions.push({
+        label: typeof p.label === "string" ? p.label : JSON.stringify(p.label),
+        confidence: typeof p.confidence === "number" ? p.confidence : null,
+        source: p.source,
+        reason: p.reason ?? null,
+        raw: JSON.stringify(p),
+      });
+    }
+
     buffer.push({
       id,
       sourcePath: filePath,
@@ -71,13 +129,7 @@ export async function ingestFile(
       contextBefore: input.context_before ?? null,
       contextAfter: input.context_after ?? null,
       raw,
-      predictions: predictions.map((p) => ({
-        label: typeof p.label === "string" ? p.label : JSON.stringify(p.label),
-        confidence: typeof p.confidence === "number" ? p.confidence : null,
-        source: p.source,
-        reason: p.reason ?? null,
-        raw: JSON.stringify(p),
-      })),
+      predictions: normalisedPredictions,
       issues: issuesIn.map((i) => ({
         type: i.type,
         score: typeof i.score === "number" ? i.score : null,
@@ -89,7 +141,7 @@ export async function ingestFile(
   }
   flush();
 
-  return { ingested, skipped };
+  return { ingested, skipped, warnings };
 }
 
 function mapInput(obj: Record<string, unknown>, fields: FieldMap, text: string): InputRecord {

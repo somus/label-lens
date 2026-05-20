@@ -20,6 +20,10 @@
         {
           "type": "string",
           "const": "boundary"
+        },
+        {
+          "type": "string",
+          "const": "multi-label"
         }
       ],
       "description": "Task kind."
