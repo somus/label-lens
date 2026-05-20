@@ -101,6 +101,10 @@ Each entry is stored as a prediction. The highest-confidence prediction becomes 
 
 ## Multi-label classification
 
+<a href="../media/multi-label.webm">
+  <img src="../media/multi-label.gif" alt="Multi-label chip rail with digit toggle and picker overlay" width="800">
+</a>
+
 Use `multi-label` when multiple labels can be true for the same row at once — content moderation, multi-intent triage, multi-topic tagging.
 
 Good fits:

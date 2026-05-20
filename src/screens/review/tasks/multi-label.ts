@@ -141,14 +141,13 @@ function renderMultiLabelChipRail(args: DecisionRenderArgs): ReturnType<typeof B
   // Inline hint surfacing the digit-toggle / commit / picker keys so the
   // chip rail is self-documenting at rest. Single-label task has implicit
   // candidate indexing in its own renderer; multi-label needed a parallel.
-  const toggleKeyHint = labels.length > 9 ? "[1]–[9]/[r]" : "[1]–[9]";
   const hintSegments: Segment[] = [
     { text: " ", tone: "default" },
-    { text: toggleKeyHint, tone: "accent" },
+    { text: "[1]–[9]", tone: "accent" },
     { text: " toggle · ", tone: "muted" },
     { text: "[enter]", tone: "accent" },
     { text: " commit · ", tone: "muted" },
-    { text: "[i]", tone: "accent" },
+    { text: "[r]", tone: "accent" },
     { text: " picker", tone: "muted" },
   ];
 
