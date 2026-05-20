@@ -32,6 +32,43 @@ import { chooseInitialScreen } from "./initial-screen.ts";
 export const MISSING_CONFIG_MESSAGE =
   "labellens: no labellens.config.json found in this directory. Run 'labellens init <file.jsonl>' first.";
 
+export class ReviewSetupError extends Error {
+  constructor(
+    message: string,
+    readonly lines: string[] = [],
+    readonly code = 2,
+  ) {
+    super(message);
+    this.name = "ReviewSetupError";
+  }
+}
+
+export type ReviewSetupStderr = {
+  error(message: string): void;
+};
+
+export type PreparedReviewState = {
+  db: Db;
+  config: LabellensConfig;
+  configPath: string;
+  inputPath: string;
+  allCommands: Command[];
+  initialScreen: "queue" | "review";
+  localOnly: boolean;
+  cancelled: boolean;
+};
+
+export type PrepareReviewStateArgs = {
+  cwd?: string;
+  localOnly?: boolean;
+  stderr?: ReviewSetupStderr;
+  chooseReingest?: (args: {
+    diff: DiffResult;
+    inputPath: string;
+    config: LabellensConfig;
+  }) => Promise<ReingestChoice>;
+};
+
 export function shouldShowMissingConfigSplash(args: {
   stdinIsTTY: boolean | undefined;
   stdoutIsTTY: boolean | undefined;
@@ -56,71 +93,15 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     return;
   }
 
-  let config: LabellensConfig;
-  try {
-    config = await loadConfig(configPath);
-  } catch (err) {
-    if (err instanceof ConfigLoadError) {
-      console.error(err.message);
-      for (const line of err.errors) console.error(`  ${line}`);
-      process.exit(2);
-    }
-    throw err;
-  }
-
-  const presetResult = resolvePreset(ALL_COMMANDS, config.keys);
-  if (presetResult.errors.length > 0) {
-    console.error("labellens: invalid config.keys");
-    for (const line of presetResult.errors) console.error(`  ${line}`);
-    process.exit(2);
-  }
-  const allCommands = presetResult.commands;
-
-  const reservedForLabels = reservedReviewKeys(allCommands);
-  const keyError = validateLabelKeys(config, reservedForLabels);
-  if (keyError) {
-    console.error("labellens: invalid config.labels[].key");
-    for (const line of keyError.split("\n")) console.error(`  ${line}`);
-    process.exit(2);
-  }
-
-  const fieldOverridesError = validateFieldOverrides(config);
-  if (fieldOverridesError) {
-    console.error("labellens: invalid output.fieldOverrides");
-    for (const line of fieldOverridesError.split("\n")) console.error(`  ${line}`);
-    process.exit(2);
-  }
-
-  const localOnlyError = validateLocalOnly(config, localOnly);
-  if (localOnlyError) {
-    console.error(`labellens: ${localOnlyError}`);
-    process.exit(2);
-  }
-
-  const inputPath = resolve(config.input.path);
-  const stateDir = join(dirname(configPath), ".labellens");
-  const stateDbPath = join(stateDir, "state.db");
-
-  let db = openDb(stateDbPath);
-
-  const recordCount = (handle: Db) =>
-    handle.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records`)[0]!.n;
-
-  const isEmpty = recordCount(db) === 0;
-  const stored = readFingerprint(db, inputPath);
-  const current = await computeFingerprint(inputPath);
-
-  // Renderer is created lazily so terminal probes (palette + theme OSC
-  // queries) don't fire during the non-interactive fingerprint / ingest
-  // window. If the process exits before mounting any screen, the terminal
-  // never gets primed and no probe responses leak into the parent shell.
   let renderer: CliRenderer | null = null;
   let resolvedDisplay: import("../render/capability.ts").ResolvedDisplay | null = null;
   const ensureRenderer = async (): Promise<CliRenderer> => {
     if (!renderer) renderer = await createCliRenderer({ exitOnCtrlC: true });
     return renderer;
   };
-  const ensureDisplay = async (): Promise<import("../render/capability.ts").ResolvedDisplay> => {
+  const ensureDisplay = async (
+    config: LabellensConfig,
+  ): Promise<import("../render/capability.ts").ResolvedDisplay> => {
     if (resolvedDisplay) return resolvedDisplay;
     const r = await ensureRenderer();
     resolvedDisplay = await bootstrapDisplay({
@@ -138,75 +119,34 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     return resolvedDisplay;
   };
 
-  const thresholds: LowConfidenceThresholds = thresholdsFromConfig(config.signals?.lowConfidence);
-
-  if (isEmpty) {
-    console.error(`Ingesting ${inputPath}...`);
-    const result = await ingestFile(db, inputPath, config.input.fields);
-    console.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
-    console.error("Computing prioritization signals...");
-    const signals = runSignals(db, signalsOptions(config));
-    console.error(`  wrote ${signals.written} issue rows`);
-    recordAppliedThresholds(db, thresholds);
-    writeFingerprint(db, inputPath, current);
-  } else if (!stored) {
-    // Legacy DB from before slice 9 (no fingerprint row). Trust existing data;
-    // record the current source fingerprint so future runs can diff.
-    writeFingerprint(db, inputPath, current);
-  } else if (stored.mtime !== current.mtime || stored.contentSha256 !== current.contentSha256) {
-    const diff = await diffIngest(db, inputPath, config.input.fields);
-    if (
-      diff.predictionsOnly.length === 0 &&
-      diff.orphans.length === 0 &&
-      diff.newRecords.length === 0
-    ) {
-      // mtime touched but content identical (e.g. `touch` on the file).
-      writeFingerprint(db, inputPath, current);
-    } else {
-      const r = await ensureRenderer();
-      const display = await ensureDisplay();
-      const choice = await promptForChoice(r, diff, display, inputPath);
-      if (choice === "cancel") {
-        r.destroy();
-        process.exit(0);
-      }
-      if (choice === "fresh") {
-        db = await freshReingest(db, stateDir, stateDbPath, inputPath, config);
-        recordAppliedThresholds(db, thresholds);
-        writeFingerprint(db, inputPath, current);
-      } else {
-        applyDiff(db, diff);
-        runSignals(db, signalsOptions(config));
-        recordAppliedThresholds(db, thresholds);
-        writeFingerprint(db, inputPath, current);
-      }
+  let prepared: PreparedReviewState;
+  try {
+    prepared = await prepareReviewState({
+      localOnly,
+      chooseReingest: async ({ diff, inputPath, config }) => {
+        const r = await ensureRenderer();
+        const display = await ensureDisplay(config);
+        return promptForChoice(r, diff, display, inputPath);
+      },
+      stderr: console,
+    });
+  } catch (err) {
+    if (err instanceof ReviewSetupError) {
+      console.error(err.message);
+      for (const line of err.lines) console.error(line === "" ? "" : `  ${line}`);
+      process.exit(err.code);
     }
+    throw err;
   }
 
-  // After ingest settles, check whether the stored threshold fingerprint
-  // matches the current config. Different (or unset) → re-evaluate
-  // low_confidence Issues against the new thresholds without a full re-ingest.
-  // Same → cheap no-op (one meta read).
-  applyThresholdsOnStartup(db, thresholds);
-
-  const unknown = findUnknownLabels(db, config.labels);
-  if (unknown.length > 0) {
-    console.error("labellens: configured label set is missing values referenced by stored data.");
-    for (const u of unknown) {
-      console.error(`  '${u.label}' — ${u.count} record${u.count === 1 ? "" : "s"}`);
-    }
-    console.error("");
-    console.error("Either re-add the missing label(s) to labellens.config.json, or remap them");
-    console.error("to a label that is already configured:");
-    for (const u of unknown) {
-      console.error(`  labellens migrate --rename ${u.label}:<configured-replacement>`);
-    }
-    db.$client.close();
-    process.exit(2);
+  if (prepared.cancelled) {
+    if (renderer) (renderer as CliRenderer).destroy();
+    process.exit(0);
   }
 
-  const r = await ensureRenderer();
-  const display = await ensureDisplay();
+  const { db, config, allCommands, configPath: preparedConfigPath, initialScreen } = prepared;
+  const display = await ensureDisplay(config);
+
   // The `updateAssistantConfig` effect persists assistant settings back to the
   // config file when the reviewer finishes the configure-assistant flow. If
   // the file isn't writable (read-only volume, locked, wrong perms) the write
@@ -214,18 +154,19 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
   // API key. Warn early so they can fix perms before that point. We don't
   // crash: the in-memory session still works without persistence.
   try {
-    accessSync(configPath, fsConstants.W_OK);
+    accessSync(preparedConfigPath, fsConstants.W_OK);
   } catch {
     console.error(
-      `labellens: warning — ${configPath} is not writable; assistant settings won't persist across launches.`,
+      `labellens: warning — ${preparedConfigPath} is not writable; assistant settings won't persist across launches.`,
     );
   }
+  const r = await ensureRenderer();
   const app = createAppContext({
     db,
     config,
     display,
     localOnly,
-    configPath,
+    configPath: preparedConfigPath,
     requestRender: () => {},
     onQuit: () => {
       r.destroy();
@@ -257,11 +198,163 @@ export async function runReview(args: { localOnly?: boolean } = {}): Promise<voi
     app.openOverlay({ kind: "queue", state: openQueue(app) });
   };
 
-  if (chooseInitialScreen(db) === "queue") {
+  if (initialScreen === "queue") {
     app.openQueueScreen?.();
   } else {
     mountReview("pending");
   }
+}
+
+export async function prepareReviewState(
+  args: PrepareReviewStateArgs = {},
+): Promise<PreparedReviewState> {
+  const cwd = args.cwd ? resolve(args.cwd) : process.cwd();
+  const localOnly = args.localOnly ?? false;
+  const configPath = resolve(cwd, "labellens.config.json");
+  const stderr = args.stderr ?? console;
+
+  if (!existsSync(configPath)) {
+    throw new ReviewSetupError(MISSING_CONFIG_MESSAGE);
+  }
+
+  let config: LabellensConfig;
+  try {
+    config = await loadConfig(configPath);
+  } catch (err) {
+    if (err instanceof ConfigLoadError) {
+      throw new ReviewSetupError(err.message, err.errors);
+    }
+    throw err;
+  }
+
+  const presetResult = resolvePreset(ALL_COMMANDS, config.keys);
+  if (presetResult.errors.length > 0) {
+    throw new ReviewSetupError("labellens: invalid config.keys", presetResult.errors);
+  }
+  const allCommands = presetResult.commands;
+
+  const reservedForLabels = reservedReviewKeys(allCommands);
+  const keyError = validateLabelKeys(config, reservedForLabels);
+  if (keyError) {
+    throw new ReviewSetupError("labellens: invalid config.labels[].key", keyError.split("\n"));
+  }
+
+  const fieldOverridesError = validateFieldOverrides(config);
+  if (fieldOverridesError) {
+    throw new ReviewSetupError(
+      "labellens: invalid output.fieldOverrides",
+      fieldOverridesError.split("\n"),
+    );
+  }
+
+  const localOnlyError = validateLocalOnly(config, localOnly);
+  if (localOnlyError) {
+    throw new ReviewSetupError(`labellens: ${localOnlyError}`);
+  }
+
+  const inputPath = resolve(dirname(configPath), config.input.path);
+  const stateDir = join(dirname(configPath), ".labellens");
+  const stateDbPath = join(stateDir, "state.db");
+
+  let db = openDb(stateDbPath);
+
+  const recordCount = (handle: Db) =>
+    handle.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM records`)[0]!.n;
+
+  const isEmpty = recordCount(db) === 0;
+  const stored = readFingerprint(db, inputPath);
+  const current = await computeFingerprint(inputPath);
+
+  const thresholds: LowConfidenceThresholds = thresholdsFromConfig(config.signals?.lowConfidence);
+
+  if (isEmpty) {
+    stderr.error(`Ingesting ${inputPath}...`);
+    const result = await ingestFile(db, inputPath, config.input.fields);
+    stderr.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
+    stderr.error("Computing prioritization signals...");
+    const signals = runSignals(db, signalsOptions(config));
+    stderr.error(`  wrote ${signals.written} issue rows`);
+    recordAppliedThresholds(db, thresholds);
+    writeFingerprint(db, inputPath, current);
+  } else if (!stored) {
+    // Legacy DB from before slice 9 (no fingerprint row). Trust existing data;
+    // record the current source fingerprint so future runs can diff.
+    writeFingerprint(db, inputPath, current);
+  } else if (stored.mtime !== current.mtime || stored.contentSha256 !== current.contentSha256) {
+    const diff = await diffIngest(db, inputPath, config.input.fields);
+    if (
+      diff.predictionsOnly.length === 0 &&
+      diff.orphans.length === 0 &&
+      diff.newRecords.length === 0
+    ) {
+      // mtime touched but content identical (e.g. `touch` on the file).
+      writeFingerprint(db, inputPath, current);
+    } else {
+      const choice = await args.chooseReingest?.({ diff, inputPath, config });
+      if (!choice) {
+        db.$client.close();
+        throw new ReviewSetupError(
+          "labellens: source file changed but no re-ingest handler was provided",
+        );
+      }
+      if (choice === "cancel") {
+        db.$client.close();
+        return {
+          db,
+          config,
+          configPath,
+          inputPath,
+          allCommands,
+          initialScreen: "review",
+          localOnly,
+          cancelled: true,
+        };
+      }
+      if (choice === "fresh") {
+        db = await freshReingest(db, stateDir, stateDbPath, inputPath, config, stderr);
+        recordAppliedThresholds(db, thresholds);
+        writeFingerprint(db, inputPath, current);
+      } else {
+        applyDiff(db, diff);
+        runSignals(db, signalsOptions(config));
+        recordAppliedThresholds(db, thresholds);
+        writeFingerprint(db, inputPath, current);
+      }
+    }
+  }
+
+  // After ingest settles, check whether the stored threshold fingerprint
+  // matches the current config. Different (or unset) → re-evaluate
+  // low_confidence Issues against the new thresholds without a full re-ingest.
+  // Same → cheap no-op (one meta read).
+  applyThresholdsOnStartup(db, thresholds);
+
+  const unknown = findUnknownLabels(db, config.labels);
+  if (unknown.length > 0) {
+    const lines = [
+      ...unknown.map((u) => `'${u.label}' — ${u.count} record${u.count === 1 ? "" : "s"}`),
+      "",
+      "Either re-add the missing label(s) to labellens.config.json, or remap them",
+      "to a label that is already configured:",
+      ...unknown.map((u) => `labellens migrate --rename ${u.label}:<configured-replacement>`),
+    ];
+    db.$client.close();
+    throw new ReviewSetupError(
+      "labellens: configured label set is missing values referenced by stored data.",
+      lines,
+    );
+  }
+
+  return {
+    db,
+    config,
+    configPath,
+    inputPath,
+    allCommands,
+    initialScreen: chooseInitialScreen(db),
+    localOnly,
+    cancelled: false,
+  };
 }
 
 /**
@@ -331,6 +424,7 @@ async function freshReingest(
   stateDbPath: string,
   inputPath: string,
   config: LabellensConfig,
+  stderr: ReviewSetupStderr = console,
 ): Promise<Db> {
   db.$client.close();
   let bakDir = `${stateDir}.bak`;
@@ -338,15 +432,15 @@ async function freshReingest(
     bakDir = `${stateDir}.bak-${Date.now()}`;
   }
   renameSync(stateDir, bakDir);
-  console.error(`Backed up state to ${bakDir}`);
+  stderr.error(`Backed up state to ${bakDir}`);
 
   const fresh = openDb(stateDbPath);
-  console.error(`Ingesting ${inputPath}...`);
+  stderr.error(`Ingesting ${inputPath}...`);
   const result = await ingestFile(fresh, inputPath, config.input.fields);
-  console.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
-  console.error("Computing prioritization signals...");
+  stderr.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
+  stderr.error("Computing prioritization signals...");
   const signals = runSignals(fresh, signalsOptions(config));
-  console.error(`  wrote ${signals.written} issue rows`);
+  stderr.error(`  wrote ${signals.written} issue rows`);
   return fresh;
 }
 
