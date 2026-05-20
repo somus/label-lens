@@ -21,8 +21,8 @@ function simpleConfig(): LabellensConfig {
 
 async function setup() {
   const store = await openTmpStore({ ingest: "tiny.jsonl" });
-  const { renderer, mockInput, renderOnce } = await createTestRenderer({
-    width: 100,
+  const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({
+    width: 140,
     height: 24,
   });
   const config = simpleConfig();
@@ -38,7 +38,7 @@ async function setup() {
   });
   mountReviewScreen({ renderer, app, registry });
   await renderOnce();
-  return { store, app, mockInput, renderOnce };
+  return { store, app, mockInput, renderOnce, captureCharFrame };
 }
 
 describe("simple preset end-to-end through review screen", () => {
@@ -80,5 +80,19 @@ describe("simple preset end-to-end through review screen", () => {
     mockInput.pressKey("p", { ctrl: true });
     await renderOnce();
     expect(app.overlay?.kind).toBe("palette");
+  });
+
+  test("action footer renders the arrow nav cluster and queue cycle suffix under simple", async () => {
+    const { captureCharFrame } = await setup();
+    const frame = captureCharFrame();
+    // Combined nav cluster: record.next + record.prev → `[↓/↑] nav`.
+    expect(frame).toContain("[↓/↑] nav");
+    // Queue cycle suffix: queue.prev + queue.next → `queues ←/→`.
+    expect(frame).toContain("queues ←/→");
+    // Palette uses ctrl+p under simple → `[^p] palette`.
+    expect(frame).toContain("[^p] palette");
+    // Vim-only j/k aliases are gone from the footer.
+    expect(frame).not.toContain("[j/k] nav");
+    expect(frame).not.toContain("queues [/]");
   });
 });

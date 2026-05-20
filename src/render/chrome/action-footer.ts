@@ -55,10 +55,10 @@ function displayKey(binding: string): string {
 }
 
 /**
- * Append a `[‹prev›/‹next›]` cycle-keys suffix to the queue-screen footer
+ * Append a `‹prev›/‹next›` cycle-keys suffix to the queue-screen footer
  * entry when both `queue.prev` and `queue.next` are bound. Reads resolved
  * bindings from the registry so the suffix tracks the active preset (vim
- * shows `[/]`, simple shows `[←/→]`) without baking either form into the
+ * shows `[/]`, simple shows `←/→`) without baking either form into the
  * static `footer.label`.
  */
 function queueCycleSuffix(registry: CommandRegistry): string {
@@ -73,6 +73,21 @@ function queueCycleSuffix(registry: CommandRegistry): string {
   return ` ${displayKey(prevKey)}/${displayKey(nextKey)}`;
 }
 
+/**
+ * Combined `[‹next›/‹prev›]` key cluster for the `record.next` footer entry —
+ * one slot shows both directions of cursor nav. Vim renders `[j/k]`; simple
+ * renders `[↓/↑]`. Returns null if the partner binding is missing so the
+ * caller can fall back to the single-key default.
+ */
+function navKeysCluster(registry: CommandRegistry): string | null {
+  const next = registry.get("record.next");
+  const prev = registry.get("record.prev");
+  const nextKey = next ? firstBinding(next) : null;
+  const prevKey = prev ? firstBinding(prev) : null;
+  if (!nextKey || !prevKey) return null;
+  return `${displayKey(nextKey)}/${displayKey(prevKey)}`;
+}
+
 export function collectFooterEntries(
   registry: CommandRegistry,
   scope: Scope,
@@ -80,6 +95,7 @@ export function collectFooterEntries(
 ): FooterEntry[] {
   const out: FooterEntry[] = [];
   const cycleSuffix = queueCycleSuffix(registry);
+  const navCluster = navKeysCluster(registry);
   for (const cmd of registry.values()) {
     if (!cmd.footer) continue;
     const inScope =
@@ -94,8 +110,13 @@ export function collectFooterEntries(
     const enabled = cmd.enabled ? cmd.enabled(ctx) : true;
     const label =
       cmd.name === "queue.openScreen" ? `${cmd.footer.label}${cycleSuffix}` : cmd.footer.label;
+    // `record.next` renders the combined `next/prev` key cluster so reviewers
+    // see both nav directions in one slot. Falls back to the single binding
+    // when the partner command is unbound.
+    const renderedBinding =
+      cmd.name === "record.next" && navCluster !== null ? navCluster : displayKey(binding);
     out.push({
-      binding: displayKey(binding),
+      binding: renderedBinding,
       label,
       order: cmd.footer.order ?? 1000,
       disabled: !enabled,
