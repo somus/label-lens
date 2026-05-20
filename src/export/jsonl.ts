@@ -1,4 +1,5 @@
 import type { OutputFieldOverrides } from "../config/config.ts";
+import { decodeLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { projectMeta } from "./meta.ts";
@@ -9,6 +10,8 @@ export type ExportJsonlOptions = {
   includeRejected?: boolean;
   includeSkipped?: boolean;
   includeOrphans?: boolean;
+  /** When true, decode `final_label` as a JSON array text and emit `string[]`. */
+  multiLabel?: boolean;
   fieldOverrides?: OutputFieldOverrides;
 };
 
@@ -34,10 +37,17 @@ export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string
     if (!accepted && !(rejected && opts.includeRejected) && !(skipped && opts.includeSkipped))
       continue;
     const meta = projectMeta(record.raw);
+    const labelValue = accepted
+      ? opts.multiLabel
+        ? review.final_label === null
+          ? null
+          : decodeLabelSet(review.final_label)
+        : review.final_label
+      : null;
     const row: Record<string, unknown> = {
       [keys.id]: record.id,
       [keys.text]: record.text,
-      [keys.label]: accepted ? review.final_label : null,
+      [keys.label]: labelValue,
       [keys.reviewed_at]: review.reviewed_at,
     };
     if (record.document_id !== null) row[keys.document_id] = record.document_id;

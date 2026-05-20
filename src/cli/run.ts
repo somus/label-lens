@@ -14,7 +14,7 @@ import {
 } from "../config/config.ts";
 import { ConfigLoadError, loadConfig } from "../config/load.ts";
 import { computeFingerprint, readFingerprint, writeFingerprint } from "../ingest/fingerprint.ts";
-import { ingestFile } from "../ingest/ingest.ts";
+import { ingestFile, ingestTaskOptionsFromConfig } from "../ingest/ingest.ts";
 import { applyDiff, type DiffResult, diffIngest } from "../ingest/reingest.ts";
 import { resolvePreset } from "../keymap/preset.ts";
 import { openQueue } from "../overlay/queue.ts";
@@ -269,8 +269,18 @@ export async function prepareReviewState(
 
   if (isEmpty) {
     stderr.error(`Ingesting ${inputPath}...`);
-    const result = await ingestFile(db, inputPath, config.input.fields);
+    const result = await ingestFile(
+      db,
+      inputPath,
+      config.input.fields,
+      ingestTaskOptionsFromConfig(config),
+    );
     stderr.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
+    for (const w of result.warnings) stderr.error(`  ${w}`);
+    if (result.warningCount > result.warnings.length) {
+      const overflow = result.warningCount - result.warnings.length;
+      stderr.error(`  …and ${overflow} more warnings suppressed (total ${result.warningCount})`);
+    }
     stderr.error("Computing prioritization signals...");
     const signals = runSignals(db, signalsOptions(config));
     stderr.error(`  wrote ${signals.written} issue rows`);
@@ -436,8 +446,18 @@ async function freshReingest(
 
   const fresh = openDb(stateDbPath);
   stderr.error(`Ingesting ${inputPath}...`);
-  const result = await ingestFile(fresh, inputPath, config.input.fields);
+  const result = await ingestFile(
+    fresh,
+    inputPath,
+    config.input.fields,
+    ingestTaskOptionsFromConfig(config),
+  );
   stderr.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
+  for (const w of result.warnings) stderr.error(`  ${w}`);
+  if (result.warningCount > result.warnings.length) {
+    const overflow = result.warningCount - result.warnings.length;
+    stderr.error(`  …and ${overflow} more warnings suppressed (total ${result.warningCount})`);
+  }
   stderr.error("Computing prioritization signals...");
   const signals = runSignals(fresh, signalsOptions(config));
   stderr.error(`  wrote ${signals.written} issue rows`);

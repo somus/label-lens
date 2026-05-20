@@ -3,7 +3,7 @@ import type { Box } from "../../../render/box.ts";
 import type { ResolvedDisplay } from "../../../render/capability.ts";
 import type { RecordWithPrimaryPrediction } from "../../../types.ts";
 
-export type TaskKind = "classification" | "boundary";
+export type TaskKind = "classification" | "boundary" | "multi-label";
 
 export type DecisionRenderArgs = {
   record: RecordWithPrimaryPrediction | null;
@@ -12,6 +12,10 @@ export type DecisionRenderArgs = {
   /** Width budget for section headers / decision rows — matches the
    *  shared content width passed to other regions. */
   contentWidth: number;
+  /** In-progress multi-label draft set for the focused record, if any.
+   * Renderers ignore this when undefined or when the task is single-label.
+   * Threaded from `AppContext.multiLabelDraft` by the review screen. */
+  multiLabelDraft?: Set<string>;
 };
 
 /**

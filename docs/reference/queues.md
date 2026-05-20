@@ -44,6 +44,8 @@ Drilldown target from the stats surface's "By source" rows.
 
 Effective `final_label` (if reviewed) or `primary_label` (if not). Reviewer-set labels take precedence over predictions.
 
+Under `task: "multi-label"`, both columns store canonical JSON array text and `by-label:<l>` matches via set membership — Records whose committed Annotation set contains `<l>`, or unreviewed Records whose primary Prediction set contains `<l>`.
+
 ### `by-issue:<t>`
 
 `EXISTS (issues WHERE type = <t>)`. Built-in issue types:

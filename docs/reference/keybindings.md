@@ -57,6 +57,8 @@ The default scope when no overlay or screen is open.
 
 ## Relabel picker (`r`)
 
+Under `task: "classification"` / `"boundary"` (single-label).
+
 | Key | Action |
 |---|---|
 | `1`–`9` | Pick visible candidate at that position |
@@ -65,6 +67,48 @@ The default scope when no overlay or screen is open.
 | `backspace` | Pop one filter char |
 | `↑` / `↓` | Move highlight |
 | `Enter` | Commit highlighted label |
+| `Esc` | Cancel |
+
+## Multi-label inline editing (review scope under `task: "multi-label"`)
+
+The chip rail itself doubles as the editor — no overlay needed for routine toggles.
+
+| Key | Action |
+|---|---|
+| `1`–`9` | Toggle the label at that position in / out of the draft set. First toggle on a fresh record seeds the draft from the primary Prediction set, so the keystroke removes/adds against the predicted set, not against `{}`. |
+| `<key>` | Configured per-label key (`config.labels[].key`) — toggles that label, same as the digit shortcut. |
+| `Enter` | Commit the current draft set. Status follows set equality with the primary Prediction set: `accepted` when equal, `relabeled` when different. Empty draft is refused — use `x` (reject) instead. |
+| `a` | Accept the full primary Prediction set verbatim (ignores the in-progress draft). |
+| `x` | Reject (status `rejected`, `final_label = null`, `prev_label` = encoded primary set). |
+| `s` | Skip. |
+| `r` | Open the multi-label picker overlay (full filter + search). Seeded from the current draft when one exists, otherwise from the primary Prediction set. |
+
+Diff glyphs in the chip rail encode the draft vs. predicted state:
+
+| Glyph | Meaning |
+|---|---|
+| `=` | Label is in both the predicted set and the draft (kept). |
+| `+` | Label was toggled in (not predicted). |
+| `-` | Label was toggled out (predicted, removed). |
+| ` ` (space) | Neither predicted nor selected. |
+
+When no draft exists, the rail falls back to the original glyph language: `◆` for predicted labels (or `*` at mono / 16-color) and ` ` otherwise.
+
+The trailing status on the rail summarises what `Enter` will commit: `accept [enter]`, `relabel (-N +N) [enter]`, or `empty — Enter refused [x] reject`.
+
+`record.next` / `record.prev` clears the draft; the next record starts from its own primary Prediction view.
+
+## Multi-label picker (`r` under `task: "multi-label"`)
+
+| Key | Action |
+|---|---|
+| `Space` | Toggle highlighted label in / out of the selected set |
+| `1`–`9` | Move highlight to that position (does not toggle / commit) |
+| `<key>` | Configured per-label key — toggles that label |
+| `<char>` | Type into filter; candidates re-rank |
+| `backspace` | Pop one filter char |
+| `↑` / `↓` | Move highlight |
+| `Enter` | Commit current selected set (`accepted` if set equals primary Prediction, else `relabeled`). Empty selected set is refused — use `x` (reject) instead. |
 | `Esc` | Cancel |
 
 ## Assistant overlay (`i`)

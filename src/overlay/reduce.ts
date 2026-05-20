@@ -4,6 +4,7 @@ import { reduceConfigureAssistant } from "./configure-assistant.ts";
 import { reduceFilterBuilder } from "./filter-builder.ts";
 import { reduceGuidelines } from "./guidelines.ts";
 import { reduceHelp } from "./help.ts";
+import { reduceMultiLabelPicker } from "./multi-label-picker.ts";
 import { reduceNote } from "./note.ts";
 import { reducePalette } from "./palette.ts";
 import { reducePicker } from "./picker.ts";
@@ -16,6 +17,8 @@ export function reduceOverlay(overlay: Overlay, event: OverlayEvent): ReduceResu
   switch (overlay.kind) {
     case "picker":
       return reducePicker(overlay.state, event);
+    case "multi-label-picker":
+      return reduceMultiLabelPicker(overlay.state, event);
     case "note":
       return reduceNote(overlay.state, event);
     case "assistant":

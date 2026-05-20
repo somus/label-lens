@@ -1,4 +1,5 @@
 import type { OutputFieldOverrides } from "../config/config.ts";
+import { decodeLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { withOrphanFilter } from "./where.ts";
@@ -9,6 +10,8 @@ export type ExportCsvOptions = {
   includeSkipped?: boolean;
   includeOrphans?: boolean;
   multiLabelSeparator?: string;
+  /** When true, decode `final_label` as a JSON array text before joining. */
+  multiLabel?: boolean;
   fieldOverrides?: OutputFieldOverrides;
 };
 
@@ -59,10 +62,18 @@ export function exportCsvString(db: Db, opts: ExportCsvOptions = {}): string {
     const skipped = review.status === "skipped";
     if (!accepted && !(rejected && opts.includeRejected) && !(skipped && opts.includeSkipped))
       continue;
+    const labelValue = accepted
+      ? opts.multiLabel
+        ? formatCsvLabel(
+            review.final_label === null ? null : decodeLabelSet(review.final_label),
+            separator,
+          )
+        : formatCsvLabel(review.final_label, separator)
+      : "";
     data.push({
       id: record.id,
       text: record.text,
-      label: accepted ? formatCsvLabel(review.final_label, separator) : "",
+      label: labelValue,
       reviewedAt: review.reviewed_at,
       documentId: record.document_id,
     });

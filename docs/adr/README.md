@@ -26,3 +26,4 @@ Load-bearing design decisions for LabelLens. Each ADR captures the context, the 
 | [0012](./0012-where-dsl-excludes-orphans-by-default.md) | `where:` DSL excludes orphans by default | Accepted   |
 | [0013](./0013-overlay-key-propagation.md) | Overlay key propagation | Accepted   |
 | [0014](./0014-keybinding-presets.md) | Keybinding presets (simple/vim + custom) | Accepted   |
+| [0015](./0015-multi-label-storage.md) | Multi-label storage: JSON array text in `final_label` | Accepted   |

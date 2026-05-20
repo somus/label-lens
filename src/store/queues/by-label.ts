@@ -1,6 +1,12 @@
 import { and, asc, eq, or } from "drizzle-orm";
 import { recordsWithPrimary } from "../schema.ts";
-import { latestEffectiveFinalLabel, nonOrphan, unreviewed } from "./predicates.ts";
+import {
+  latestEffectiveFinalLabel,
+  latestEffectiveFinalLabelContains,
+  nonOrphan,
+  primaryLabelContains,
+  unreviewed,
+} from "./predicates.ts";
 import type { QueueDefinition } from "./registry.ts";
 
 /**
@@ -26,7 +32,9 @@ export function byLabel(value: string): QueueDefinition {
       where: and(
         or(
           latestEffectiveFinalLabel(value),
+          latestEffectiveFinalLabelContains(value),
           and(unreviewed(), eq(recordsWithPrimary.primaryLabel, value)),
+          and(unreviewed(), primaryLabelContains(value)),
         ),
         nonOrphan(),
       ),

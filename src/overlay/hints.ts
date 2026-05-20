@@ -64,6 +64,15 @@ export function overlayFooterHint(overlay: Overlay, preset: OverlayKeyPreset = "
         { text: "[esc] ", tone: "accent" },
         { text: "cancel", tone: "muted" },
       ];
+    case "multi-label-picker":
+      return [
+        { text: "[space] ", tone: "accent" },
+        { text: "toggle  ", tone: "muted" },
+        { text: "[enter] ", tone: "accent" },
+        { text: "commit  ", tone: "muted" },
+        { text: "[esc] ", tone: "accent" },
+        { text: "cancel", tone: "muted" },
+      ];
     case "note":
       return [
         { text: "[enter] ", tone: "accent" },

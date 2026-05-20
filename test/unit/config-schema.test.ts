@@ -37,7 +37,7 @@ describe("validateConfigSchema", () => {
   });
 
   test("rejects unknown `task` value", () => {
-    const bad: Record<string, unknown> = { ...makeValid(), task: "multi-label" };
+    const bad: Record<string, unknown> = { ...makeValid(), task: "span-tagging" };
     const errors = validateConfigSchema(bad);
     expect(errors.length).toBeGreaterThan(0);
   });

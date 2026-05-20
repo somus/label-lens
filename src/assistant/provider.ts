@@ -5,7 +5,15 @@ import type { Db } from "../store/db.ts";
 import { envVarFor, resolveApiKey } from "./env.ts";
 import { type CanonicalPromptInput, canonicalizePrompt, hashPrompt } from "./prompt.ts";
 import { buildAssistantPrompt } from "./prompt-template.ts";
-import { type AssistantResponse, AssistantResponseSchema, isAssistantResponse } from "./schema.ts";
+import {
+  type AssistantMultiLabelResponse,
+  AssistantMultiLabelResponseSchema,
+  type AssistantResponse,
+  type AssistantResponseAny,
+  AssistantResponseSchema,
+  isAssistantMultiLabelResponse,
+  isAssistantResponse,
+} from "./schema.ts";
 
 const SUBMIT_TOOL_NAME = "submit_label_suggestion";
 
@@ -16,12 +24,43 @@ const SUBMIT_TOOL_NAME = "submit_label_suggestion";
  * can only return one of our names. Falls back to the open AssistantResponseSchema
  * when labelNames is empty (testing / edge case).
  */
-function buildSubmitTool(labelNames: readonly string[]): Tool {
+function buildSubmitTool(labelNames: readonly string[], multiLabel = false): Tool {
   if (labelNames.length === 0) {
     return {
       name: SUBMIT_TOOL_NAME,
       description: "Submit your label suggestion for the candidate record. Call this exactly once.",
-      parameters: AssistantResponseSchema,
+      parameters: multiLabel ? AssistantMultiLabelResponseSchema : AssistantResponseSchema,
+    };
+  }
+  if (multiLabel) {
+    const MultiLabelConstrained = Type.Object({
+      suggestedLabels: Type.Array(
+        StringEnum([...labelNames] as [string, ...string[]], {
+          description: "Configured labels to recommend. Each must be one of the listed values.",
+        }),
+        { description: "Complete recommended label set (zero or more)." },
+      ),
+      confidence: StringEnum(["low", "medium", "high"], {
+        description: "Assistant's confidence in its own recommendation.",
+      }),
+      reasoning: Type.String({
+        description: "Markdown-formatted explanation of the recommendation.",
+      }),
+      evidenceFor: Type.Array(Type.String(), {
+        description: "Short bullet phrases supporting the suggested set.",
+      }),
+      evidenceAgainst: Type.Array(Type.String(), {
+        description: "Short bullet phrases against the suggested set.",
+      }),
+      recommendedAction: StringEnum(["accept", "relabel", "reject", "skip"], {
+        description: "How the reviewer should commit.",
+      }),
+    });
+    return {
+      name: SUBMIT_TOOL_NAME,
+      description:
+        "Submit your multi-label suggestion for the candidate record. Call this exactly once with the complete set.",
+      parameters: MultiLabelConstrained,
     };
   }
   const ConstrainedSchema = Type.Object({
@@ -65,6 +104,9 @@ export type QueryAssistantArgs = {
   promptInput: CanonicalPromptInput;
   /** Names from `config.labels[].name`; used to reject hallucinated `suggestedLabel` values before caching. */
   labelNames: readonly string[];
+  /** When true, the assistant emits a `suggestedLabels: string[]` payload via
+   * the multi-label tool. When false (default), single-label. */
+  multiLabel?: boolean;
   /** Receives each text-delta token as the model streams. Caller renders into footer / reasoning buffer. */
   onToken?: (token: string) => void;
   /** Notified once when the privacy gate forces a halt — UI prompts the reviewer to acknowledge. */
@@ -74,7 +116,7 @@ export type QueryAssistantArgs = {
 };
 
 export type QueryAssistantResult = {
-  response: AssistantResponse;
+  response: AssistantResponseAny;
   wasCached: boolean;
 };
 
@@ -127,6 +169,7 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
     model,
     promptInput,
     labelNames,
+    multiLabel,
     onToken,
     onPrivacyGate,
     signal,
@@ -173,7 +216,7 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   // once. The tool's `suggestedLabel` parameter is a StringEnum over the
   // configured labels so the model can't hallucinate names that aren't in
   // config.labels.
-  const tool = buildSubmitTool(labelNames);
+  const tool = buildSubmitTool(labelNames, multiLabel === true);
   const ctx = {
     systemPrompt,
     messages: [{ role: "user" as const, content: userPrompt, timestamp: Date.now() }],
@@ -236,6 +279,25 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
       "no-tool-call",
       `Model finished without calling ${SUBMIT_TOOL_NAME}.`,
     );
+  }
+  if (multiLabel === true) {
+    if (!isAssistantMultiLabelResponse(finalToolCall.arguments)) {
+      throw new AssistantQueryError(
+        "schema-mismatch",
+        `${SUBMIT_TOOL_NAME} arguments do not match AssistantMultiLabelResponseSchema.`,
+      );
+    }
+    const response = finalToolCall.arguments as AssistantMultiLabelResponse;
+    const labelSet = new Set(labelNames);
+    const bad = response.suggestedLabels.filter((l) => !labelSet.has(l));
+    if (bad.length > 0) {
+      throw new AssistantQueryError(
+        "invalid-label",
+        `Model suggested labels not in config.labels: ${bad.join(", ")}.`,
+      );
+    }
+    cacheAssistantResponse(db, recordId, promptHash, response);
+    return { response, wasCached: false };
   }
   if (!isAssistantResponse(finalToolCall.arguments)) {
     throw new AssistantQueryError(

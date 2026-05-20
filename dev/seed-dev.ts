@@ -10,6 +10,7 @@
  *   bun run dev/seed-dev.ts --count 1000          # bigger
  *   bun run dev/seed-dev.ts --seed 42             # different deterministic dataset
  *   bun run dev/seed-dev.ts --task boundary       # boundary task fixture (3-5 docs)
+ *   bun run dev/seed-dev.ts --task multi-label    # content-moderation fixture
  *   LL_DEV_DIR=/tmp/foo bun run dev/seed-dev.ts
  */
 
@@ -17,7 +18,8 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { LabellensConfig } from "../src/config/config.ts";
-import { ingestFile } from "../src/ingest/ingest.ts";
+import { ingestFile, ingestTaskOptionsFromConfig } from "../src/ingest/ingest.ts";
+import { encodeLabelSet } from "../src/labels/label-set.ts";
 import { runSignals } from "../src/signals/run.ts";
 import { openDb } from "../src/store/db.ts";
 import { insertReview, updateRecordNote } from "../src/store/records.ts";
@@ -28,12 +30,14 @@ import {
   type GeneratedRecord,
   generateBoundary,
   generateClassification,
+  generateMultiLabel,
   LABELS,
+  MULTI_LABELS,
   rng,
   serializeJsonl,
 } from "./fixtures/generator.ts";
 
-type Task = "classification" | "boundary";
+type Task = "classification" | "boundary" | "multi-label";
 type GenOptions = {
   count: number;
   seed: number;
@@ -83,8 +87,8 @@ function parseArgs(): GenOptions {
     else if (arg === "--no-prefill") out.noPrefill = true;
     else if (arg === "--task") {
       const v = process.argv[++i];
-      if (v !== "classification" && v !== "boundary") {
-        throw new Error("--task must be 'classification' or 'boundary'");
+      if (v !== "classification" && v !== "boundary" && v !== "multi-label") {
+        throw new Error("--task must be 'classification', 'boundary', or 'multi-label'");
       }
       out.task = v;
     }
@@ -116,11 +120,33 @@ function generate(opts: GenOptions): GeneratedRecord[] {
       withMultiSource: opts.withBoundaryMultiSource,
     }).records;
   }
+  if (opts.task === "multi-label") {
+    return generateMultiLabel({ seed: opts.seed, count: opts.count }).records;
+  }
   return generateClassification({
     seed: opts.seed,
     count: opts.count,
     withDuplicates: opts.withDuplicates,
   }).records;
+}
+
+/**
+ * `labellens init` infers `classification` / `boundary` from the JSONL. For
+ * the multi-label dev fixture we want `task: "multi-label"` with the
+ * canonical moderation label set — overwrite the inferred config to match.
+ */
+async function patchConfigForMultiLabel(configPath: string): Promise<void> {
+  const parsed = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
+  parsed.task = "multi-label";
+  parsed.labels = [...MULTI_LABELS];
+  parsed.output = {
+    ...parsed.output,
+    csvMultiLabelSeparator: parsed.output.csvMultiLabelSeparator ?? ";",
+  };
+  await Bun.write(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
+  console.log(
+    `Multi-label: rewrote config.task and config.labels (${parsed.labels.length} labels).`,
+  );
 }
 
 /**
@@ -197,7 +223,11 @@ function prefillStateOpen(db: ReturnType<typeof openDb>, opts: GenOptions): void
     // labels that don't exist in the generated config (e.g. classification
     // labels into a boundary dataset).
     const taskLabels: readonly string[] =
-      opts.task === "boundary" ? BOUNDARY_LABELS : LABELS.filter((l) => l !== "other");
+      opts.task === "boundary"
+        ? BOUNDARY_LABELS
+        : opts.task === "multi-label"
+          ? MULTI_LABELS
+          : LABELS.filter((l) => l !== "other");
     const otherLabels = taskLabels;
     let reviews = 0;
     for (let i = 0; i < opts.withReviews && candidates.length > 0; i++) {
@@ -212,6 +242,21 @@ function prefillStateOpen(db: ReturnType<typeof openDb>, opts: GenOptions): void
           status: "accepted",
           final_label: predicted,
           prev_label: null,
+          source_of_truth: "human",
+        });
+      } else if (opts.task === "multi-label") {
+        // Multi-label flip: pick a different single configured label as the
+        // committed set so prev != final and status='relabeled' fires.
+        const fallback = otherLabels[0]!;
+        const flipLabel =
+          otherLabels.filter((l) => l !== fallback)[
+            Math.floor(rand() * (otherLabels.length - 1))
+          ] ?? fallback;
+        insertReview(db, {
+          record_id: row.id,
+          status: "relabeled",
+          final_label: encodeLabelSet([flipLabel]),
+          prev_label: predicted,
           source_of_truth: "human",
         });
       } else {
@@ -265,12 +310,21 @@ async function main(): Promise<void> {
   if (opts.withManyLabels && opts.task === "classification") {
     await patchConfigForManyLabels(configPath);
   }
+  if (opts.task === "multi-label") {
+    await patchConfigForMultiLabel(configPath);
+  }
   const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
   const dbPath = join(dir, ".labellens", "state.db");
   const db = openDb(dbPath);
   try {
-    const ingestResult = await ingestFile(db, dataPath, config.input.fields);
+    const ingestResult = await ingestFile(
+      db,
+      dataPath,
+      config.input.fields,
+      ingestTaskOptionsFromConfig(config),
+    );
     console.log(`Ingested ${ingestResult.ingested}, skipped ${ingestResult.skipped}.`);
+    for (const w of ingestResult.warnings) console.log(`  warn: ${w}`);
     const signals = runSignals(db);
     console.log(`Signals: wrote ${signals.written} issue rows.`);
     if (!opts.noPrefill && (opts.withMarks > 0 || opts.withReviews > 0)) {

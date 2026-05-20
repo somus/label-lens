@@ -29,8 +29,8 @@ One row per reviewed record. Reads `effective_reviews` — only the current stat
 | `id` | string | Stable record id (content hash by default, ADR 0001). |
 | `text` | string | Candidate text from the source JSONL. |
 | `context_before` / `context_after` | string \| null | If the source had them. |
-| `final_label` | string \| null | The annotation. Null when status is `rejected` or `skipped`. |
-| `prev_label` | string \| null | The label this overrode (typically the predicted label on relabel). |
+| `final_label` | string \| null \| string[] | The annotation. Null when status is `rejected` or `skipped`. For `task: "multi-label"`, emitted as a JSON array (`["spam","toxicity"]`) of the committed set. |
+| `prev_label` | string \| null | The label this overrode (typically the predicted label on relabel). For multi-label tasks, this is the encoded JSON-array text of the previous set. |
 | `status` | `accepted` \| `relabeled` \| `rejected` \| `skipped` | Latest effective state. |
 | `source_of_truth` | `human` \| `human+assistant` | `human+assistant` whenever the assistant panel was viewed for this record (ADR 0004). |
 | `reviewed_at` | ISO 8601 | UTC timestamp. |
@@ -58,6 +58,12 @@ Same fields as JSONL, flattened. Nested fields (`predictions`) are JSON-stringif
 | `predictions_json` | string (JSON-encoded array) |
 
 CSV is quoted per RFC 4180. Embedded quotes are doubled.
+
+For `task: "multi-label"`, the `final_label` column joins the committed set with `output.csvMultiLabelSeparator` (default `;`) — e.g. `spam;toxicity`. Set a different separator if your labels contain a literal `;`:
+
+```jsonc
+"output": { "path": "reviewed.csv", "format": "csv", "csvMultiLabelSeparator": "|" }
+```
 
 ## `labellens export stats`
 

@@ -1,5 +1,5 @@
 import type { BulkAction, BulkReviewAction } from "../actions/record/bulk.ts";
-import type { AssistantResponse } from "../assistant/schema.ts";
+import type { AssistantResponse, AssistantResponseAny } from "../assistant/schema.ts";
 import type { AssistantConfig } from "../config/config.ts";
 import type { KeyEvent } from "../keymap/engine.ts";
 import type { Predicate } from "../store/queues/predicate.ts";
@@ -8,6 +8,7 @@ import type { RecordWithPrimaryPrediction, ReviewStatus, SourceOfTruth } from ".
 import type { FilterBuilderState } from "./filter-builder.ts";
 import type { GuidelinesState } from "./guidelines.ts";
 import type { HelpState } from "./help.ts";
+import type { MultiLabelPickerState } from "./multi-label-picker.ts";
 import type { PaletteState } from "./palette.ts";
 import type { QueueState } from "./queue.ts";
 import type { StatsOverlayState } from "./stats-overlay.ts";
@@ -64,6 +65,13 @@ export type AssistantBase = {
   /** True after `Tab` press — render reasoning markdown above the footer.
    * Tracked on the base so the reviewer can pre-toggle before `done`. */
   reasoningExpanded: boolean;
+  /** Multi-label context. Present iff the task is multi-label so the reducer
+   * can normalise the suggested set against the configured labels and encode
+   * it for commit. Single-label overlays leave this undefined. */
+  multiLabel?: {
+    configuredLabels: string[];
+    predictedSet: string[];
+  };
 };
 
 /** Discriminated by `status` — each variant carries only the fields that are
@@ -78,8 +86,12 @@ export type AssistantState =
     })
   | (AssistantBase & {
       status: "done";
-      /** Final suggested label after `streamEnd`. */
+      /** Final suggested label after `streamEnd`. Empty when the response is
+       * a multi-label suggestion — read `suggestionSet` instead. */
       suggestion: string;
+      /** Multi-label suggestion (normalised + config-ordered). Present iff
+       * the assistant returned a multi-label response. */
+      suggestionSet?: string[];
       /** Final reasoning markdown after `streamEnd`. */
       reason: string;
       /** Final confidence after `streamEnd`. */
@@ -116,6 +128,7 @@ export type BulkConfirmState = {
 
 export type Overlay =
   | { kind: "picker"; state: PickerState }
+  | { kind: "multi-label-picker"; state: MultiLabelPickerState }
   | { kind: "note"; state: NoteState }
   | { kind: "configure-assistant"; state: ConfigureAssistantState }
   | { kind: "assistant"; state: AssistantState }
@@ -141,7 +154,7 @@ export type OverlayEvent =
   | { kind: "key"; event: KeyEvent; preset?: OverlayKeyPreset }
   | { kind: "paste"; text: string }
   | { kind: "streamToken"; token: string }
-  | { kind: "streamEnd"; response?: AssistantResponse }
+  | { kind: "streamEnd"; response?: AssistantResponseAny }
   | { kind: "streamError"; error: unknown }
   | { kind: "cancel" }
   | { kind: "commit" };

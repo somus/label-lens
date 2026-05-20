@@ -25,6 +25,19 @@ describe("loadConfig", () => {
     expect(config.labels).toEqual(["food"]);
   });
 
+  test("accepts task: 'multi-label'", async () => {
+    const path = writeTmp(
+      JSON.stringify({
+        task: "multi-label",
+        labels: ["spam", "toxicity"],
+        input: { path: "./x.jsonl", format: "jsonl", fields: { text: "text" } },
+        output: { path: "./out.jsonl", format: "jsonl" },
+      }),
+    );
+    const config = await loadConfig(path);
+    expect(config.task).toBe("multi-label");
+  });
+
   test("throws ConfigLoadError with parse hint on malformed JSON", async () => {
     const path = writeTmp("{ this is not json");
     await expect(loadConfig(path)).rejects.toBeInstanceOf(ConfigLoadError);

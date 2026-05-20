@@ -1,0 +1,8 @@
+{"text":"buy cheap watches now www.cheap-watches.example","predictions":[{"label":["spam","promotion"],"confidence":0.92,"source":"moderator:gpt"}]}
+{"text":"discount code XYZ at checkout, limited time!!!","predictions":[{"label":["promotion"],"confidence":0.71,"source":"moderator:gpt"}]}
+{"text":"great recipe, will try this weekend","predictions":[{"label":[],"confidence":0.84,"source":"moderator:gpt"}]}
+{"text":"check my channel youtube.com/@me for similar content","predictions":[{"label":["self-promo"],"confidence":0.78,"source":"moderator:gpt"}]}
+{"text":"what does this have to do with the original post?","predictions":[{"label":["off-topic"],"confidence":0.66,"source":"moderator:gpt"}]}
+{"text":"subscribe to my newsletter for more tips","predictions":[{"label":["self-promo","promotion"],"confidence":0.88,"source":"moderator:gpt"}]}
+{"text":"thanks for sharing, this was helpful","predictions":[{"label":[],"confidence":0.91,"source":"moderator:gpt"}]}
+{"text":"DM me for crypto signals 50% return guaranteed","predictions":[{"label":["spam"],"confidence":0.59,"source":"moderator:gpt"}]}

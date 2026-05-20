@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
+  "task": "multi-label",
+  "labels": [
+    "spam",
+    "toxicity",
+    "promotion",
+    "off-topic",
+    "harassment",
+    "self-promo"
+  ],
+  "input": {
+    "path": "./comments.multilabel.jsonl",
+    "format": "jsonl",
+    "fields": {
+      "text": "text",
+      "prediction": "prediction",
+      "confidence": "confidence",
+      "source": "source"
+    }
+  },
+  "output": {
+    "path": "./reviewed.jsonl",
+    "format": "jsonl",
+    "csvMultiLabelSeparator": ";"
+  },
+  "display": {
+    "color": "truecolor",
+    "banding": "auto",
+    "theme": "dark",
+    "candidatePin": 0.4,
+    "layout": "auto",
+    "motion": "auto",
+    "sidebar": "on",
+    "queuePreview": "auto",
+    "labelChip": "configured"
+  },
+  "navigation": {
+    "smartNext": false
+  },
+  "assistant": {
+    "enabled": false
+  }
+}

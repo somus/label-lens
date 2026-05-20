@@ -9,7 +9,7 @@ The file ships a `$schema` URL pointing at [`schema/labellens.config.schema.json
 ```jsonc
 {
   "$schema": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
-  "task": "classification" | "boundary",
+  "task": "classification" | "boundary" | "multi-label",
   "labels": ["food", "travel", { "name": "salary", "key": "s", "color": "green" }],
   "guidelines": "Optional path or inline markdown.",
   "input":  { "path": "data.jsonl", "format": "jsonl", "fields": { "text": "text", "prediction": "prediction" } },
@@ -33,6 +33,7 @@ For examples and task-selection guidance, see [Review task types](../explanation
 |---|---|
 | `classification` | One label per record. |
 | `boundary` | Segmentation over a document — labels mark entry boundaries (`ENTRY_START`, `CONTINUATION`, etc.). |
+| `multi-label` | Multiple labels can be true at once. Predictions must supply label arrays; `Space` toggles in the relabel picker, `Enter` commits the current set. |
 
 ## `labels` (required)
 

@@ -45,6 +45,7 @@ export function performExport(
   const includeRejected = opts.includeRejected ?? config.output.includeRejected ?? false;
   const includeSkipped = opts.includeSkipped ?? config.output.includeSkipped ?? false;
   const fieldOverrides = config.output.fieldOverrides;
+  const multiLabel = config.task === "multi-label";
   let body: string;
   let path: string;
   switch (opts.format) {
@@ -54,6 +55,7 @@ export function performExport(
         includeRejected,
         includeSkipped,
         includeOrphans,
+        multiLabel,
         fieldOverrides,
       });
       path = paths.jsonl;
@@ -64,6 +66,7 @@ export function performExport(
         includeRejected,
         includeSkipped,
         includeOrphans,
+        multiLabel,
         multiLabelSeparator: config.output.csvMultiLabelSeparator,
         fieldOverrides,
       });
