@@ -21,7 +21,12 @@ function statsModalHeight(termHeight: number): number {
 export function statsVisibleRows(summaryGroups: number, termHeight: number): number {
   const modalHeight = statsModalHeight(termHeight);
   const summaryRows = summaryGroups > 0 ? summaryGroups + 1 : 0;
-  return Math.max(1, Math.min(DEFAULT_STATS_PAGE_SIZE, modalHeight - summaryRows - 8));
+  // Visible rows track the actual modal body. The Scrollbar's `total <=
+  // visible` branch renders an empty spacer column, so a tall terminal with
+  // few stats lines auto-hides the scrollbar (matches the help overlay).
+  // Short terminals stay scrollable because visible shrinks below total.
+  // Floor at 1 so the slice math never underflows.
+  return Math.max(1, modalHeight - summaryRows - 8);
 }
 
 export function renderStatsOverlay(
