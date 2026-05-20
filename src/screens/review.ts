@@ -656,12 +656,21 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
   }
   // done — narrowed by the early returns above
   const hasReason = state.reason.trim().length > 0;
+  // Multi-label responses store the set in `suggestionSet` and leave
+  // `suggestion` as "". Render the joined set so the footer shows "accept →
+  // spam, toxicity" instead of "accept → " (empty).
+  const suggestionText =
+    state.suggestionSet !== undefined
+      ? state.suggestionSet.length > 0
+        ? state.suggestionSet.join(", ")
+        : "∅"
+      : state.suggestion;
   const segs: Segment[] = [
     { text: " ◆", tone: "accent" },
     { text: " ", tone: "default" },
     { text: state.recommendedAction, tone: "default" },
     { text: " → ", tone: "muted" },
-    { text: state.suggestion, tone: "accent" },
+    { text: suggestionText, tone: "accent" },
     { text: "  ", tone: "default" },
     { text: state.confidence, tone: "muted" },
     { text: "   ", tone: "default" },
