@@ -20,7 +20,6 @@ export function labelChipText(args: {
     if (digit) return `[${digit}]`;
     return "";
   }
-  // configured
   if (key) return `[${key}]`;
   if (digit) return `[${digit}]`;
   return "";

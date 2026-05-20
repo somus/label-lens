@@ -8,11 +8,8 @@
  * - **Note text**: truncate-at-end + caller appends "(press n for full)".
  */
 
-// Three ASCII dots (`...`) instead of `…` (U+2026). The single-codepoint
-// ellipsis is variable-width across fonts — many monospace fonts render it
-// inside a single cell as collapsed `..`, which reads as part of the path
-// (e.g. file extensions) and overlaps visually with adjacent characters.
-// ASCII triple-dot is always 3 cells, never ambiguous.
+// ASCII "..." instead of "…" (U+2026) — single-codepoint ellipsis is
+// variable-width across monospace fonts; ASCII triple-dot is always 3 cells.
 const ELLIPSIS = "...";
 const ELLIPSIS_WIDTH = ELLIPSIS.length;
 

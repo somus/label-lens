@@ -31,12 +31,7 @@ export function projectMeta(raw: string): Record<string, unknown> | undefined {
   const obj = parsed as Record<string, unknown>;
   // Canonical form: input has a top-level `meta` object — use it verbatim.
   const canonical = obj.meta;
-  if (
-    canonical !== undefined &&
-    canonical !== null &&
-    typeof canonical === "object" &&
-    !Array.isArray(canonical)
-  ) {
+  if (canonical !== null && typeof canonical === "object" && !Array.isArray(canonical)) {
     return canonical as Record<string, unknown>;
   }
   // Fallback: bundle non-canonical top-level extras (e.g. user_id, tags).
