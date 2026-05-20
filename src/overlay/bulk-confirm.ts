@@ -63,5 +63,15 @@ export function reduceBulkConfirm(state: BulkConfirmState, event: OverlayEvent):
 function reduceKey(state: BulkConfirmState, event: KeyEvent): ReduceResult {
   if (event.name === "escape") return close();
   if (event.name === "return") return commit(state);
+  if (event.name === "v") {
+    // Escape hatch: jump to the marked queue so the reviewer can eyeball
+    // the selection before committing. The `drill` effect closes the
+    // overlay AND switches queue in one step. Reviewer can re-issue the
+    // bulk command from there.
+    return {
+      overlay: null,
+      effects: [{ kind: "drill", queueId: "marked" }],
+    };
+  }
   return { overlay: packed(state), effects: [] };
 }

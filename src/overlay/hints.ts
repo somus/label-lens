@@ -109,6 +109,8 @@ export function overlayFooterHint(overlay: Overlay, preset: OverlayKeyPreset = "
       return [
         { text: "[enter] ", tone: "accent" },
         { text: "confirm  ", tone: "muted" },
+        { text: "[v] ", tone: "accent" },
+        { text: "view marked  ", tone: "muted" },
         { text: "[esc] ", tone: "accent" },
         { text: "cancel", tone: "muted" },
       ];

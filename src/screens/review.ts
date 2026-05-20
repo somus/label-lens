@@ -1201,7 +1201,7 @@ function renderBulkConfirm(
   lines.push(Text({ content: "" }));
   lines.push(
     Text({
-      content: " [enter] confirm · [esc] cancel",
+      content: " [enter] confirm · [v] view marked · [esc] cancel",
       attributes: TextAttributes.DIM,
     }),
   );

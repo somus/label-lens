@@ -72,6 +72,17 @@ describe("bulk-confirm overlay reducer", () => {
     });
   });
 
+  test("v key drills to the marked queue and closes the overlay (no commit)", () => {
+    const eligible = [mkRecord("a"), mkRecord("b")];
+    const state = openBulkConfirm({ action: "accept", eligible, excluded: [] });
+    const result = reduceBulkConfirm(state, {
+      kind: "key",
+      event: { name: "v" },
+    });
+    expect(result.overlay).toBeNull();
+    expect(result.effects).toEqual([{ kind: "drill", queueId: "marked" }]);
+  });
+
   test("unmark emits commitBulkUnmark, not commitBatch", () => {
     const eligible = [mkRecord("a"), mkRecord("b")];
     const state = openBulkConfirm({ action: "unmark", eligible, excluded: [] });
