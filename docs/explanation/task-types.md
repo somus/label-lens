@@ -4,8 +4,8 @@ LabelLens reviews pre-labeled records. It is not a blank annotation tool: the in
 
 Read [Prediction vs annotation](./prediction-vs-annotation.md) first if those terms are new. In short: a prediction is the model, rule, or LLM proposal from the source data; an annotation is the human-reviewed result stored in `.labellens/state.db`.
 
-<a href="../media/boundary-review.webm">
-  <img src="../media/boundary-review.gif" alt="Boundary review with document context and doc view" width="800">
+<a href="../media/hero.webm">
+  <img src="../media/hero.gif" alt="LabelLens review loop — accept, relabel, skip" width="800">
 </a>
 
 ## Which task should I use?
@@ -51,6 +51,10 @@ Minimal config shape:
 The review action always produces one current annotation for the record: accept the prediction, relabel to a different value, reject, or skip. If your row can legitimately need both `billing` and `urgent`, do not force that into `classification` unless your upstream data has already turned combinations into single values like `billing+urgent`.
 
 ## Boundary review
+
+<a href="../media/boundary-review.webm">
+  <img src="../media/boundary-review.gif" alt="Boundary review with document context and doc view" width="800">
+</a>
 
 Use `boundary` when the label describes a line or segment's role inside a larger document. The key difference from ordinary classification is context: a line like `Senior Engineer - Acme` is hard to classify alone, but clear when shown between a section heading and bullet lines.
 
