@@ -277,6 +277,10 @@ export async function prepareReviewState(
     );
     stderr.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
     for (const w of result.warnings) stderr.error(`  ${w}`);
+    if (result.warningCount > result.warnings.length) {
+      const overflow = result.warningCount - result.warnings.length;
+      stderr.error(`  …and ${overflow} more warnings suppressed (total ${result.warningCount})`);
+    }
     stderr.error("Computing prioritization signals...");
     const signals = runSignals(db, signalsOptions(config));
     stderr.error(`  wrote ${signals.written} issue rows`);
@@ -450,6 +454,10 @@ async function freshReingest(
   );
   stderr.error(`  ingested ${result.ingested}, skipped ${result.skipped}`);
   for (const w of result.warnings) stderr.error(`  ${w}`);
+  if (result.warningCount > result.warnings.length) {
+    const overflow = result.warningCount - result.warnings.length;
+    stderr.error(`  …and ${overflow} more warnings suppressed (total ${result.warningCount})`);
+  }
   stderr.error("Computing prioritization signals...");
   const signals = runSignals(fresh, signalsOptions(config));
   stderr.error(`  wrote ${signals.written} issue rows`);

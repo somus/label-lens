@@ -22,7 +22,19 @@ export type IngestResult = {
   ingested: number;
   skipped: number;
   warnings: string[];
+  /** Total warnings observed during ingest. `warnings.length` is capped at
+   * `INGEST_WARNINGS_CAP` to keep memory bounded on noisy datasets. When
+   * `warningCount > warnings.length`, the array is followed by a sentinel
+   * row indicating how many were suppressed. */
+  warningCount: number;
 };
+
+/** Cap on how many distinct warning strings we hold in memory during an
+ * ingest pass. Above this, we count overflow but stop accumulating —
+ * keeps a malformed dataset from growing the warnings array linearly with
+ * row count. The CLI surfaces the count so the user still learns the
+ * scale, just not every individual message. */
+export const INGEST_WARNINGS_CAP = 200;
 
 export function ingestTaskOptionsFromConfig(config: LabellensConfig): IngestTaskOptions {
   return {
@@ -52,6 +64,11 @@ export async function ingestFile(
   let ingested = 0;
   let skipped = 0;
   const warnings: string[] = [];
+  let warningCount = 0;
+  const recordWarning = (msg: string): void => {
+    warningCount++;
+    if (warnings.length < INGEST_WARNINGS_CAP) warnings.push(msg);
+  };
   let rowIndex = 0;
   const multiLabel = taskOptions?.task === "multi-label";
   const configuredLabels = taskOptions?.labels ?? [];
@@ -87,19 +104,19 @@ export async function ingestFile(
     for (const p of predictions) {
       if (multiLabel) {
         if (!Array.isArray(p.label)) {
-          warnings.push(
+          recordWarning(
             `ingest: record ${id} source=${p.source} dropped — multi-label task requires array label, got ${typeof p.label}`,
           );
           continue;
         }
         const norm = normalizeLabelSet(p.label, configuredLabels);
         if (norm.dropped.length > 0) {
-          warnings.push(
+          recordWarning(
             `ingest: record ${id} source=${p.source} dropped unknown labels: ${norm.dropped.join(", ")}`,
           );
         }
         if (norm.duplicates.length > 0) {
-          warnings.push(
+          recordWarning(
             `ingest: record ${id} source=${p.source} deduped labels: ${norm.duplicates.join(", ")}`,
           );
         }
@@ -141,7 +158,7 @@ export async function ingestFile(
   }
   flush();
 
-  return { ingested, skipped, warnings };
+  return { ingested, skipped, warnings, warningCount };
 }
 
 function mapInput(obj: Record<string, unknown>, fields: FieldMap, text: string): InputRecord {

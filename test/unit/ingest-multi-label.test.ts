@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ingestFile } from "../../src/ingest/ingest.ts";
+import { INGEST_WARNINGS_CAP, ingestFile } from "../../src/ingest/ingest.ts";
 import { predictions } from "../../src/store/schema.ts";
 import { DEFAULT_FIELDS, openTmpStore, tmpdir } from "../util/tmp.ts";
 
@@ -75,6 +75,27 @@ test("multi-label ingest drops Predictions with non-array labels and warns", asy
   expect(rows[0]?.source).toBe("arrayed");
   expect(rows[0]?.label).toBe('["toxicity"]');
   expect(result.warnings.join("\n")).toMatch(/stringy/);
+});
+
+test("multi-label ingest caps in-memory warnings (warningCount tracks the true total)", async () => {
+  // Generates more bad-label rows than the cap so the warnings array does
+  // not grow linearly with row count on noisy datasets. The CLI still
+  // surfaces the total via warningCount.
+  using store = await openTmpStore();
+  using dir = tmpdir();
+  const overflowRows = INGEST_WARNINGS_CAP + 50;
+  const rows = Array.from({ length: overflowRows }, (_, i) => ({
+    id: `r${i}`,
+    text: `text-${i}`,
+    predictions: [{ label: ["bogus-only"], source: "modelA" }],
+  }));
+  const input = writeJsonl(dir.path, rows);
+  const result = await ingestFile(store.db, input, DEFAULT_FIELDS, {
+    task: "multi-label",
+    labels: CONFIGURED,
+  });
+  expect(result.warnings.length).toBe(INGEST_WARNINGS_CAP);
+  expect(result.warningCount).toBe(overflowRows);
 });
 
 test("single-label ingest unchanged when no taskOptions passed", async () => {
