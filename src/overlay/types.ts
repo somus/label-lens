@@ -1,9 +1,10 @@
+import type { BulkAction, BulkReviewAction } from "../actions/record/bulk.ts";
 import type { AssistantResponse } from "../assistant/schema.ts";
 import type { AssistantConfig } from "../config/config.ts";
 import type { KeyEvent } from "../keymap/engine.ts";
 import type { Predicate } from "../store/queues/predicate.ts";
 import type { QueueId } from "../store/queues/registry.ts";
-import type { ReviewStatus, SourceOfTruth } from "../types.ts";
+import type { RecordWithPrimaryPrediction, ReviewStatus, SourceOfTruth } from "../types.ts";
 import type { FilterBuilderState } from "./filter-builder.ts";
 import type { GuidelinesState } from "./guidelines.ts";
 import type { HelpState } from "./help.ts";
@@ -105,6 +106,14 @@ export type ConfigureAssistantState = {
   error?: string;
 };
 
+export type BulkConfirmState = {
+  action: BulkAction;
+  eligible: RecordWithPrimaryPrediction[];
+  excluded: RecordWithPrimaryPrediction[];
+  /** Required for `relabel`. */
+  label?: string;
+};
+
 export type Overlay =
   | { kind: "picker"; state: PickerState }
   | { kind: "note"; state: NoteState }
@@ -115,7 +124,8 @@ export type Overlay =
   | { kind: "help"; state: HelpState }
   | { kind: "guidelines"; state: GuidelinesState }
   | { kind: "stats"; state: StatsOverlayState }
-  | { kind: "queue"; state: QueueState };
+  | { kind: "queue"; state: QueueState }
+  | { kind: "bulk-confirm"; state: BulkConfirmState };
 
 export type OverlayKind = Overlay["kind"];
 
@@ -163,7 +173,14 @@ export type Effect =
   | { kind: "runCommand"; commandName: string; argument?: string }
   | { kind: "drill"; queueId: QueueId }
   | { kind: "pushPaletteHistory"; entry: string }
-  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number };
+  | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number }
+  | {
+      kind: "commitBatch";
+      action: BulkReviewAction;
+      eligible: RecordWithPrimaryPrediction[];
+      label?: string;
+    }
+  | { kind: "commitBulkUnmark"; eligible: RecordWithPrimaryPrediction[] };
 
 export type ReduceResult = {
   overlay: Overlay | null;

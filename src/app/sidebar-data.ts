@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "../store/db.ts";
+import type { HistoryEntry } from "../store/queries.ts";
 import type { StoredReview } from "../types.ts";
 
 /**
@@ -28,6 +29,11 @@ export type SidebarHistoryRow = {
   status: StoredReview["status"];
   label: string | null;
   recordText: string;
+  /** When set, this row represents a collapsed batch of `batchCount`
+   * decisions sharing one `batch_id`. The renderer surfaces a ×N suffix.
+   * Single-record decisions leave both fields unset. */
+  batchId?: string | null;
+  batchCount?: number;
 };
 
 export type SidebarQueueData = {
@@ -58,6 +64,44 @@ export type SidebarStatsData = {
 };
 
 export type SidebarData = SidebarQueueData | SidebarStatsData;
+
+/**
+ * Collapse adjacent history entries sharing a `batch_id` into one summary
+ * row carrying `batchCount`. Returns entries newest-first matching the
+ * input order. Entries without a batch_id pass through unchanged.
+ *
+ * Adjacency on `batch_id` is sufficient because `recentReviewsWithText`
+ * returns rows ordered by `reviews.id DESC` and a batch inserts all its
+ * member rows in a single transaction — their IDs are contiguous.
+ */
+export function collapseHistoryByBatch(entries: HistoryEntry[]): SidebarHistoryRow[] {
+  const out: SidebarHistoryRow[] = [];
+  let i = 0;
+  while (i < entries.length) {
+    const head = entries[i]!;
+    if (!head.batch_id) {
+      out.push({
+        status: head.status,
+        label: head.final_label ?? head.prev_label,
+        recordText: head.recordText,
+      });
+      i += 1;
+      continue;
+    }
+    let j = i + 1;
+    while (j < entries.length && entries[j]!.batch_id === head.batch_id) j += 1;
+    const count = j - i;
+    out.push({
+      status: head.status,
+      label: head.final_label ?? head.prev_label,
+      recordText: head.recordText,
+      batchId: head.batch_id,
+      batchCount: count,
+    });
+    i = j;
+  }
+  return out;
+}
 
 /**
  * Per-queue signal counts. Returns rows for signal types with >0 hits in the

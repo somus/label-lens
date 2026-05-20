@@ -14,7 +14,13 @@ import type { Db } from "../store/db.ts";
 import { recentReviewsWithText } from "../store/queries.ts";
 import type { QueueDefinition, QueueId } from "../store/queues/registry.ts";
 import { buildSmartPendingQuery } from "../store/queues/smart-pending.ts";
-import { queueProgress, type SidebarData, signalCounts, statsTotals } from "./sidebar-data.ts";
+import {
+  collapseHistoryByBatch,
+  queueProgress,
+  type SidebarData,
+  signalCounts,
+  statsTotals,
+} from "./sidebar-data.ts";
 
 /**
  * Flash message kinds. Each maps to a glyph (`✓ ⓘ ⚠ ✗`) and a default
@@ -246,11 +252,10 @@ export function createAppContext(args: {
       const queueTotal = cursor?.total ?? 0;
       const queuePosition = cursor && cursor.total > 0 ? cursor.position + 1 : 0;
       const ids = cursor ? cursor.recordIds() : null;
-      const history = recentReviewsWithText(args.db, 5).map((h) => ({
-        status: h.status,
-        label: h.final_label ?? h.prev_label,
-        recordText: h.recordText,
-      }));
+      // Fetch a wider window than the on-screen cap so the batch collapser
+      // has room to fold a many-row batch into one summary without losing
+      // unrelated history rows behind it.
+      const history = collapseHistoryByBatch(recentReviewsWithText(args.db, 50)).slice(0, 5);
       return {
         mode: "queue",
         queueLabel,

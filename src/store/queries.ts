@@ -111,6 +111,7 @@ function effectiveRowToStored(row: EffectiveRow): StoredReview {
     source_of_truth: row.sourceOfTruth,
     compensates_review_id: row.compensatesReviewId,
     note: row.note,
+    batch_id: row.batchId,
   };
 }
 
@@ -125,6 +126,7 @@ function reviewRowToStored(row: typeof reviews.$inferSelect): StoredReview {
     source_of_truth: row.sourceOfTruth,
     compensates_review_id: row.compensatesReviewId,
     note: row.note,
+    batch_id: row.batchId,
   };
 }
 
@@ -252,6 +254,21 @@ export function progressCounts(db: TxOrDb): ProgressCounts {
 export function latestReview(db: TxOrDb): StoredReview | null {
   const row = db.select().from(effectiveReviews).orderBy(desc(effectiveReviews.id)).limit(1).get();
   return row ? effectiveRowToStored(row) : null;
+}
+
+/**
+ * Every currently-effective review sharing a `batch_id`. Drives batch undo:
+ * the caller iterates the result, writing one compensating row per member.
+ * Returns rows newest-first so callers can index latest-first if needed.
+ */
+export function effectiveReviewsInBatch(db: TxOrDb, batchId: string): StoredReview[] {
+  const rows = db
+    .select()
+    .from(effectiveReviews)
+    .where(eq(effectiveReviews.batchId, batchId))
+    .orderBy(desc(effectiveReviews.id))
+    .all();
+  return rows.map(effectiveRowToStored);
 }
 
 /**

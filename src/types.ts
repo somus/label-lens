@@ -59,6 +59,7 @@ export type StoredReview = {
   source_of_truth: SourceOfTruth;
   compensates_review_id: number | null;
   note: string | null;
+  batch_id: string | null;
 };
 
 export type RecordWithPrimaryPrediction = StoredRecord & {

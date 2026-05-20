@@ -467,12 +467,19 @@ function historyRow(
   const glyphCells = visualWidth(glyph);
   const glyphColumn = Math.max(2, glyphCells + 1);
   const labelBudget = Math.min(12, Math.max(6, Math.floor((innerWidth - glyphColumn) / 3)));
-  const labelText = truncateEndSafe(entry.label ?? "—", labelBudget);
+  const labelBase = entry.label ?? "—";
+  const labelWithBatch =
+    entry.batchCount && entry.batchCount > 1 ? `${labelBase} ×${entry.batchCount}` : labelBase;
+  const labelText = truncateEndSafe(labelWithBatch, labelBudget);
   const labelCells = visualWidth(labelText);
   const labelPad = Math.max(0, labelBudget - labelCells);
   const used = glyphColumn + labelBudget + 1; // 1ch gap to record-text
   const textBudget = Math.max(4, innerWidth - used);
   const textTone: Segment["tone"] = "muted";
+  const recordTextDisplay =
+    entry.batchCount && entry.batchCount > 1
+      ? `${entry.recordText} (+${entry.batchCount - 1} more)`
+      : entry.recordText;
   return fixedRow(
     innerWidth,
     Text({
@@ -482,7 +489,7 @@ function historyRow(
           { text: " ".repeat(glyphColumn - glyphCells), tone: "default" },
           { text: labelText, tone: "default" },
           { text: " ".repeat(labelPad + 1), tone: "default" },
-          { text: truncateEndSafe(entry.recordText, textBudget), tone: textTone },
+          { text: truncateEndSafe(recordTextDisplay, textBudget), tone: textTone },
         ],
         display,
       ),

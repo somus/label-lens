@@ -71,6 +71,10 @@ _Avoid_: Window, surroundings.
 Read-only full-document view entered via `g d` chord on the review screen. Shows every **Record** sharing the focused record's **Document**, with the candidate line highlighted and the focus box drawn. Banding is off in doc view to keep it scannable. Owns its own keymap scope (`doc-view`) — only scroll keys (`j` / `k`, `ctrl-d` / `ctrl-u`, `g g`, `G`) and exit (`q` / `esc`). Doc view does **not** mutate the **Cursor**; exit returns to the same record in the same queue.
 _Avoid_: Source view, raw view, file view.
 
+**Batch**:
+A group of **Review entries** committed in one logical bulk action and grouped by a shared `batch_id` (UUID). Each member is a normal Review entry; the shared id is the only thing that ties them together. Bulk actions target the **Marked** Tag as the selection set; already-reviewed marked Records are excluded from review actions but cleared by `:bulk-unmark`. Undoing the latest Review surfaces the batch path when its `batch_id` is set — one logical undo reverses every effective member by inserting per-member compensating Reviews.
+_Avoid_: Group, bunch, set (overloaded).
+
 **Overlay**:
 A modal sub-surface that captures keypresses while open and commits an action when it closes. Relabel **Picker** (`r`), **Note** prompt (`n`), **Assistant** (`i`, slice 11), Queue, Help, Guidelines, and Stats all use this seam. Each Overlay owns its state, accepts a uniform `OverlayEvent` (key, stream token, cancel, commit), and emits data **Effects** (`close`, `commitDecision`, `updateNote`, `markAssistantViewed`) the screen interprets against the AppContext. Text-input Overlays capture all keys; read-only and picker-style Overlays may explicitly propagate unclaimed keys back to the active command path.
 _Avoid_: Modal, dialog, popup. (Pre-ADR-0009 docs called the assistant surface a "panel"; the current shape is an inline-footer Overlay — ADR 0009.)

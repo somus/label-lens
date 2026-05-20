@@ -32,6 +32,9 @@ export function HistoryStrip(args: {
     segs.push({ text: statusGlyph(entry.status, display), tone: STATUS_TONE[entry.status] });
     segs.push({ text: " ", tone: "default" });
     segs.push({ text: entry.label ?? "—", tone: "default" });
+    if (entry.batchCount && entry.batchCount > 1) {
+      segs.push({ text: ` ×${entry.batchCount}`, tone: "muted" });
+    }
   });
   segs.push({ text: "      ", tone: "dim" });
   segs.push({ text: "[u] undo", tone: "muted" });

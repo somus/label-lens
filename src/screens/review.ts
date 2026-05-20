@@ -15,6 +15,7 @@ import { reduceOverlay } from "../overlay/reduce.ts";
 import { withStatsPageSize } from "../overlay/stats-overlay.ts";
 import type {
   AssistantState,
+  BulkConfirmState,
   ConfigureAssistantState,
   NoteState,
   Overlay,
@@ -563,6 +564,8 @@ function renderOverlay(
       return renderStatsOverlay(overlay.state, display, termWidth, termHeight);
     case "queue":
       return renderQueueOverlay(overlay.state, display, termWidth, termHeight);
+    case "bulk-confirm":
+      return renderBulkConfirm(overlay.state, display, termWidth, termHeight);
   }
 }
 
@@ -1168,6 +1171,41 @@ function renderPicker(
       attributes: TextAttributes.DIM,
     }),
   );
+}
+
+function renderBulkConfirm(
+  state: BulkConfirmState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  const action = state.action;
+  const title =
+    action === "relabel" && state.label ? `Bulk relabel → ${state.label}` : `Bulk ${action}`;
+  const eligibleCount = state.eligible.length;
+  const excludedCount = state.excluded.length;
+  const lines: ReturnType<typeof Text>[] = [
+    Text({
+      content: ` ${eligibleCount} record(s) will be affected`,
+      attributes: TextAttributes.BOLD,
+    }),
+  ];
+  if (excludedCount > 0) {
+    lines.push(
+      Text({
+        content: ` ${excludedCount} already-reviewed marked record(s) excluded`,
+        attributes: TextAttributes.DIM,
+      }),
+    );
+  }
+  lines.push(Text({ content: "" }));
+  lines.push(
+    Text({
+      content: " [enter] confirm · [esc] cancel",
+      attributes: TextAttributes.DIM,
+    }),
+  );
+  return modalBox(display, termWidth, termHeight, 0.4, title, ...lines);
 }
 
 function renderNote(

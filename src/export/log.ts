@@ -14,6 +14,7 @@ export function exportReviewLogString(db: Db): string {
       source_of_truth: reviews.sourceOfTruth,
       compensates_review_id: reviews.compensatesReviewId,
       note: reviews.note,
+      batch_id: reviews.batchId,
     })
     .from(reviews)
     .orderBy(asc(reviews.reviewedAt), asc(reviews.id))

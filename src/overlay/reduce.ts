@@ -1,4 +1,5 @@
 import { reduceAssistant } from "./assistant.ts";
+import { reduceBulkConfirm } from "./bulk-confirm.ts";
 import { reduceConfigureAssistant } from "./configure-assistant.ts";
 import { reduceFilterBuilder } from "./filter-builder.ts";
 import { reduceGuidelines } from "./guidelines.ts";
@@ -33,5 +34,7 @@ export function reduceOverlay(overlay: Overlay, event: OverlayEvent): ReduceResu
       return reduceStatsOverlay(overlay.state, event);
     case "queue":
       return reduceQueue(overlay.state, event);
+    case "bulk-confirm":
+      return reduceBulkConfirm(overlay.state, event);
   }
 }

@@ -105,6 +105,13 @@ export function overlayFooterHint(overlay: Overlay, preset: OverlayKeyPreset = "
         { text: "[esc] ", tone: "accent" },
         { text: "cancel", tone: "muted" },
       ];
+    case "bulk-confirm":
+      return [
+        { text: "[enter] ", tone: "accent" },
+        { text: "confirm  ", tone: "muted" },
+        { text: "[esc] ", tone: "accent" },
+        { text: "cancel", tone: "muted" },
+      ];
   }
 }
 

@@ -110,6 +110,39 @@ describe("exportReviewLogString", () => {
     expect(rows[1]!.note).toBeNull();
   });
 
+  test("emits batch_id field: NULL for non-batch reviews and the shared id for batch members", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const ids = recordIds(store.db);
+    insertReview(store.db, {
+      record_id: ids[0]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+    });
+    insertReview(store.db, {
+      record_id: ids[1]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+      batch_id: "00000000-0000-4000-8000-000000000001",
+    });
+    insertReview(store.db, {
+      record_id: ids[2]!,
+      status: "accepted",
+      final_label: "food",
+      prev_label: null,
+      source_of_truth: "human",
+      batch_id: "00000000-0000-4000-8000-000000000001",
+    });
+    const rows = lines(exportReviewLogString(store.db));
+    expect(Object.hasOwn(rows[0]!, "batch_id")).toBe(true);
+    expect(rows[0]!.batch_id).toBeNull();
+    expect(rows[1]!.batch_id).toBe("00000000-0000-4000-8000-000000000001");
+    expect(rows[2]!.batch_id).toBe("00000000-0000-4000-8000-000000000001");
+  });
+
   test("review row with no note emits note: null", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ids = recordIds(store.db);
