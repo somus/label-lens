@@ -1,5 +1,5 @@
 import type { OutputFieldOverrides } from "../config/config.ts";
-import { decodeLabelSet } from "../labels/label-set.ts";
+import { decodeLabelSetStrict } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { withOrphanFilter } from "./where.ts";
@@ -65,7 +65,9 @@ export function exportCsvString(db: Db, opts: ExportCsvOptions = {}): string {
     const labelValue = accepted
       ? opts.multiLabel
         ? formatCsvLabel(
-            review.final_label === null ? null : decodeLabelSet(review.final_label),
+            review.final_label === null
+              ? null
+              : decodeMultiLabelForCsv(review.final_label, record.id, separator),
             separator,
           )
         : formatCsvLabel(review.final_label, separator)
@@ -93,4 +95,24 @@ export function exportCsvString(db: Db, opts: ExportCsvOptions = {}): string {
     rows.push(cells.join(","));
   }
   return `${rows.join("\r\n")}\r\n`;
+}
+
+function decodeMultiLabelForCsv(text: string, recordId: string, separator: string): string[] {
+  let labels: string[];
+  try {
+    labels = decodeLabelSetStrict(text);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`record ${recordId}: ${reason}`);
+  }
+  if (labels.length === 0) {
+    throw new Error(`record ${recordId}: empty multi-label set is invalid for export`);
+  }
+  const collision = labels.find((l) => l.includes(separator));
+  if (collision !== undefined) {
+    throw new Error(
+      `record ${recordId}: label "${collision}" contains CSV separator "${separator}"; change output.csvMultiLabelSeparator`,
+    );
+  }
+  return labels;
 }

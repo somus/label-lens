@@ -26,6 +26,29 @@ export function decodeLabelSet(text: string): string[] {
   return parsed.filter((v): v is string => typeof v === "string");
 }
 
+/**
+ * Strict counterpart to `decodeLabelSet`. Used by export, where silently
+ * coercing malformed storage to `[]` would emit a wrong dataset. Throws
+ * `Error` on non-JSON, non-array, or arrays with non-string elements.
+ */
+export function decodeLabelSetStrict(text: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`malformed label set: not valid JSON (${text})`);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error(`malformed label set: expected JSON array, got ${text}`);
+  }
+  for (const v of parsed) {
+    if (typeof v !== "string") {
+      throw new Error(`malformed label set: non-string element in ${text}`);
+    }
+  }
+  return parsed as string[];
+}
+
 export function normalizeLabelSet(input: unknown, configured: string[]): NormalizeResult {
   const dropped: string[] = [];
   const duplicates: string[] = [];

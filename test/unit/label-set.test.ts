@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   decodeLabelSet,
+  decodeLabelSetStrict,
   encodeLabelSet,
   labelSetsEqual,
   normalizeLabelSet,
@@ -56,6 +57,26 @@ test("normalizeLabelSet drops non-string entries with their stringified form", (
   const r = normalizeLabelSet(["spam", 42, null], configured);
   expect(r.set).toEqual(["spam"]);
   expect(r.dropped).toEqual(["42", "null"]);
+});
+
+test("decodeLabelSetStrict returns the array on canonical input", () => {
+  expect(decodeLabelSetStrict('["spam","toxicity"]')).toEqual(["spam", "toxicity"]);
+  expect(decodeLabelSetStrict("[]")).toEqual([]);
+});
+
+test("decodeLabelSetStrict throws on non-JSON text", () => {
+  expect(() => decodeLabelSetStrict("not-json")).toThrow(/malformed/i);
+});
+
+test("decodeLabelSetStrict throws on JSON that is not an array", () => {
+  expect(() => decodeLabelSetStrict('"spam"')).toThrow(/array/i);
+  expect(() => decodeLabelSetStrict("null")).toThrow(/array/i);
+  expect(() => decodeLabelSetStrict("{}")).toThrow(/array/i);
+});
+
+test("decodeLabelSetStrict throws when any element is not a string", () => {
+  expect(() => decodeLabelSetStrict('["spam",42,"toxicity"]')).toThrow(/string/i);
+  expect(() => decodeLabelSetStrict("[null]")).toThrow(/string/i);
 });
 
 test("labelSetsEqual is order-insensitive", () => {

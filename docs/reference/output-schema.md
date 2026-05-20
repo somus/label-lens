@@ -39,6 +39,21 @@ One row per reviewed record. Reads `effective_reviews` — only the current stat
 
 Records you skipped are included with `status: "skipped"` and `final_label: null`. Records you never touched are **omitted** — only effective reviews land in the export.
 
+### Multi-label JSONL
+
+For `task: "multi-label"` (see [task types](../explanation/task-types.md), shipped in #105):
+
+- Accepted/relabeled rows emit `label` as a JSON array of strings in canonical configured-label order, e.g. `"label": ["spam","toxicity"]`.
+- Rejected/skipped rows (when included via `--include-rejected` / `--include-skipped`) keep `label: null`, same as single-label.
+- `output.fieldOverrides.label` renames the emitted field for both task shapes.
+
+Export aborts with a user-visible error if any included accepted/relabeled row has:
+
+- an empty stored set (`[]`),
+- a stored value that is not valid JSON, not a JSON array, or contains a non-string element.
+
+The error names the offending record id. No coercion is attempted — malformed storage is treated as a bug in upstream commit/migration code.
+
 ## `labellens export csv`
 
 Same fields as JSONL, flattened. Nested fields (`predictions`) are JSON-stringified into a single column.
@@ -59,11 +74,21 @@ Same fields as JSONL, flattened. Nested fields (`predictions`) are JSON-stringif
 
 CSV is quoted per RFC 4180. Embedded quotes are doubled.
 
-For `task: "multi-label"`, the `final_label` column joins the committed set with `output.csvMultiLabelSeparator` (default `;`) — e.g. `spam;toxicity`. Set a different separator if your labels contain a literal `;`:
+For `task: "multi-label"` (shipped in #105), the `label` column joins the committed set with `output.csvMultiLabelSeparator` (default `;`) — e.g. `spam;toxicity`. Set a different separator if your labels contain a literal `;`:
 
 ```jsonc
 "output": { "path": "reviewed.csv", "format": "csv", "csvMultiLabelSeparator": "|" }
 ```
+
+Rejected/skipped rows (when included) emit a blank label cell, same as single-label.
+
+CSV export aborts with a user-visible error if any included accepted/relabeled multi-label row has:
+
+- an empty stored set,
+- a malformed stored value (non-JSON, non-array, or non-string elements),
+- a label value that contains the configured separator (would produce ambiguous output — pick a different `csvMultiLabelSeparator`).
+
+The error names the offending record id and, for the separator collision, the offending label.
 
 ## `labellens export stats`
 
