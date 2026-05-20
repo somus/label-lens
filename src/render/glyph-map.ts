@@ -1,10 +1,6 @@
 import type { ResolvedDisplay } from "./capability.ts";
 
-/**
- * Capability-aware glyph maps. Truecolor/256 render the Unicode glyph; 16/mono
- * fall back to ASCII so the row still reads on legacy terminals. The fallback
- * set matches what the slice-3 history strip shipped with (`+~->?<`).
- */
+/** Capability-aware glyph maps — truecolor/256 render Unicode, 16/mono fall back to ASCII. */
 
 function richGlyphs(display: ResolvedDisplay): boolean {
   return display.color === "truecolor" || display.color === "256";

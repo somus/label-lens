@@ -59,9 +59,8 @@ function applyMigrations(db: Db, entries: MigrationEntry[]): void {
     folderMillis: e.timestamp,
     hash: crypto.createHash("sha256").update(e.sql).digest("hex"),
   }));
-  // dialect.migrate is the internal worker drizzle's public migrate() calls.
-  // Going around the public API lets us pass already-loaded migrations
-  // (folder reading is the only thing the public migrator does that we skip).
+  // Reach the internal worker drizzle's public migrate() wraps — lets us pass
+  // pre-loaded migrations and skip folder reads.
   type Internal = {
     dialect: { migrate: (m: DialectMigration[], session: unknown, config: unknown) => void };
     session: unknown;
