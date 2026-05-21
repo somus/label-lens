@@ -9,6 +9,7 @@ import { predicateQueue } from "../store/queues/predicate.ts";
 import { queueCount } from "../store/queues/queue-counts.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import { insertReview, updateRecordNote } from "../store/records.ts";
+import { openExtractionForm } from "./extraction-form.ts";
 import { reduceOverlay } from "./reduce.ts";
 import type { Effect, OverlayEvent } from "./types.ts";
 
@@ -188,6 +189,23 @@ export function applyEffects(
         }
         void dispatchCommand(effect.commandName, effect.argument);
         break;
+      case "openExtractionFormPrefilled": {
+        // Assistant Enter on an extraction task: open the form with
+        // the LLM's suggestion pre-filled as the draft so the reviewer
+        // can verify each field before pressing Enter again to commit.
+        // The `close` effect that follows this in the emitter list has
+        // already cleared the assistant overlay, so `openOverlay` here
+        // installs the form without a stacked-overlay race.
+        const formState = openExtractionForm({
+          recordId: effect.recordId,
+          fields: effect.fields,
+          predicted: effect.predicted,
+          previousReview: effect.prefilled,
+          assistantViewed: true,
+        });
+        app.openOverlay({ kind: "extraction-form", state: formState });
+        break;
+      }
       case "drill":
         app.closeOverlay();
         switchQueue(app, effect.queueId);

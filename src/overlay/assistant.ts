@@ -3,7 +3,6 @@ import {
   canonicalizeExtractionObject,
   type ExtractionObject,
   encodeExtractionObject,
-  extractionObjectsEqual,
 } from "../labels/extraction-object.ts";
 import { encodeLabelSet, labelSetsEqual, normalizeLabelSet } from "../labels/label-set.ts";
 import type {
@@ -147,38 +146,28 @@ function commitExtraction(state: Extract<AssistantState, { status: "done" }>): R
       ],
     };
   }
-  // Required-field check before commit — assistant may have returned a missing
-  // required value despite the provider-side gate (legacy cached row, etc.).
-  for (const f of state.extraction.fields) {
-    if (!f.required) continue;
-    const v = state.suggestionObject[f.name] ?? null;
-    if (v === null || v === "") {
-      return { overlay: packed(state), effects: [] };
-    }
-  }
-  const matchesPredicted = extractionObjectsEqual(
-    state.suggestionObject,
-    state.extraction.predictedObject,
-  );
-  const status = matchesPredicted ? "accepted" : "relabeled";
-  const finalLabel = encodeExtractionObject(state.suggestionObject, state.extraction.fields);
-  const prevLabel =
-    status === "relabeled"
-      ? encodeExtractionObject(state.extraction.predictedObject, state.extraction.fields)
-      : null;
+  // Extraction Enter never auto-commits the LLM's suggestion. Instead it
+  // opens the extraction form pre-populated with `suggestionObject` so
+  // the reviewer can eyeball each field, fix anything off, and then
+  // commit via the form's own Enter (which already routes through the
+  // required-field gate + `human+assistant` audit). This matches the
+  // user's expectation that the LLM's structured output is a draft, not
+  // a one-press apply.
   return {
-    overlay: null,
+    // Returning `overlay: null` here would race with the
+    // `openExtractionFormPrefilled` effect (closeOverlay would restore
+    // the suspended assistant state); the effect itself replaces the
+    // overlay, so leave the slot untouched at reduce time.
+    overlay: packed(state),
     effects: [
       { kind: "markAssistantViewed", recordId: state.recordId },
       {
-        kind: "commitDecision",
+        kind: "openExtractionFormPrefilled",
         recordId: state.recordId,
-        status,
-        finalLabel,
-        prevLabel,
-        sourceOfTruth: "human+assistant",
+        fields: state.extraction.fields,
+        predicted: state.extraction.predictedObject,
+        prefilled: state.suggestionObject,
       },
-      { kind: "close" },
     ],
   };
 }

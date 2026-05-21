@@ -198,6 +198,16 @@ export type Effect =
       sessionApiKey?: string;
     }
   | { kind: "runCommand"; commandName: string; argument?: string }
+  | {
+      // Open the extraction form pre-populated with the assistant's
+      // suggested object instead of committing it directly. The reviewer
+      // can eyeball/edit each field before pressing Enter to commit.
+      kind: "openExtractionFormPrefilled";
+      recordId: string;
+      fields: ExtractionField[];
+      predicted: ExtractionObject;
+      prefilled: ExtractionObject;
+    }
   | { kind: "drill"; queueId: QueueId }
   | { kind: "pushPaletteHistory"; entry: string }
   | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number }

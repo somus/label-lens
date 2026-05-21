@@ -75,7 +75,11 @@ describe("assistant overlay — extraction task", () => {
     }
   });
 
-  test("commit emits a relabeled commitDecision when suggested differs from predicted", () => {
+  test("commit emits openExtractionFormPrefilled with the suggested object as draft", () => {
+    // Extraction Enter no longer auto-commits the LLM's suggestion;
+    // it opens the form pre-populated with `extractedObject` so the
+    // reviewer can verify each field before committing via the form's
+    // own Enter.
     const initial = openAssistant("rec1", null, {
       extraction: {
         fields: FIELDS,
@@ -95,19 +99,71 @@ describe("assistant overlay — extraction task", () => {
     );
     if (afterStreamEnd.overlay?.kind !== "assistant") throw new Error("expected overlay");
     const commit = reduceAssistant(afterStreamEnd.overlay.state, { kind: "commit" });
-    const decision = commit.effects.find((e) => e.kind === "commitDecision");
-    expect(decision).toBeDefined();
-    expect((decision as { status: string }).status).toBe("relabeled");
-    expect((decision as { finalLabel: string | null }).finalLabel).toBe(
-      '{"company":"Beta","amount":"100"}',
-    );
-    expect((decision as { prevLabel: string | null }).prevLabel).toBe(
-      '{"company":"Acme","amount":null}',
-    );
-    expect((decision as { sourceOfTruth: string }).sourceOfTruth).toBe("human+assistant");
+    const open = commit.effects.find((e) => e.kind === "openExtractionFormPrefilled");
+    expect(open).toBeDefined();
+    if (open?.kind === "openExtractionFormPrefilled") {
+      expect(open.recordId).toBe("rec1");
+      expect(open.prefilled).toEqual({ company: "Beta", amount: "100" });
+      expect(open.predicted).toEqual({ company: "Acme", amount: null });
+    }
+    // The reducer should NOT emit a direct commitDecision for the
+    // relabel path under the prefill-form model.
+    expect(commit.effects.find((e) => e.kind === "commitDecision")).toBeUndefined();
   });
 
-  test("commit refused when assistant suggestion omits a required field", () => {
+  test("recommendedAction='accept' also opens the prefilled form (still reviewer-confirmed)", () => {
+    const initial = openAssistant("rec1", null, {
+      extraction: {
+        fields: FIELDS,
+        predictedObject: { company: "Acme", amount: null },
+      },
+    });
+    const afterStreamEnd = reduceAssistant(
+      initial,
+      streamEnd({
+        extractedObject: { company: "Acme", amount: null },
+        confidence: "high",
+        reasoning: "",
+        evidenceFor: [],
+        evidenceAgainst: [],
+        recommendedAction: "accept",
+      }),
+    );
+    if (afterStreamEnd.overlay?.kind !== "assistant") throw new Error("expected overlay");
+    const commit = reduceAssistant(afterStreamEnd.overlay.state, { kind: "commit" });
+    expect(commit.effects.find((e) => e.kind === "openExtractionFormPrefilled")).toBeDefined();
+  });
+
+  test("recommendedAction='reject' still commits directly via commitDecision (no form needed)", () => {
+    const initial = openAssistant("rec1", null, {
+      extraction: {
+        fields: FIELDS,
+        predictedObject: { company: "Acme", amount: null },
+      },
+    });
+    const afterStreamEnd = reduceAssistant(
+      initial,
+      streamEnd({
+        extractedObject: { company: null, amount: null },
+        confidence: "low",
+        reasoning: "",
+        evidenceFor: [],
+        evidenceAgainst: [],
+        recommendedAction: "reject",
+      }),
+    );
+    if (afterStreamEnd.overlay?.kind !== "assistant") throw new Error("expected overlay");
+    const commit = reduceAssistant(afterStreamEnd.overlay.state, { kind: "commit" });
+    const decision = commit.effects.find((e) => e.kind === "commitDecision");
+    expect(decision).toBeDefined();
+    expect((decision as { status: string }).status).toBe("rejected");
+  });
+
+  test("commit on a required-field-missing relabel still opens the form so the reviewer can fix it", () => {
+    // Previously the reducer refused the commit (overlay stays open, no
+    // effects). Under the prefill-form model the form opens with the
+    // partially-filled object — the form's own required-field gate then
+    // prevents Enter→commit until the reviewer fixes the missing field.
     const initial = openAssistant("rec1", null, {
       extraction: {
         fields: FIELDS,
@@ -127,6 +183,10 @@ describe("assistant overlay — extraction task", () => {
     );
     if (afterStreamEnd.overlay?.kind !== "assistant") throw new Error("expected overlay");
     const commit = reduceAssistant(afterStreamEnd.overlay.state, { kind: "commit" });
-    expect(commit.effects.find((e) => e.kind === "commitDecision")).toBeUndefined();
+    const open = commit.effects.find((e) => e.kind === "openExtractionFormPrefilled");
+    expect(open).toBeDefined();
+    if (open?.kind === "openExtractionFormPrefilled") {
+      expect(open.prefilled).toEqual({ company: null, amount: "100" });
+    }
   });
 });
