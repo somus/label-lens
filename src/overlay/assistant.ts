@@ -18,6 +18,7 @@ export type OpenAssistantOptions = {
   extraction?: {
     fields: ExtractionField[];
     predictedObject: ExtractionObject;
+    hadPrediction: boolean;
   };
 };
 
@@ -49,6 +50,7 @@ export function openAssistant(
           extraction: {
             fields: options.extraction.fields,
             predictedObject: options.extraction.predictedObject,
+            hadPrediction: options.extraction.hadPrediction,
           },
         }
       : {}),
@@ -122,8 +124,12 @@ function commitExtraction(state: Extract<AssistantState, { status: "done" }>): R
   const action = state.recommendedAction;
   const baseStatus = actionToStatus(action);
   if (baseStatus === "rejected" || baseStatus === "skipped") {
+    // No primary Prediction → `prev_label` stays null instead of
+    // serialising the synthetic all-null baseline. Downstream queue
+    // predicates and metrics that treat non-null `prev_label` as
+    // evidence of an actual model output would otherwise be poisoned.
     const prevLabel =
-      baseStatus === "rejected"
+      baseStatus === "rejected" && state.extraction.hadPrediction
         ? encodeExtractionObject(state.extraction.predictedObject, state.extraction.fields)
         : null;
     return {
@@ -163,6 +169,7 @@ function commitExtraction(state: Extract<AssistantState, { status: "done" }>): R
         fields: state.extraction.fields,
         predicted: state.extraction.predictedObject,
         prefilled: state.suggestionObject,
+        hadPrediction: state.extraction.hadPrediction,
       },
     ],
   };

@@ -19,6 +19,7 @@ describe("assistant overlay — extraction task", () => {
       extraction: {
         fields: FIELDS,
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     });
     expect(state.extraction).toBeDefined();
@@ -39,7 +40,11 @@ describe("assistant overlay — extraction task", () => {
       { name: "amount", type: "string", required: true, key: "amt" },
     ];
     const initial = openAssistant("rec1", null, {
-      extraction: { fields: aliasedFields, predictedObject: { company: "Acme", amount: null } },
+      extraction: {
+        fields: aliasedFields,
+        predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
+      },
     });
     const result = reduceAssistant(
       initial,
@@ -67,6 +72,7 @@ describe("assistant overlay — extraction task", () => {
       extraction: {
         fields: FIELDS,
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     });
     const result = reduceAssistant(
@@ -92,6 +98,7 @@ describe("assistant overlay — extraction task", () => {
       extraction: {
         fields: FIELDS,
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     });
     const result = reduceAssistant(initial, {
@@ -121,6 +128,7 @@ describe("assistant overlay — extraction task", () => {
       extraction: {
         fields: FIELDS,
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     });
     const afterStreamEnd = reduceAssistant(
@@ -153,6 +161,7 @@ describe("assistant overlay — extraction task", () => {
       extraction: {
         fields: FIELDS,
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     });
     const afterStreamEnd = reduceAssistant(
@@ -176,6 +185,7 @@ describe("assistant overlay — extraction task", () => {
       extraction: {
         fields: FIELDS,
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     });
     const afterStreamEnd = reduceAssistant(
@@ -205,6 +215,7 @@ describe("assistant overlay — extraction task", () => {
       extraction: {
         fields: FIELDS,
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     });
     const afterStreamEnd = reduceAssistant(

@@ -124,6 +124,7 @@ describe("assistant save+restore", () => {
           { name: "amount", type: "string", required: false },
         ],
         predictedObject: { company: "Acme", amount: null },
+        hadPrediction: true,
       },
     };
 

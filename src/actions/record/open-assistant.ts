@@ -90,6 +90,7 @@ export const openAssistantCommand: Command = {
             extraction: {
               fields: extractionFields,
               predictedObject: predictedExtractionObject,
+              hadPrediction: record.primaryPrediction !== null,
             },
           }
         : undefined;

@@ -79,12 +79,6 @@ export function applyEffects(
   for (const effect of effects) {
     switch (effect.kind) {
       case "close":
-        // Drafts are bound to the open overlay session. Esc-out (close
-        // without commit) must clear them so a subsequent re-open of the
-        // form on the same record starts from the prior committed Review
-        // rather than the stale in-flight edit. multi-label takes the same
-        // approach via commitDecision; this covers the close-only path.
-        if (app.extractionDraft !== null) app.clearExtractionDraft();
         app.closeOverlay();
         break;
       case "commitDecision": {
@@ -115,9 +109,6 @@ export function applyEffects(
         // funnel through here so one clear covers every path.
         if (app.multiLabelDraft?.recordId === effect.recordId) {
           app.clearMultiLabelDraft();
-        }
-        if (app.extractionDraft?.recordId === effect.recordId) {
-          app.clearExtractionDraft();
         }
         // A commit means the reviewer is done with this record's
         // assistant session. Drop the suspended state so the trailing
@@ -211,6 +202,7 @@ export function applyEffects(
           predicted: effect.predicted,
           previousReview: effect.prefilled,
           assistantViewed: true,
+          hadPrediction: effect.hadPrediction,
         });
         app.openOverlay({ kind: "extraction-form", state: formState });
         break;

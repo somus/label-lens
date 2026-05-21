@@ -80,6 +80,11 @@ export type AssistantBase = {
   extraction?: {
     fields: ExtractionField[];
     predictedObject: ExtractionObject;
+    /** False when the record had no primary Prediction at open time;
+     * the commit path then forces `relabeled` + null prev_label so we
+     * never write a synthetic prior model output. Mirrors the gate on
+     * the `a` command. */
+    hadPrediction: boolean;
   };
 };
 
@@ -207,6 +212,7 @@ export type Effect =
       fields: ExtractionField[];
       predicted: ExtractionObject;
       prefilled: ExtractionObject;
+      hadPrediction: boolean;
     }
   | { kind: "drill"; queueId: QueueId }
   | { kind: "pushPaletteHistory"; entry: string }

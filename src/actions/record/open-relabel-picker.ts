@@ -41,6 +41,7 @@ export const openRelabelPicker: Command = {
     }
     if (ctx.config.task === "extraction") {
       const fields = ctx.config.extraction?.fields ?? [];
+      const hadPrediction = record.primaryPrediction !== null;
       const predicted: ExtractionObject = record.primaryPrediction
         ? decodeExtractionObject(record.primaryPrediction.label, fields)
         : {};
@@ -49,16 +50,13 @@ export const openRelabelPicker: Command = {
         prior && prior.final_label !== null
           ? decodeExtractionObject(prior.final_label, fields)
           : null;
-      const draftCarry =
-        ctx.extractionDraft && ctx.extractionDraft.recordId === record.id
-          ? ctx.extractionDraft.object
-          : null;
       const state = openExtractionForm({
         recordId: record.id,
         fields,
         predicted,
-        previousReview: draftCarry ?? previousReview,
+        previousReview,
         assistantViewed: ctx.viewedAssistant.has(record.id),
+        hadPrediction,
       });
       ctx.openOverlay({ kind: "extraction-form", state });
       return;

@@ -51,7 +51,7 @@ export function restoreCachedAssistantState(
       confidence: cached.confidence,
       recommendedAction: cached.recommendedAction,
       reason: cached.reasoning,
-      extraction: { fields, predictedObject },
+      extraction: { fields, predictedObject, hadPrediction: record.primaryPrediction !== null },
     };
   }
 

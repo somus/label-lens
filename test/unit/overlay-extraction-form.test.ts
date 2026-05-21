@@ -23,6 +23,7 @@ describe("extraction form reducer", () => {
       fields: FIELDS,
       predicted: { company: "Acme", amount: null, date: null },
       previousReview: null,
+      hadPrediction: true,
     }) as ExtractionFormStateForTest;
   }
 
@@ -54,6 +55,7 @@ describe("extraction form reducer", () => {
       fields: FIELDS,
       predicted: { company: "Acme", amount: null, date: null },
       previousReview: { company: "Beta", amount: "100", date: null },
+      hadPrediction: true,
     });
     expect(s.draft).toEqual({ company: "Beta", amount: "100", date: null });
   });
@@ -175,6 +177,7 @@ describe("extraction form reducer", () => {
       predicted: { company: "Acme", amount: null, date: null },
       previousReview: null,
       assistantViewed: true,
+      hadPrediction: true,
     });
     const { effects } = dispatch(s, keyEvent("return"));
     const commit = effects.find((e) => e.kind === "commitDecision");
