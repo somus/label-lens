@@ -1,4 +1,4 @@
-export type Label = string | string[];
+export type Label = string | string[] | Record<string, unknown>;
 
 export type InputPrediction = {
   label: Label;

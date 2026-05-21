@@ -1,10 +1,12 @@
 import type { BulkAction, BulkReviewAction } from "../actions/record/bulk.ts";
 import type { AssistantResponse, AssistantResponseAny } from "../assistant/schema.ts";
-import type { AssistantConfig } from "../config/config.ts";
+import type { AssistantConfig, ExtractionField } from "../config/config.ts";
 import type { KeyEvent } from "../keymap/engine.ts";
+import type { ExtractionObject } from "../labels/extraction-object.ts";
 import type { Predicate } from "../store/queues/predicate.ts";
 import type { QueueId } from "../store/queues/registry.ts";
 import type { RecordWithPrimaryPrediction, ReviewStatus, SourceOfTruth } from "../types.ts";
+import type { ExtractionFormState } from "./extraction-form.ts";
 import type { FilterBuilderState } from "./filter-builder.ts";
 import type { GuidelinesState } from "./guidelines.ts";
 import type { HelpState } from "./help.ts";
@@ -72,6 +74,18 @@ export type AssistantBase = {
     configuredLabels: string[];
     predictedSet: string[];
   };
+  /** Extraction context. Present iff the task is extraction so the reducer
+   * can canonicalise the suggested object against the configured fields and
+   * encode it for commit. Mutually exclusive with `multiLabel`. */
+  extraction?: {
+    fields: ExtractionField[];
+    predictedObject: ExtractionObject;
+    /** False when the record had no primary Prediction at open time;
+     * the commit path then forces `relabeled` + null prev_label so we
+     * never write a synthetic prior model output. Mirrors the gate on
+     * the `a` command. */
+    hadPrediction: boolean;
+  };
 };
 
 /** Discriminated by `status` — each variant carries only the fields that are
@@ -87,11 +101,15 @@ export type AssistantState =
   | (AssistantBase & {
       status: "done";
       /** Final suggested label after `streamEnd`. Empty when the response is
-       * a multi-label suggestion — read `suggestionSet` instead. */
+       * a multi-label or extraction suggestion — read `suggestionSet` /
+       * `suggestionObject` instead. */
       suggestion: string;
       /** Multi-label suggestion (normalised + config-ordered). Present iff
        * the assistant returned a multi-label response. */
       suggestionSet?: string[];
+      /** Extraction suggestion (canonicalised against configured fields).
+       * Present iff the assistant returned an extraction response. */
+      suggestionObject?: ExtractionObject;
       /** Final reasoning markdown after `streamEnd`. */
       reason: string;
       /** Final confidence after `streamEnd`. */
@@ -129,6 +147,7 @@ export type BulkConfirmState = {
 export type Overlay =
   | { kind: "picker"; state: PickerState }
   | { kind: "multi-label-picker"; state: MultiLabelPickerState }
+  | { kind: "extraction-form"; state: ExtractionFormState }
   | { kind: "note"; state: NoteState }
   | { kind: "configure-assistant"; state: ConfigureAssistantState }
   | { kind: "assistant"; state: AssistantState }
@@ -184,6 +203,17 @@ export type Effect =
       sessionApiKey?: string;
     }
   | { kind: "runCommand"; commandName: string; argument?: string }
+  | {
+      // Open the extraction form pre-populated with the assistant's
+      // suggested object instead of committing it directly. The reviewer
+      // can eyeball/edit each field before pressing Enter to commit.
+      kind: "openExtractionFormPrefilled";
+      recordId: string;
+      fields: ExtractionField[];
+      predicted: ExtractionObject;
+      prefilled: ExtractionObject;
+      hadPrediction: boolean;
+    }
   | { kind: "drill"; queueId: QueueId }
   | { kind: "pushPaletteHistory"; entry: string }
   | { kind: "scheduleFilterPreview"; predicate: Predicate; revision: number }

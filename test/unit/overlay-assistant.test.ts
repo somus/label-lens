@@ -146,18 +146,24 @@ describe("key handling", () => {
     }
   });
 
-  test("Esc dismisses but still emits markAssistantViewed (ADR 0004)", () => {
+  test("Esc propagates to the review scope; assistant stays visible", () => {
+    // The assistant strip is permanent once opened — Esc does NOT
+    // dismiss it. The audit tag (ADR 0004) is set at open time by
+    // `openAssistantCommand` (see open-assistant.ts), so the reducer
+    // no longer needs to emit markAssistantViewed on Esc.
     const s = doneState();
     const r = press(s, "escape");
-    expect(r.overlay).toBeNull();
-    expect(r.effects.map((e) => e.kind)).toEqual(["markAssistantViewed", "close"]);
+    expect(r.propagated).toBe(true);
+    expect(r.overlay?.kind).toBe("assistant");
+    expect(r.effects).toEqual([]);
   });
 
-  test("Esc while streaming still marks viewed", () => {
+  test("Esc while streaming also just propagates", () => {
     let s = openAssistant(RECORD_ID);
     s = state(reduceAssistant(s, { kind: "streamToken", token: "partial" }));
     const r = press(s, "escape");
-    expect(r.effects.some((e) => e.kind === "markAssistantViewed")).toBe(true);
+    expect(r.propagated).toBe(true);
+    expect(r.overlay?.kind).toBe("assistant");
   });
 
   test("cancel event behaves like Esc", () => {
@@ -197,6 +203,32 @@ describe("key handling", () => {
     } else {
       throw new Error("expected commitDecision");
     }
+  });
+
+  test("unknown keys propagate so review-scope bindings still fire (ADR 0009)", () => {
+    // Assistant is an inline section, not a modal — q (quit), a (accept),
+    // x (reject), s (skip), j/k (nav), etc. must still trigger their
+    // review-scope commands while the suggestion footer is visible.
+    const s = openAssistant(RECORD_ID);
+    for (const name of ["q", "a", "x", "s", "j", "k", ":", "?", "escape"]) {
+      const r = press(s, name);
+      expect(r.propagated).toBe(true);
+    }
+  });
+
+  test("tab and return are NOT propagated (assistant owns these)", () => {
+    // `escape` IS propagated under the always-visible model: the strip
+    // does not auto-dismiss, so Esc falls through to the review scope
+    // (where it is currently unbound). Only Tab (expand reasoning) and
+    // Enter-when-done (commit) stay consumed by the reducer.
+    const s = state(
+      reduceAssistant(openAssistant(RECORD_ID), {
+        kind: "streamEnd",
+        response: validResponse,
+      }),
+    );
+    expect(press(s, "tab").propagated).toBeUndefined();
+    expect(press(s, "return").propagated).toBeUndefined();
   });
 
   test("empty reasoning still settles to done; reducer keeps Tab toggle for symmetry", () => {

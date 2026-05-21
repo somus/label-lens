@@ -1,4 +1,5 @@
 import type { LabellensConfig } from "../../../config/config.ts";
+import { createExtractionTask } from "./extraction.ts";
 import { createMultiLabelTask } from "./multi-label.ts";
 import { createSingleLabelTask } from "./single-label.ts";
 import type { TaskRenderer } from "./types.ts";
@@ -26,6 +27,14 @@ export function resolveTaskRenderer(config: LabellensConfig): TaskRenderer {
     return createMultiLabelTask({
       contextRowsBefore: previewLines,
       contextRowsAfter: previewLines,
+    });
+  }
+  if (config.task === "extraction") {
+    const previewLines = config.classification?.previewLines ?? 2;
+    return createExtractionTask({
+      contextRowsBefore: previewLines,
+      contextRowsAfter: previewLines,
+      fields: config.extraction?.fields ?? [],
     });
   }
   const previewLines = config.classification?.previewLines ?? 2;

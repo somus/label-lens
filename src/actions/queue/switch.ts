@@ -22,6 +22,17 @@ export function switchQueue(ctx: AppContext, queueId: QueueId): void {
   ctx.queueId = queueId;
   ctx.clearViewedAssistant();
   ctx.clearMultiLabelDraft();
+  ctx.clearSavedAssistant();
+  // An assistant overlay held a recordId from the prior queue; without
+  // clearing it here, a subsequent Enter would commit the suggestion
+  // against the previous queue's record, not the newly-focused one.
+  // Re-hydrate against the new cursor so a cache hit for the focused
+  // record auto-displays after the switch.
+  if (ctx.overlay?.kind === "assistant") {
+    ctx.cancelAssistantStream();
+    ctx.overlay = null;
+  }
+  ctx.hydrateAssistantFromCache();
   ctx.motion.play("status.queue", flash(120, "info"));
   ctx.setFlash(`Queue: ${def.label}`, "info", 1500);
   ctx.requestRender();

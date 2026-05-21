@@ -1,3 +1,5 @@
+import type { ExtractionField } from "../config/config.ts";
+import { type ExtractionObject, encodeExtractionObject } from "../labels/extraction-object.ts";
 import { encodeLabelSet, labelSetsEqual, normalizeLabelSet } from "../labels/label-set.ts";
 import type {
   AssistantBase,
@@ -12,6 +14,11 @@ export type OpenAssistantOptions = {
   multiLabel?: {
     configuredLabels: string[];
     predicted: string[];
+  };
+  extraction?: {
+    fields: ExtractionField[];
+    predictedObject: ExtractionObject;
+    hadPrediction: boolean;
   };
 };
 
@@ -38,6 +45,15 @@ export function openAssistant(
           },
         }
       : {}),
+    ...(options?.extraction
+      ? {
+          extraction: {
+            fields: options.extraction.fields,
+            predictedObject: options.extraction.predictedObject,
+            hadPrediction: options.extraction.hadPrediction,
+          },
+        }
+      : {}),
   };
 }
 
@@ -51,6 +67,7 @@ function baseOf(state: AssistantState): AssistantBase {
     predictedLabel: state.predictedLabel,
     reasoningExpanded: state.reasoningExpanded,
     ...(state.multiLabel ? { multiLabel: state.multiLabel } : {}),
+    ...(state.extraction ? { extraction: state.extraction } : {}),
   };
 }
 
@@ -75,6 +92,9 @@ function commit(state: AssistantState): ReduceResult {
   if (state.status !== "done") {
     return { overlay: packed(state), effects: [] };
   }
+  if (state.suggestionObject && state.extraction) {
+    return commitExtraction(state);
+  }
   if (state.suggestionSet && state.multiLabel) {
     return commitMultiLabel(state);
   }
@@ -95,6 +115,64 @@ function commit(state: AssistantState): ReduceResult {
     { kind: "close" },
   ];
   return { overlay: null, effects };
+}
+
+function commitExtraction(state: Extract<AssistantState, { status: "done" }>): ReduceResult {
+  if (!state.suggestionObject || !state.extraction) {
+    return { overlay: packed(state), effects: [] };
+  }
+  const action = state.recommendedAction;
+  const baseStatus = actionToStatus(action);
+  if (baseStatus === "rejected" || baseStatus === "skipped") {
+    // No primary Prediction → `prev_label` stays null instead of
+    // serialising the synthetic all-null baseline. Downstream queue
+    // predicates and metrics that treat non-null `prev_label` as
+    // evidence of an actual model output would otherwise be poisoned.
+    const prevLabel =
+      baseStatus === "rejected" && state.extraction.hadPrediction
+        ? encodeExtractionObject(state.extraction.predictedObject, state.extraction.fields)
+        : null;
+    return {
+      overlay: null,
+      effects: [
+        { kind: "markAssistantViewed", recordId: state.recordId },
+        {
+          kind: "commitDecision",
+          recordId: state.recordId,
+          status: baseStatus,
+          finalLabel: null,
+          prevLabel,
+          sourceOfTruth: "human+assistant",
+        },
+        { kind: "close" },
+      ],
+    };
+  }
+  // Extraction Enter never auto-commits the LLM's suggestion. Instead it
+  // opens the extraction form pre-populated with `suggestionObject` so
+  // the reviewer can eyeball each field, fix anything off, and then
+  // commit via the form's own Enter (which already routes through the
+  // required-field gate + `human+assistant` audit). This matches the
+  // user's expectation that the LLM's structured output is a draft, not
+  // a one-press apply.
+  return {
+    // Returning `overlay: null` here would race with the
+    // `openExtractionFormPrefilled` effect (closeOverlay would restore
+    // the suspended assistant state); the effect itself replaces the
+    // overlay, so leave the slot untouched at reduce time.
+    overlay: packed(state),
+    effects: [
+      { kind: "markAssistantViewed", recordId: state.recordId },
+      {
+        kind: "openExtractionFormPrefilled",
+        recordId: state.recordId,
+        fields: state.extraction.fields,
+        predicted: state.extraction.predictedObject,
+        prefilled: state.suggestionObject,
+        hadPrediction: state.extraction.hadPrediction,
+      },
+    ],
+  };
 }
 
 function commitMultiLabel(state: Extract<AssistantState, { status: "done" }>): ReduceResult {
@@ -191,6 +269,45 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
       // shape. TypeBox `Type.Object` is open by default, so a single-label
       // response that happens to carry an extra `suggestedLabels` key would
       // otherwise be misrouted to the multi-label branch.
+      if (state.extraction) {
+        if (!("extractedObject" in r)) {
+          return {
+            overlay: packed({
+              ...baseOf(state),
+              status: "error",
+              errorMessage: "Assistant returned a non-extraction response for an extraction task.",
+            }),
+            effects: [],
+          };
+        }
+        // The LLM produces canonical-shape objects keyed by configured
+        // field name (the tool schema is `properties[f.name]`); the
+        // ingest-side `canonicalizeExtractionObject` is for the source
+        // JSON shape, which uses the `key` alias. Calling that helper
+        // here would mis-read every aliased field — e.g. for an
+        // `amount` field with `key: "amt"`, it would look up
+        // `source["amt"]` (always undefined in LLM responses) and
+        // collapse the value to null. Mirror the read pattern used by
+        // `restoreCachedAssistantState`: read by `f.name`, accept
+        // strings (any other type becomes null).
+        const suggestionObject: ExtractionObject = {};
+        for (const f of state.extraction.fields) {
+          const raw = r.extractedObject[f.name];
+          suggestionObject[f.name] = typeof raw === "string" ? raw : null;
+        }
+        return {
+          overlay: packed({
+            ...baseOf(state),
+            status: "done",
+            suggestion: "",
+            suggestionObject,
+            confidence: r.confidence,
+            recommendedAction: r.recommendedAction,
+            reason: r.reasoning,
+          }),
+          effects: [],
+        };
+      }
       if (state.multiLabel) {
         if (!("suggestedLabels" in r)) {
           return {
@@ -258,11 +375,17 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
 }
 
 function reduceKey(state: AssistantState, name: string): ReduceResult {
-  if (name === "escape") return dismiss(state);
   if (name === "tab") {
     const toggled: AssistantState = { ...state, reasoningExpanded: !state.reasoningExpanded };
     return { overlay: packed(toggled), effects: [] };
   }
   if (name === "return") return commit(state);
-  return { overlay: packed(state), effects: [] };
+  // Assistant is an inline section (ADR 0009) that the reviewer cannot
+  // dismiss directly — once a suggestion is on screen it stays visible
+  // until they navigate to another record. `Esc` therefore propagates
+  // to the review scope alongside every other unhandled key
+  // (`q`, `a`, `x`, `s`, `j/k`, `:`, `?`, …). Multi-label picker and
+  // the extraction form use the same propagation pattern for keys they
+  // do not own.
+  return { overlay: packed(state), effects: [], propagated: true };
 }

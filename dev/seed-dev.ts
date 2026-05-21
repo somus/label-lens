@@ -11,6 +11,7 @@
  *   bun run dev/seed-dev.ts --seed 42             # different deterministic dataset
  *   bun run dev/seed-dev.ts --task boundary       # boundary task fixture (3-5 docs)
  *   bun run dev/seed-dev.ts --task multi-label    # content-moderation fixture
+ *   bun run dev/seed-dev.ts --task extraction     # structured invoice-extraction fixture
  *   LL_DEV_DIR=/tmp/foo bun run dev/seed-dev.ts
  */
 
@@ -19,6 +20,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { LabellensConfig } from "../src/config/config.ts";
 import { ingestFile, ingestTaskOptionsFromConfig } from "../src/ingest/ingest.ts";
+import { encodeExtractionObject } from "../src/labels/extraction-object.ts";
 import { encodeLabelSet } from "../src/labels/label-set.ts";
 import { runSignals } from "../src/signals/run.ts";
 import { openDb } from "../src/store/db.ts";
@@ -27,9 +29,11 @@ import { toggleTag } from "../src/store/tags.ts";
 import {
   BOUNDARY_LABELS,
   EXTRA_LABELS,
+  EXTRACTION_FIELDS,
   type GeneratedRecord,
   generateBoundary,
   generateClassification,
+  generateExtraction,
   generateMultiLabel,
   LABELS,
   MULTI_LABELS,
@@ -37,7 +41,7 @@ import {
   serializeJsonl,
 } from "./fixtures/generator.ts";
 
-type Task = "classification" | "boundary" | "multi-label";
+type Task = "classification" | "boundary" | "multi-label" | "extraction";
 type GenOptions = {
   count: number;
   seed: number;
@@ -87,8 +91,10 @@ function parseArgs(): GenOptions {
     else if (arg === "--no-prefill") out.noPrefill = true;
     else if (arg === "--task") {
       const v = process.argv[++i];
-      if (v !== "classification" && v !== "boundary" && v !== "multi-label") {
-        throw new Error("--task must be 'classification', 'boundary', or 'multi-label'");
+      if (v !== "classification" && v !== "boundary" && v !== "multi-label" && v !== "extraction") {
+        throw new Error(
+          "--task must be 'classification', 'boundary', 'multi-label', or 'extraction'",
+        );
       }
       out.task = v;
     }
@@ -123,6 +129,9 @@ function generate(opts: GenOptions): GeneratedRecord[] {
   if (opts.task === "multi-label") {
     return generateMultiLabel({ seed: opts.seed, count: opts.count }).records;
   }
+  if (opts.task === "extraction") {
+    return generateExtraction({ seed: opts.seed, count: opts.count }).records;
+  }
   return generateClassification({
     seed: opts.seed,
     count: opts.count,
@@ -146,6 +155,24 @@ async function patchConfigForMultiLabel(configPath: string): Promise<void> {
   await Bun.write(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
   console.log(
     `Multi-label: rewrote config.task and config.labels (${parsed.labels.length} labels).`,
+  );
+}
+
+/**
+ * `labellens init` infers `classification` / `boundary` from the JSONL and
+ * has no way to recognise extraction-shaped object predictions. Rewrite the
+ * inferred config to `task: "extraction"` with the canonical fields and
+ * drop the inferred `labels` array (extraction stores structured objects
+ * keyed by `extraction.fields`; the flat label set is unused).
+ */
+async function patchConfigForExtraction(configPath: string): Promise<void> {
+  const parsed = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
+  parsed.task = "extraction";
+  parsed.labels = [];
+  parsed.extraction = { fields: [...EXTRACTION_FIELDS] };
+  await Bun.write(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
+  console.log(
+    `Extraction: rewrote config.task and config.extraction.fields (${EXTRACTION_FIELDS.length} fields).`,
   );
 }
 
@@ -237,11 +264,70 @@ function prefillStateOpen(db: ReturnType<typeof openDb>, opts: GenOptions): void
       const predicted = row.primary_label;
       if (accept) {
         if (!predicted) continue;
+        if (opts.task === "extraction") {
+          // Only accept extraction predictions whose required fields are
+          // all populated — matches the runtime accept gate so the seeded
+          // state is realistic and consistent with what `a` would write.
+          let parsed: Record<string, unknown> | null;
+          try {
+            parsed = JSON.parse(predicted) as Record<string, unknown>;
+          } catch {
+            parsed = null;
+          }
+          if (!parsed) continue;
+          let ok = true;
+          for (const f of EXTRACTION_FIELDS) {
+            if (!f.required) continue;
+            const v = parsed[f.name];
+            if (v === null || v === undefined || v === "") {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+        }
         insertReview(db, {
           record_id: row.id,
           status: "accepted",
           final_label: predicted,
           prev_label: null,
+          source_of_truth: "human",
+        });
+      } else if (opts.task === "extraction") {
+        // Extraction flip: tweak the predicted object so status='relabeled'.
+        // Append " (reviewed)" to `company` and re-encode the canonical
+        // object — produces a deterministic, valid relabel.
+        let parsed: Record<string, unknown> | null;
+        try {
+          parsed = predicted ? (JSON.parse(predicted) as Record<string, unknown>) : null;
+        } catch {
+          parsed = null;
+        }
+        if (!parsed) continue;
+        // Walk fields with source-shape keys (honouring `key` alias) so
+        // encodeExtractionObject — which alias-resolves on read — picks
+        // every value up. Storing under canonical names would silently
+        // drop the `amount` value because the field's `key: "amt"` alias
+        // hides it from the encoder.
+        const corrected: Record<string, string | null> = {};
+        for (const f of EXTRACTION_FIELDS) {
+          const sourceKey = (f as { key?: string }).key ?? f.name;
+          const v = parsed[f.name];
+          corrected[sourceKey] = typeof v === "string" && v.length > 0 ? v : null;
+        }
+        if (typeof corrected.company === "string" && corrected.company.length > 0) {
+          corrected.company = `${corrected.company} (reviewed)`;
+        } else {
+          corrected.company = "Reviewed Co";
+        }
+        // Backfill required amount via its source-shape key (`amt`).
+        if ((corrected.amt ?? "") === "") corrected.amt = "0.00";
+        const finalLabel = encodeExtractionObject(corrected, [...EXTRACTION_FIELDS]);
+        insertReview(db, {
+          record_id: row.id,
+          status: "relabeled",
+          final_label: finalLabel,
+          prev_label: predicted,
           source_of_truth: "human",
         });
       } else if (opts.task === "multi-label") {
@@ -312,6 +398,9 @@ async function main(): Promise<void> {
   }
   if (opts.task === "multi-label") {
     await patchConfigForMultiLabel(configPath);
+  }
+  if (opts.task === "extraction") {
+    await patchConfigForExtraction(configPath);
   }
   const config = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
   const dbPath = join(dir, ".labellens", "state.db");

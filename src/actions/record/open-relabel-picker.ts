@@ -1,7 +1,10 @@
 import { labelKey, labelName } from "../../config/config.ts";
+import { decodeExtractionObject, type ExtractionObject } from "../../labels/extraction-object.ts";
 import { decodeLabelSet } from "../../labels/label-set.ts";
+import { openExtractionForm } from "../../overlay/extraction-form.ts";
 import { openMultiLabelPicker } from "../../overlay/multi-label-picker.ts";
 import { openPicker } from "../../overlay/picker.ts";
+import { currentReview } from "../../store/queries.ts";
 import type { Command } from "../command.ts";
 
 export const openRelabelPicker: Command = {
@@ -34,6 +37,28 @@ export const openRelabelPicker: Command = {
         ...(draft ? { initialSelected: draft } : {}),
       });
       ctx.openOverlay({ kind: "multi-label-picker", state });
+      return;
+    }
+    if (ctx.config.task === "extraction") {
+      const fields = ctx.config.extraction?.fields ?? [];
+      const hadPrediction = record.primaryPrediction !== null;
+      const predicted: ExtractionObject = record.primaryPrediction
+        ? decodeExtractionObject(record.primaryPrediction.label, fields)
+        : {};
+      const prior = currentReview(ctx.db, record.id);
+      const previousReview: ExtractionObject | null =
+        prior && prior.final_label !== null
+          ? decodeExtractionObject(prior.final_label, fields)
+          : null;
+      const state = openExtractionForm({
+        recordId: record.id,
+        fields,
+        predicted,
+        previousReview,
+        assistantViewed: ctx.viewedAssistant.has(record.id),
+        hadPrediction,
+      });
+      ctx.openOverlay({ kind: "extraction-form", state });
       return;
     }
     const state = openPicker({

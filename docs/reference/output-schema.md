@@ -39,6 +39,21 @@ One row per reviewed record. Reads `effective_reviews` — only the current stat
 
 Records you skipped are included with `status: "skipped"` and `final_label: null`. Records you never touched are **omitted** — only effective reviews land in the export.
 
+### Extraction JSONL
+
+For `task: "extraction"` (see [task types](../explanation/task-types.md)):
+
+- Accepted/relabeled rows emit `label` as the corrected JSON object keyed by configured `extraction.fields[].name` in configured order, e.g. `"label": {"company": "Acme", "amount": "100"}`.
+- Rejected/skipped rows (when included via `--include-rejected` / `--include-skipped`) keep `label: null`, same as other tasks.
+- `output.fieldOverrides.label` renames the emitted field for extraction the same way it does for the other task shapes.
+
+Export aborts with a user-visible error if any included accepted/relabeled row has:
+
+- a required `extraction.fields[]` value that is null or empty,
+- a stored value that is not valid JSON, not a JSON object, or contains a non-string-non-null field value.
+
+The error names the offending record id and (for required-field failures) the offending field name.
+
 ### Multi-label JSONL
 
 For `task: "multi-label"` (see [task types](../explanation/task-types.md), shipped in #105):
@@ -73,6 +88,8 @@ Same fields as JSONL, flattened. Nested fields (`predictions`) are JSON-stringif
 | `predictions_json` | string (JSON-encoded array) |
 
 CSV is quoted per RFC 4180. Embedded quotes are doubled.
+
+For `task: "extraction"`, the `label` column is `JSON.stringify(correctedObject)` — the same JSON object the JSONL export emits, rendered as a single quoted CSV cell (RFC 4180 quoting on commas / quotes). Rejected/skipped rows emit a blank cell, same as other tasks. The export aborts (with the offending record id) on missing required fields or malformed stored values.
 
 For `task: "multi-label"` (shipped in #105), the `label` column joins the committed set with `output.csvMultiLabelSeparator` (default `;`) — e.g. `spam;toxicity`. Set a different separator if your labels contain a literal `;`:
 

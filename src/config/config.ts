@@ -176,6 +176,47 @@ const ClassificationConfigSchema = Type.Object(
   { description: "Classification-task specific config." },
 );
 
+const ExtractionFieldSchema = Type.Object(
+  {
+    name: Type.String({
+      minLength: 1,
+      description:
+        "Canonical field name. Used as the storage / export object key and the editor label.",
+    }),
+    type: Type.Literal("string", {
+      description:
+        "Field value type. Only string is supported in #112; arrays, numbers, booleans, and nested objects are future work.",
+    }),
+    required: Type.Boolean({
+      description: "When true, accept and edit-commit refuse the row if this field is null/empty.",
+    }),
+    key: Type.Optional(
+      Type.String({
+        minLength: 1,
+        description:
+          "Optional source-JSON key alias. When set, ingest reads the prediction object's `key` property; canonical storage still uses `name`.",
+      }),
+    ),
+  },
+  {
+    additionalProperties: false,
+    description: "Single field in an extraction task's structured prediction object.",
+  },
+);
+
+const ExtractionConfigSchema = Type.Object(
+  {
+    fields: Type.Array(ExtractionFieldSchema, {
+      minItems: 1,
+      description: "Ordered list of structured fields the reviewer can edit.",
+    }),
+  },
+  {
+    additionalProperties: false,
+    description: "Extraction-task specific config.",
+  },
+);
+
 const AssistantConfigSchema = Type.Object(
   {
     enabled: Type.Boolean({
@@ -351,13 +392,21 @@ export const LabellensConfigSchema = Type.Object(
   {
     $schema: Type.Optional(Type.String({ description: "URI of this config's JSON Schema." })),
     task: Type.Union(
-      [Type.Literal("classification"), Type.Literal("boundary"), Type.Literal("multi-label")],
+      [
+        Type.Literal("classification"),
+        Type.Literal("boundary"),
+        Type.Literal("multi-label"),
+        Type.Literal("extraction"),
+      ],
       {
         description: "Task kind.",
       },
     ),
     labels: Type.Array(LabelConfigEntrySchema, {
-      minItems: 1,
+      // minItems is enforced in `validateConfigSchema` per-task so extraction
+      // can omit / empty `labels` (it stores structured objects keyed by
+      // `extraction.fields`, not a flat label set). All other tasks still
+      // require at least one configured label.
       description: "Configured label set. Used for review, queues, and exports.",
     }),
     guidelines: Type.Optional(
@@ -367,6 +416,7 @@ export const LabellensConfigSchema = Type.Object(
     ),
     boundary: Type.Optional(BoundaryConfigSchema),
     classification: Type.Optional(ClassificationConfigSchema),
+    extraction: Type.Optional(ExtractionConfigSchema),
     input: Type.Object(
       {
         path: Type.String({ description: "Source JSONL. Resolved relative to the config file." }),
@@ -396,6 +446,8 @@ export type DisplayConfig = Static<typeof DisplayConfigSchema>;
 export type NavigationConfig = Static<typeof NavigationConfigSchema>;
 export type BoundaryConfig = Static<typeof BoundaryConfigSchema>;
 export type ClassificationConfig = Static<typeof ClassificationConfigSchema>;
+export type ExtractionConfig = Static<typeof ExtractionConfigSchema>;
+export type ExtractionField = Static<typeof ExtractionFieldSchema>;
 export type AssistantConfig = Static<typeof AssistantConfigSchema>;
 export type SignalsConfig = Static<typeof SignalsConfigSchema>;
 export type LowConfidenceConfig = Static<typeof LowConfidenceConfigSchema>;
@@ -413,16 +465,58 @@ export const CONFIG_SCHEMA_URL =
  * of human-readable error strings; empty array means valid.
  */
 export function validateConfigSchema(raw: unknown): string[] {
-  if (Value.Check(LabellensConfigSchema as TSchema, raw)) return [];
   const errors: string[] = [];
-  let seen = 0;
-  for (const e of Value.Errors(LabellensConfigSchema as TSchema, raw)) {
-    const path = e.instancePath === "" ? "(root)" : e.instancePath;
-    errors.push(`${path}: ${e.message}`);
-    seen++;
-    if (seen >= 20) {
-      errors.push("…(further errors suppressed)");
-      break;
+  if (!Value.Check(LabellensConfigSchema as TSchema, raw)) {
+    let seen = 0;
+    for (const e of Value.Errors(LabellensConfigSchema as TSchema, raw)) {
+      const path = e.instancePath === "" ? "(root)" : e.instancePath;
+      errors.push(`${path}: ${e.message}`);
+      seen++;
+      if (seen >= 20) {
+        errors.push("…(further errors suppressed)");
+        return errors;
+      }
+    }
+    return errors;
+  }
+  // Task-aware rules layered on top of the TypeBox shape. `labels` is
+  // schema-optional-minItems so extraction configs can omit it, but
+  // single-label / boundary / multi-label tasks still require at least
+  // one entry.
+  const cfg = raw as LabellensConfig;
+  if (cfg.task !== "extraction" && (!cfg.labels || cfg.labels.length === 0)) {
+    errors.push("/labels: must contain at least 1 element for non-extraction tasks");
+  }
+  if (cfg.task === "extraction" && (!cfg.extraction || cfg.extraction.fields.length === 0)) {
+    errors.push('/extraction: required when task is "extraction"');
+  }
+  if (cfg.task === "extraction" && cfg.extraction && cfg.extraction.fields.length > 0) {
+    // Duplicate canonical `name` collapses the stored object's key space —
+    // ingest, form draft, and export all key by `name`, so two rows with
+    // the same name silently overwrite each other.
+    const names = new Set<string>();
+    const dupeNames = new Set<string>();
+    for (const f of cfg.extraction.fields) {
+      if (names.has(f.name)) dupeNames.add(f.name);
+      names.add(f.name);
+    }
+    for (const n of dupeNames) {
+      errors.push(`/extraction/fields: duplicate field name "${n}"`);
+    }
+    // Effective input keys must also be unique: `key ?? name` is what
+    // canonicalize reads from source JSON. Two fields claiming the same
+    // source key would map one input column into multiple canonical
+    // fields.
+    const inputKeys = new Map<string, string>();
+    const dupeKeys = new Set<string>();
+    for (const f of cfg.extraction.fields) {
+      const k = f.key ?? f.name;
+      const prior = inputKeys.get(k);
+      if (prior !== undefined && prior !== f.name) dupeKeys.add(k);
+      inputKeys.set(k, f.name);
+    }
+    for (const k of dupeKeys) {
+      errors.push(`/extraction/fields: duplicate input key "${k}"`);
     }
   }
   return errors;

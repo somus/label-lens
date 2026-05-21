@@ -20,6 +20,7 @@ export const next: Command = {
     if (before !== after) {
       ctx.clearViewedAssistant();
       ctx.clearMultiLabelDraft();
+      ctx.clearSavedAssistant();
     }
   },
 };

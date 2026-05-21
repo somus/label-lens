@@ -339,7 +339,11 @@ export async function prepareReviewState(
   // Same → cheap no-op (one meta read).
   applyThresholdsOnStartup(db, thresholds);
 
-  const unknown = findUnknownLabels(db, config.labels);
+  // Extraction stores structured JSON objects in `predictions.label` /
+  // `reviews.final_label`, not configured-label values; the configured-label
+  // guard does not apply and would otherwise flag every stored object as
+  // unknown.
+  const unknown = config.task === "extraction" ? [] : findUnknownLabels(db, config.labels);
   if (unknown.length > 0) {
     const lines = [
       ...unknown.map((u) => `'${u.label}' — ${u.count} record${u.count === 1 ? "" : "s"}`),

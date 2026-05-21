@@ -100,7 +100,10 @@ describe("chrome — status bar + action footer", () => {
     expect(frame).toContain("[j/k] nav");
     expect(frame).toContain("[a] accept");
     expect(frame).toContain("[r] relabel");
-    expect(frame).toContain("[i] ask");
+    // Footer label varies by config: `[i] ask` when assistant is
+    // configured (post-first-press), `[i] setup` otherwise. The test
+    // fixture leaves assistant unconfigured.
+    expect(frame).toContain("[i] setup");
     expect(frame).toContain("[x] reject");
     expect(frame).toContain("[s] skip");
     expect(frame).toContain("[n] note");

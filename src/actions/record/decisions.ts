@@ -5,6 +5,7 @@ import { applyEffects } from "../../overlay/effects.ts";
 import type { Effect } from "../../overlay/types.ts";
 import type { RecordWithPrimaryPrediction } from "../../types.ts";
 import type { Command, CommandBindings } from "../command.ts";
+import { missingRequiredFields } from "./extraction-validate.ts";
 
 /**
  * Multi-label draft semantics: `1`–`9` and per-label-key shortcuts toggle
@@ -75,6 +76,24 @@ function decisionCommand(spec: DecisionSpec): Command {
         ctx.setFlash("Cannot accept: record has no prediction", "error");
         return;
       }
+      // Extraction accept must satisfy required-field validation against the
+      // primary Prediction's stored object. Refuse + flash if a required
+      // field is null/empty so we don't write an invalid Annotation.
+      if (
+        spec.status === "accepted" &&
+        ctx.config.task === "extraction" &&
+        record.primaryPrediction
+      ) {
+        const fields = ctx.config.extraction?.fields ?? [];
+        const missing = missingRequiredFields(record.primaryPrediction.label, fields);
+        if (missing.length > 0) {
+          ctx.setFlash(
+            `Cannot accept: required field(s) missing — ${missing.join(", ")}. Press r to edit.`,
+            "error",
+          );
+          return;
+        }
+      }
       const effect: Effect = {
         kind: "commitDecision",
         recordId: record.id,
@@ -143,6 +162,13 @@ export function relabelByIndexCommand(n: number): Command {
       }
       if (ctx.config.task === "multi-label") {
         toggleMultiLabelDraft(ctx, record, labelName(entry));
+        return;
+      }
+      if (ctx.config.task === "extraction") {
+        // 1-9 quick-relabel cannot commit a single string label under
+        // extraction — the Annotation must be a structured object. Press r
+        // to open the form instead.
+        ctx.setFlash("Use r to open the extraction form", "info", 1500);
         return;
       }
       const label = labelName(entry);
@@ -230,6 +256,10 @@ export function relabelByKeyCommand(entry: LabelConfigEntry): Command | null {
       if (!record || !ctx.queueId) return;
       if (ctx.config.task === "multi-label") {
         toggleMultiLabelDraft(ctx, record, label);
+        return;
+      }
+      if (ctx.config.task === "extraction") {
+        ctx.setFlash("Use r to open the extraction form", "info", 1500);
         return;
       }
       const predicted = record.primaryPrediction?.label ?? null;

@@ -7,6 +7,7 @@ import {
   queryAssistant,
 } from "../../assistant/provider.ts";
 import { labelKey, labelName } from "../../config/config.ts";
+import { decodeExtractionObject } from "../../labels/extraction-object.ts";
 import { decodeLabelSet } from "../../labels/label-set.ts";
 import { openAssistant } from "../../overlay/assistant.ts";
 import { openConfigureAssistant } from "../../overlay/configure-assistant.ts";
@@ -63,10 +64,16 @@ export const openAssistantCommand: Command = {
     const queueId = ctx.queueId;
     const predictedLabel = record.primaryPrediction?.label ?? null;
     const isMultiLabel = ctx.config.task === "multi-label";
+    const isExtraction = ctx.config.task === "extraction";
     const predictedSet =
       isMultiLabel && record.primaryPrediction
         ? decodeLabelSet(record.primaryPrediction.label)
         : [];
+    const extractionFields = ctx.config.extraction?.fields ?? [];
+    const predictedExtractionObject =
+      isExtraction && record.primaryPrediction
+        ? decodeExtractionObject(record.primaryPrediction.label, extractionFields)
+        : {};
     const configuredLabels = ctx.config.labels.map((e) => labelName(e));
 
     // Cancel any prior in-flight assistant request before we fire a new one.
@@ -76,12 +83,25 @@ export const openAssistantCommand: Command = {
     const controller = new AbortController();
     ctx.assistantAbort = { recordId: fireRecordId, controller };
 
-    const state = openAssistant(
-      fireRecordId,
-      predictedLabel,
-      isMultiLabel ? { multiLabel: { configuredLabels, predicted: predictedSet } } : undefined,
-    );
+    const openOptions = isMultiLabel
+      ? { multiLabel: { configuredLabels, predicted: predictedSet } }
+      : isExtraction
+        ? {
+            extraction: {
+              fields: extractionFields,
+              predictedObject: predictedExtractionObject,
+              hadPrediction: record.primaryPrediction !== null,
+            },
+          }
+        : undefined;
+    const state = openAssistant(fireRecordId, predictedLabel, openOptions);
     ctx.openOverlay({ kind: "assistant", state });
+    // ADR 0004: opening the panel counts as exposure regardless of how
+    // the reviewer dismisses it. With `Esc` no longer closing the
+    // assistant (the strip is now permanent until the reviewer
+    // navigates), tag the record here so every subsequent commit on it
+    // carries `source_of_truth: "human+assistant"`.
+    ctx.viewedAssistant.add(fireRecordId);
 
     let model: import("@earendil-works/pi-ai").Model<string>;
     try {
@@ -117,6 +137,15 @@ export const openAssistantCommand: Command = {
         confidence: p.confidence ?? undefined,
         reason: p.reason ?? undefined,
       })),
+      ...(isExtraction
+        ? {
+            extractionFields: extractionFields.map((f) => ({
+              name: f.name,
+              type: "string" as const,
+              required: f.required,
+            })),
+          }
+        : {}),
       provider: assistant.provider ?? "",
       model: assistant.model ?? "",
       promptTemplateVersion: PROMPT_TEMPLATE_VERSION,
@@ -140,6 +169,7 @@ export const openAssistantCommand: Command = {
       promptInput,
       labelNames,
       multiLabel: isMultiLabel,
+      ...(isExtraction ? { extraction: { fields: extractionFields } } : {}),
       signal: controller.signal,
       onToken: (token) => {
         // Only forward tokens while this exact record's panel is still open;

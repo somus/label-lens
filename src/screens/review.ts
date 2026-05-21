@@ -7,9 +7,10 @@ import { createChordResolver } from "../keymap/chord.ts";
 import type { Scope } from "../keymap/engine.ts";
 import { CONFIGURE_PROVIDERS, envVarFor } from "../overlay/configure-assistant.ts";
 import { applyEffects } from "../overlay/effects.ts";
+import type { ExtractionFormState } from "../overlay/extraction-form.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
-import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
+import { flashFooterHint } from "../overlay/hints.ts";
 import type { MultiLabelPickerState } from "../overlay/multi-label-picker.ts";
 import type { QueueState } from "../overlay/queue.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
@@ -23,7 +24,7 @@ import type {
   PickerCandidate,
   PickerState,
 } from "../overlay/types.ts";
-import { fadeIn, pulse } from "../render/anim.ts";
+import { pulse } from "../render/anim.ts";
 import { Box } from "../render/box.ts";
 import {
   pickQueuePreview,
@@ -85,6 +86,10 @@ export function mountReviewScreen(args: {
   enterReview(app, initialQueueId);
   app.commandRegistry = registry;
   app.activeScope = "review";
+  // Boot-time hydration: cursor was just opened in enterReview; install
+  // any cached assistant response for the focused record so the strip
+  // is interactive on first paint without requiring `i`.
+  app.hydrateAssistantFromCache();
   const bindings = bindingsFor([...registry.values()]);
   let mounted = true;
 
@@ -96,9 +101,6 @@ export function mountReviewScreen(args: {
   // Track chord pending key across renders so we only start the fade-out
   // motion on transition (calling play() per frame would reset progress).
   let lastChordKey: string | null = null;
-  // Track assistant strip visibility across renders so the fade-in plays once
-  // when it first appears (not on every keystroke while the overlay is open).
-  let lastAssistantVisible = false;
 
   const renderState = () => {
     if (!mounted) return;
@@ -266,25 +268,36 @@ export function mountReviewScreen(args: {
       total: queueTotal,
       contentWidth,
     });
-    // Inline assistant strip slots right below the chip rail (decision)
-    // when the overlay is active — keeps suggestion + label set in the same
-    // eye-line per the inline-footer design (ADR 0009).
-    const assistantVisible = app.overlay?.kind === "assistant";
-    if (assistantVisible !== lastAssistantVisible) {
-      const becameVisible = assistantVisible;
-      lastAssistantVisible = assistantVisible;
-      // Fade-in plays once on appearance; the motion controller is a no-op at
-      // mono / 16-color (display.motion=false) so this respects the config
-      // override automatically.
-      if (becameVisible) app.motion.play("assistant.strip.appear", fadeIn(220));
-    }
-    const assistantStrip = assistantVisible
-      ? renderAssistantStrip(
-          (app.overlay as { kind: "assistant"; state: AssistantState }).state,
-          app.display,
-          contentWidth,
-          app.motion.snapshot("assistant.strip.appear"),
-        )
+    // Inline assistant section (ADR 0009). The strip is always present
+    // when the assistant is configured, so pressing `i` populates it
+    // in-place without shifting the surrounding layout. When the
+    // assistant overlay is open we render its state; otherwise we
+    // render an idle placeholder occupying the same single-row footprint.
+    // When the assistant is not enabled in config the strip is hidden
+    // entirely — discovery happens via the `[i] setup assistant` chip
+    // in the action footer.
+    const assistantEnabled = app.config.assistant?.enabled === true;
+    // Active overlay is the foreground source; `savedAssistantState`
+    // covers the case where the reviewer opened a non-assistant overlay
+    // (e.g. the extraction form) on top of a completed suggestion —
+    // the strip stays populated while the foreground overlay is up.
+    // Guard the state against record-id mismatch: navigation (j/k, ]/[)
+    // does not synchronously close the assistant overlay; if the cursor
+    // has moved we render the idle placeholder instead of leaking the
+    // previous record's suggestion onto the new row.
+    const rawAssistantState =
+      app.overlay?.kind === "assistant" ? app.overlay.state : app.savedAssistantState;
+    const currentRecordId = cursor?.current()?.id ?? null;
+    const assistantState =
+      rawAssistantState !== null && rawAssistantState.recordId === currentRecordId
+        ? rawAssistantState
+        : null;
+    // Cache hydration runs on cursor.on("change") via
+    // `app.hydrateAssistantFromCache()` — it installs the cached state
+    // into `app.overlay` directly so the strip is interactive. No
+    // render-side cache lookup needed.
+    const assistantStrip = assistantEnabled
+      ? renderAssistantStrip(assistantState, app.display, contentWidth)
       : Box({});
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
@@ -299,16 +312,11 @@ export function mountReviewScreen(args: {
     );
 
     const flashActive = !app.overlay && flash !== null;
-    // Assistant + note overlays keep the registry-derived footer so the
-    // reviewer still sees accept/reject/relabel under them — the commit
-    // shortcuts stay live while the overlay is open.
-    const overlayWantsCustomHint =
-      app.overlay !== null && app.overlay.kind !== "assistant" && app.overlay.kind !== "note";
-    const footerHint = overlayWantsCustomHint
-      ? overlayFooterHint(app.overlay!, app.keyPreset)
-      : app.overlay
-        ? undefined
-        : flashFooterHint(flash, app.display, flashActive);
+    // Footer always renders the registry-derived review-scope shortcuts.
+    // Overlays no longer hijack the bar — every modal carries its own
+    // intra-modal keymap footer if it needs one. Flash messages still
+    // take over when the screen is unmodalled.
+    const footerHint = app.overlay ? undefined : flashFooterHint(flash, app.display, flashActive);
 
     // Skip the per-frame sidebar snapshot when the sidebar is hidden.
     // `getSidebarData` queries the DB (signal counts, queue progress) +
@@ -334,7 +342,11 @@ export function mountReviewScreen(args: {
     // Overlay mounts at the root level (added after Chrome so it paints
     // on top) and centers against the full terminal — no clipping by
     // sidebar / queue-preview rails since it's not inside the main column.
-    if (app.overlay) {
+    //
+    // The assistant overlay is intentionally skipped here: it renders
+    // inline below the chip / fields rail via `renderAssistantStrip`
+    // (ADR 0009), not as a stacked modal.
+    if (app.overlay && app.overlay.kind !== "assistant") {
       renderer.root.add(
         renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight),
       );
@@ -364,6 +376,13 @@ export function mountReviewScreen(args: {
     contextScope: Scope,
   ) => {
     app.activeScope = contextScope;
+    // Read-only overlays (stats, help, guidelines, queue) propagate
+    // unhandled keys but must not let review-scope decisions like `a` /
+    // `x` / `s` fire accidentally while the reviewer is reading docs.
+    // Feed `chord` with the literal "global" scope so only global-scope
+    // bindings (`q` quit, `:` palette, `^p` palette history) match.
+    // The interactive inline assistant overlay bypasses this helper —
+    // see `onKey` for the special-case full-dispatch path.
     const action = chord.feed("global", {
       name: event.name,
       ctrl: event.ctrl,
@@ -390,7 +409,15 @@ export function mountReviewScreen(args: {
       const queueId = app.queueId ?? initialQueueId;
       applyEffects(app, queueId, result.effects, dispatchCommand);
       if (result.propagated) {
-        dispatchPropagatedKey(event, propagatedScope(sourceOverlay, app));
+        if (sourceOverlay.kind === "assistant") {
+          // Assistant renders inline (ADR 0009); reviewer expects the
+          // full review-scope keymap to keep working. Route through
+          // `dispatchKey`, not the global-only `dispatchPropagatedKey`,
+          // so `r` open form, `a` accept, `x` reject, etc. all fire.
+          dispatchKey(event);
+        } else {
+          dispatchPropagatedKey(event, propagatedScope(sourceOverlay, app));
+        }
       } else if (mounted) {
         renderState();
       }
@@ -534,7 +561,7 @@ function modalBox(
 }
 
 function renderOverlay(
-  overlay: Overlay,
+  overlay: Exclude<Overlay, { kind: "assistant" }>,
   app: AppContext,
   termWidth: number,
   termHeight: number,
@@ -545,13 +572,10 @@ function renderOverlay(
       return renderPicker(overlay.state, display, termWidth, termHeight);
     case "multi-label-picker":
       return renderMultiLabelPicker(overlay.state, display, termWidth, termHeight);
+    case "extraction-form":
+      return renderExtractionForm(overlay.state, display, termWidth, termHeight);
     case "note":
       return renderNote(overlay.state, display, termWidth, termHeight);
-    case "assistant":
-      // Assistant overlay renders inline (below the chip rail) via
-      // renderAssistantStrip in the main body, not as a modal stack. Return
-      // an empty box so the overlay layer doesn't double-render.
-      return Box({});
     case "configure-assistant":
       return renderConfigureAssistant(overlay.state, display, termWidth, termHeight);
     case "palette":
@@ -585,19 +609,14 @@ function renderOverlay(
  * the summary row.
  */
 function renderAssistantStrip(
-  state: AssistantState,
+  state: AssistantState | null,
   display: ResolvedDisplay,
   contentWidth: number,
-  fadeSnapshot?: import("../render/anim.ts").MotionSnapshot,
 ): ReturnType<typeof Box> {
-  const reason = state.status === "done" ? state.reason : null;
-  const expanded = state.reasoningExpanded && reason !== null;
-  const segs = buildAssistantSegments(state);
-  const trailing = buildAssistantStatusTrailing(state);
-  // During fade-in (motion progress < 1) drop BOLD on the summary line so the
-  // strip visibly settles in rather than snapping to full weight. At mono /
-  // 16-color the motion controller stays inactive so this is a no-op.
-  const fadingIn = (fadeSnapshot?.active ?? false) && (fadeSnapshot?.progress ?? 1) < 1;
+  const reason = state?.status === "done" ? state.reason : null;
+  const expanded = state?.reasoningExpanded === true && reason !== null;
+  const segs = state === null ? buildAssistantIdleSegments() : buildAssistantSegments(state);
+  const trailing = state === null ? undefined : buildAssistantStatusTrailing(state);
 
   const children: ReturnType<typeof Text | typeof Box>[] = [];
   children.push(SectionHeader({ display, label: "assistant", width: contentWidth, trailing }));
@@ -620,7 +639,7 @@ function renderAssistantStrip(
       { flexDirection: "column", flexShrink: 0, width: contentWidth },
       Text({
         content: segmentsToStyledText(segs, display),
-        attributes: fadingIn ? TextAttributes.DIM : TextAttributes.BOLD,
+        attributes: state === null ? TextAttributes.DIM : TextAttributes.BOLD,
         wrapMode: "word",
       }),
     ),
@@ -629,14 +648,22 @@ function renderAssistantStrip(
   return Box({ flexDirection: "column", marginTop: 1, flexShrink: 0 }, ...children);
 }
 
+function buildAssistantIdleSegments(): Segment[] {
+  // Single row matching the height of `buildAssistantSegments` so opening
+  // the assistant overlay (`i`) does not shift surrounding content. Keep
+  // the chip count low — this is dim helper text, not a call to action.
+  return [
+    { text: " ", tone: "default" },
+    { text: "[i]", tone: "accent" },
+    { text: " ask the LLM for a suggestion", tone: "muted" },
+  ];
+}
+
 function buildAssistantSegments(state: AssistantState): Segment[] {
   if (state.status === "loading") {
     return [
       { text: " LLM ", tone: "accent" },
       { text: "thinking…", tone: "muted" },
-      { text: "   ", tone: "default" },
-      { text: "[esc]", tone: "accent" },
-      { text: " cancel", tone: "muted" },
     ];
   }
   if (state.status === "streaming") {
@@ -649,22 +676,22 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
     return [
       { text: " ✗ ", tone: "danger" },
       { text: state.errorMessage ?? "unknown error", tone: "muted" },
-      { text: "   ", tone: "default" },
-      { text: "[esc]", tone: "accent" },
-      { text: " dismiss", tone: "muted" },
     ];
   }
   // done — narrowed by the early returns above
   const hasReason = state.reason.trim().length > 0;
-  // Multi-label responses store the set in `suggestionSet` and leave
-  // `suggestion` as "". Render the joined set so the footer shows "accept →
-  // spam, toxicity" instead of "accept → " (empty).
+  // Multi-label responses store the set in `suggestionSet`, extraction
+  // responses in `suggestionObject`, single-label in `suggestion`. Render
+  // a compact preview for each so the footer never shows "accept → "
+  // (empty) and the reviewer can see what Enter would commit.
   const suggestionText =
-    state.suggestionSet !== undefined
-      ? state.suggestionSet.length > 0
-        ? state.suggestionSet.join(", ")
-        : "∅"
-      : state.suggestion;
+    state.suggestionObject !== undefined
+      ? truncate(formatExtractionPreview(state.suggestionObject), 80)
+      : state.suggestionSet !== undefined
+        ? state.suggestionSet.length > 0
+          ? state.suggestionSet.join(", ")
+          : "∅"
+        : state.suggestion;
   const segs: Segment[] = [
     { text: " ◆", tone: "accent" },
     { text: " ", tone: "default" },
@@ -680,12 +707,7 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
   if (hasReason) {
     segs.push({ text: "[tab]", tone: "accent" }, { text: " reasoning · ", tone: "muted" });
   }
-  segs.push(
-    { text: "[enter]", tone: "accent" },
-    { text: " commit · ", tone: "muted" },
-    { text: "[esc]", tone: "accent" },
-    { text: " dismiss", tone: "muted" },
-  );
+  segs.push({ text: "[enter]", tone: "accent" }, { text: " commit", tone: "muted" });
   return segs;
 }
 
@@ -698,6 +720,19 @@ function buildAssistantStatusTrailing(state: AssistantState): Segment[] | undefi
 
 function truncate(s: string, max: number): string {
   return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
+/**
+ * Compact one-line preview of an extraction object for the assistant
+ * footer. Renders as `field=value · field=value` so the reviewer sees
+ * exactly what Enter would commit. Null fields show as `field=∅`.
+ */
+function formatExtractionPreview(object: Record<string, string | null>): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(object)) {
+    parts.push(`${k}=${v === null ? "∅" : v}`);
+  }
+  return parts.length === 0 ? "∅" : parts.join(" · ");
 }
 
 function renderConfigureAssistant(
@@ -1233,6 +1268,48 @@ function renderMultiLabelPicker(
     Text({ content: "" }),
     Text({
       content: " [space] toggle · [enter] commit · [esc] cancel",
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function renderExtractionForm(
+  state: ExtractionFormState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  const title = state.editing
+    ? `Edit: ${state.fields[state.focus]?.name ?? "?"}`
+    : "Extraction review";
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.55,
+    title,
+    Text({ content: "" }),
+    ...state.fields.map((f, i) => {
+      const focused = i === state.focus;
+      const cursor = focused ? "▸" : " ";
+      const value =
+        state.editing && focused ? `${state.editBuffer}_` : (state.draft[f.name] ?? "—");
+      const reqMarker = f.required ? "*" : " ";
+      const segs: Segment[] = [
+        { text: ` ${cursor} ${reqMarker} `, tone: focused ? "accent" : "default" },
+        { text: `${f.name}: `, tone: focused ? "default" : "muted" },
+        { text: String(value), tone: focused ? "accent" : "default" },
+      ];
+      return Text({
+        content: segmentsToStyledText(segs, display),
+        attributes: focused ? TextAttributes.BOLD : TextAttributes.NONE,
+      });
+    }),
+    Text({ content: "" }),
+    Text({
+      content: state.editing
+        ? " [enter] commit value · [esc] cancel edit"
+        : " [e] edit · [enter] commit review · [↑/↓] move focus · [esc] close",
       attributes: TextAttributes.DIM,
     }),
   );

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
+  "task": "extraction",
+  "labels": [],
+  "extraction": {
+    "fields": [
+      { "name": "company", "type": "string", "required": true },
+      { "name": "amount", "type": "string", "required": true, "key": "amt" },
+      { "name": "date", "type": "string", "required": false }
+    ]
+  },
+  "input": {
+    "path": "./invoices.extraction.jsonl",
+    "format": "jsonl",
+    "fields": {
+      "text": "text",
+      "prediction": "prediction",
+      "confidence": "confidence",
+      "source": "source"
+    }
+  },
+  "output": {
+    "path": "./reviewed.jsonl",
+    "format": "jsonl"
+  },
+  "display": {
+    "color": "truecolor",
+    "banding": "auto",
+    "theme": "dark",
+    "candidatePin": 0.4,
+    "layout": "auto",
+    "motion": "auto",
+    "sidebar": "on",
+    "queuePreview": "auto",
+    "labelChip": "configured"
+  },
+  "navigation": {
+    "smartNext": false
+  },
+  "assistant": {
+    "enabled": false
+  }
+}

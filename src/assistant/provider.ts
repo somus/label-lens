@@ -1,16 +1,19 @@
 import { type Model, StringEnum, stream, type Tool, Type } from "@earendil-works/pi-ai";
-import type { AssistantConfig } from "../config/config.ts";
+import type { AssistantConfig, ExtractionField } from "../config/config.ts";
 import { cacheAssistantResponse, getCachedAssistantResponse } from "../store/assistant-queries.ts";
 import type { Db } from "../store/db.ts";
 import { envVarFor, resolveApiKey } from "./env.ts";
 import { type CanonicalPromptInput, canonicalizePrompt, hashPrompt } from "./prompt.ts";
 import { buildAssistantPrompt } from "./prompt-template.ts";
 import {
+  type AssistantExtractionResponse,
+  AssistantExtractionResponseSchema,
   type AssistantMultiLabelResponse,
   AssistantMultiLabelResponseSchema,
   type AssistantResponse,
   type AssistantResponseAny,
   AssistantResponseSchema,
+  isAssistantExtractionResponse,
   isAssistantMultiLabelResponse,
   isAssistantResponse,
 } from "./schema.ts";
@@ -24,6 +27,66 @@ const SUBMIT_TOOL_NAME = "submit_label_suggestion";
  * can only return one of our names. Falls back to the open AssistantResponseSchema
  * when labelNames is empty (testing / edge case).
  */
+function buildExtractionSubmitTool(fields: ExtractionField[]): Tool {
+  // Build a per-field-keyed object: each configured field name is a property
+  // whose value is `string | null`. Required fields ride in the `required`
+  // array so a hallucination that omits one is caught at validation time.
+  if (fields.length === 0) {
+    return {
+      name: SUBMIT_TOOL_NAME,
+      description:
+        "Submit your extraction suggestion for the candidate record. Call this exactly once with the complete object.",
+      parameters: AssistantExtractionResponseSchema,
+    };
+  }
+  const properties: Record<string, ReturnType<typeof Type.Union>> = {};
+  const required: string[] = [];
+  for (const f of fields) {
+    // The per-field description is the LLM's last-line guard against
+    // drifting between reasoning and payload. Gemini in particular has
+    // been observed to write a plausible reasoning narrative ("set
+    // amount to $325.50") but emit a contradictory tool payload
+    // (`amount: "0"`). Spelling out "copy the substring verbatim" at
+    // the property level helps it anchor to the candidate text.
+    properties[f.name] = Type.Union([Type.String(), Type.Null()], {
+      description: `Value of the "${f.name}" field. Copy the substring verbatim from the candidate text — keep currency symbols ($, €, ₹), punctuation, casing, and surrounding characters exactly as written. Do NOT normalise, round, reformat, or invent a default. Use null only if the value is genuinely absent from the candidate.${f.required ? ' This field is required; null is only acceptable when you also set recommendedAction to "reject".' : ""}`,
+    });
+    if (f.required) required.push(f.name);
+  }
+  const ExtractedObject = Type.Object(properties, {
+    required,
+    additionalProperties: false,
+    description:
+      "Complete suggested extraction object keyed by configured field names. Every property must be a verbatim string copy from the candidate text (or null if absent). The keys here MUST exactly match the configured field names — no extras, no nesting, no renaming. If your `reasoning` says you set a field to a particular value, the JSON below must contain that same string.",
+  } as never);
+  const Constrained = Type.Object({
+    extractedObject: ExtractedObject,
+    confidence: StringEnum(["low", "medium", "high"], {
+      description: "Assistant's confidence in its own recommendation.",
+    }),
+    reasoning: Type.String({
+      description:
+        "1–2 sentence explanation of which fields you changed and why. The values you describe here MUST exactly match the corresponding values in `extractedObject`. Do not mention a value in reasoning that isn't present in the object.",
+    }),
+    evidenceFor: Type.Array(Type.String(), {
+      description: "Short bullet phrases supporting the suggested object.",
+    }),
+    evidenceAgainst: Type.Array(Type.String(), {
+      description: "Short bullet phrases against the suggested object.",
+    }),
+    recommendedAction: StringEnum(["accept", "relabel", "reject", "skip"], {
+      description:
+        "accept = `extractedObject` exactly matches the highest-confidence existing prediction; relabel = you corrected one or more fields; reject = candidate is unrelated to the extraction task OR a required field is absent from the candidate; skip = candidate is genuinely ambiguous.",
+    }),
+  });
+  return {
+    name: SUBMIT_TOOL_NAME,
+    description:
+      "Submit your extraction suggestion for the candidate record. Call this exactly once. `extractedObject` is your final corrected object; `reasoning` MUST stay consistent with `extractedObject` value-for-value.",
+    parameters: Constrained,
+  };
+}
+
 function buildSubmitTool(labelNames: readonly string[], multiLabel = false): Tool {
   if (labelNames.length === 0) {
     return {
@@ -107,6 +170,9 @@ export type QueryAssistantArgs = {
   /** When true, the assistant emits a `suggestedLabels: string[]` payload via
    * the multi-label tool. When false (default), single-label. */
   multiLabel?: boolean;
+  /** When set, the assistant emits an `extractedObject` payload constrained
+   * to these field names. Mutually exclusive with `multiLabel`. */
+  extraction?: { fields: ExtractionField[] };
   /** Receives each text-delta token as the model streams. Caller renders into footer / reasoning buffer. */
   onToken?: (token: string) => void;
   /** Notified once when the privacy gate forces a halt — UI prompts the reviewer to acknowledge. */
@@ -170,6 +236,7 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
     promptInput,
     labelNames,
     multiLabel,
+    extraction,
     onToken,
     onPrivacyGate,
     signal,
@@ -184,7 +251,19 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   // All three are acceptable per PRD §10.5 — cache is content-addressed by
   // prompt_hash, not by current config state.
   const cached = getCachedAssistantResponse(db, recordId, promptHash);
-  if (cached) return { response: cached, wasCached: true };
+  if (cached) {
+    // Re-validate cache hits against the current config so a stale row
+    // produced before the field list / label set changed cannot leak
+    // through the gate. Mismatch falls through to a fresh query rather
+    // than throwing — matches the "no row" path so the reviewer is
+    // never stuck with a poisoned cache slot.
+    const reason = validateAssistantResponseShape(cached, {
+      labelNames,
+      multiLabel: multiLabel === true,
+      extraction,
+    });
+    if (reason === null) return { response: cached, wasCached: true };
+  }
 
   if (!assistant.enabled) {
     throw new AssistantQueryError("not-enabled", "Assistant is disabled in config.");
@@ -216,7 +295,9 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   // once. The tool's `suggestedLabel` parameter is a StringEnum over the
   // configured labels so the model can't hallucinate names that aren't in
   // config.labels.
-  const tool = buildSubmitTool(labelNames, multiLabel === true);
+  const tool = extraction
+    ? buildExtractionSubmitTool(extraction.fields)
+    : buildSubmitTool(labelNames, multiLabel === true);
   const ctx = {
     systemPrompt,
     messages: [{ role: "user" as const, content: userPrompt, timestamp: Date.now() }],
@@ -262,7 +343,9 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
         case "error":
           throw new AssistantQueryError(
             "provider-error",
-            event.error.errorMessage ?? `provider stream error (${event.reason})`,
+            summarizeProviderError(
+              event.error.errorMessage ?? `provider stream error (${event.reason})`,
+            ),
           );
       }
     }
@@ -279,6 +362,21 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
       "no-tool-call",
       `Model finished without calling ${SUBMIT_TOOL_NAME}.`,
     );
+  }
+  if (extraction) {
+    if (!isAssistantExtractionResponse(finalToolCall.arguments)) {
+      throw new AssistantQueryError(
+        "schema-mismatch",
+        `${SUBMIT_TOOL_NAME} arguments do not match AssistantExtractionResponseSchema.`,
+      );
+    }
+    const response = finalToolCall.arguments as AssistantExtractionResponse;
+    const reason = validateExtractionResponse(response, extraction);
+    if (reason !== null) {
+      throw new AssistantQueryError("invalid-label", reason);
+    }
+    cacheAssistantResponse(db, recordId, promptHash, response);
+    return { response, wasCached: false };
   }
   if (multiLabel === true) {
     if (!isAssistantMultiLabelResponse(finalToolCall.arguments)) {
@@ -318,6 +416,108 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   }
   cacheAssistantResponse(db, recordId, promptHash, response);
   return { response, wasCached: false };
+}
+
+/**
+ * Validate an extraction response against the current configured fields.
+ * Returns null when valid, else a short human-readable reason. Treats
+ * whitespace-only required values as missing (the encode path trims
+ * blanks to null, so a downstream export would fail with a required-
+ * field error). When `recommendedAction === "reject"`, required fields
+ * may be null — the tool contract and prompt explicitly allow that path
+ * for candidates where the value is genuinely absent.
+ */
+function validateExtractionResponse(
+  response: AssistantExtractionResponse,
+  extraction: { fields: ExtractionField[] },
+): string | null {
+  const configured = new Set(extraction.fields.map((f) => f.name));
+  const unknown = Object.keys(response.extractedObject).filter((k) => !configured.has(k));
+  if (unknown.length > 0) {
+    return `Model suggested fields not in extraction.fields: ${unknown.join(", ")}.`;
+  }
+  if (response.recommendedAction === "reject") return null;
+  const missing = extraction.fields
+    .filter((f) => f.required)
+    .filter((f) => {
+      const v = response.extractedObject[f.name];
+      if (v === undefined || v === null) return true;
+      return typeof v === "string" && v.trim().length === 0;
+    })
+    .map((f) => f.name);
+  if (missing.length > 0) {
+    return `Model omitted required extraction field(s): ${missing.join(", ")}.`;
+  }
+  return null;
+}
+
+/**
+ * Validate any cached assistant response against the live config slice
+ * before returning it as a cache hit. Stale rows (config fields removed,
+ * labels renamed) fail this check and fall through to a fresh query.
+ */
+function validateAssistantResponseShape(
+  response: AssistantResponseAny,
+  args: {
+    labelNames: readonly string[];
+    multiLabel: boolean;
+    extraction?: { fields: ExtractionField[] };
+  },
+): string | null {
+  if (args.extraction) {
+    if (!isAssistantExtractionResponse(response)) return "shape mismatch";
+    return validateExtractionResponse(response, args.extraction);
+  }
+  if (args.multiLabel) {
+    if (!isAssistantMultiLabelResponse(response)) return "shape mismatch";
+    const set = new Set(args.labelNames);
+    const bad = response.suggestedLabels.filter((l) => !set.has(l));
+    return bad.length === 0 ? null : `unknown labels: ${bad.join(", ")}`;
+  }
+  if (!isAssistantResponse(response)) return "shape mismatch";
+  return args.labelNames.includes(response.suggestedLabel) ? null : "unknown label";
+}
+
+/**
+ * Cleanup for provider error payloads before they hit the assistant
+ * overlay. Some upstream providers (Google's gateway in particular)
+ * return their 5xx errors as a full HTML page wrapped in JSON; pi-ai
+ * surfaces that payload verbatim in `event.error.errorMessage`, which
+ * the overlay would otherwise render as a wall of `<!DOCTYPE html> …`
+ * markup. Collapse the noise into a short, status-shaped message:
+ *
+ * 1. If the payload parses as JSON containing `error.status` and / or
+ *    `error.code`, render `"<status> (<code>)"`.
+ * 2. If it begins with `<!DOCTYPE` or `<html`, render `"provider returned
+ *    an HTML error page (likely a 5xx)"`.
+ * 3. Otherwise truncate to 240 chars so the overlay never overflows.
+ */
+export function summarizeProviderError(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return "provider stream error (no message)";
+  // Shape 1: JSON wrapper with `error.code` / `error.status`.
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as { error?: { code?: unknown; status?: unknown } };
+      const inner = parsed.error;
+      if (inner && typeof inner === "object") {
+        const status = typeof inner.status === "string" ? inner.status : undefined;
+        const code =
+          typeof inner.code === "number" || typeof inner.code === "string" ? inner.code : undefined;
+        if (status && code !== undefined) return `provider error: ${status} (${code})`;
+        if (status) return `provider error: ${status}`;
+        if (code !== undefined) return `provider error: code ${code}`;
+      }
+    } catch {
+      // Fall through to the next shape check.
+    }
+  }
+  // Shape 2: HTML error page (Google's "Error 502 (Server Error)!!1" etc.).
+  if (/^<!doctype html|^<html/i.test(trimmed)) {
+    return "provider returned an HTML error page (likely a 5xx upstream failure)";
+  }
+  // Shape 3: passthrough with bounded length so the overlay row stays sane.
+  return trimmed.length > 240 ? `${trimmed.slice(0, 240).trimEnd()}…` : trimmed;
 }
 
 // Re-export for callers that want to inspect the canonical schema

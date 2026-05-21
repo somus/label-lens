@@ -46,6 +46,10 @@ export function performExport(
   const includeSkipped = opts.includeSkipped ?? config.output.includeSkipped ?? false;
   const fieldOverrides = config.output.fieldOverrides;
   const multiLabel = config.task === "multi-label";
+  const extraction =
+    config.task === "extraction" && config.extraction?.fields
+      ? { fields: config.extraction.fields }
+      : undefined;
   let body: string;
   let path: string;
   switch (opts.format) {
@@ -56,6 +60,7 @@ export function performExport(
         includeSkipped,
         includeOrphans,
         multiLabel,
+        ...(extraction ? { extraction } : {}),
         fieldOverrides,
       });
       path = paths.jsonl;
@@ -67,6 +72,7 @@ export function performExport(
         includeSkipped,
         includeOrphans,
         multiLabel,
+        ...(extraction ? { extraction } : {}),
         multiLabelSeparator: config.output.csvMultiLabelSeparator,
         fieldOverrides,
       });

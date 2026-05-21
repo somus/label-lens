@@ -1,8 +1,9 @@
 import type { CommandRegistry } from "../actions/command.ts";
+import { restoreCachedAssistantState as hydrateAssistant } from "../assistant/restore-cached.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import { createSmartLearning, type SmartLearning } from "../learning/smart-learning.ts";
-import type { Overlay, OverlayKeyPreset } from "../overlay/types.ts";
+import type { AssistantState, Overlay, OverlayKeyPreset } from "../overlay/types.ts";
 import {
   createMotionController,
   type MotionController,
@@ -104,6 +105,15 @@ export type AppContext = {
   overlay: Overlay | null;
   openOverlay(o: Overlay): void;
   closeOverlay(): void;
+  /**
+   * Transient flag set by `hydrateAssistantFromCache` when it installs a
+   * fresh cached assistant overlay during an effect batch (typically
+   * fired from `cursor.on("change")` after `commitDecision`'s queue
+   * refresh). Read by the `close` effect to avoid clobbering an
+   * overlay that was just installed by hydration. Reset at the end of
+   * `applyEffects`.
+   */
+  overlayHydratedThisBatch: boolean;
   /** The active Cursor + queue when a review screen is mounted. Null otherwise. */
   cursor: Cursor | null;
   queueId: QueueId | null;
@@ -143,6 +153,27 @@ export type AppContext = {
    */
   assistantAbort: { recordId: string; controller: AbortController } | null;
   cancelAssistantStream(): void;
+  /**
+   * Suspended assistant overlay state. Set when the reviewer opens a
+   * non-assistant overlay (e.g. the extraction form via `r`) while a
+   * completed assistant suggestion is on screen — captures the `done`
+   * state so the inline assistant strip stays populated underneath the
+   * new overlay. `closeOverlay` restores it as the active overlay so the
+   * suggestion is interactive again once the foreground overlay closes.
+   * Cleared on record navigation alongside the other per-record drafts.
+   */
+  savedAssistantState: AssistantState | null;
+  clearSavedAssistant(): void;
+  /**
+   * Install the most recent cached assistant response (if any) as the
+   * active assistant overlay for the cursor's current record. Called
+   * on cursor change and on review-screen mount so the strip is
+   * immediately interactive (Enter, Tab) without requiring `i`.
+   * No-op when the assistant is disabled, no record is focused, the
+   * current overlay is a non-assistant modal, or the assistant
+   * overlay is already pointing at this record.
+   */
+  hydrateAssistantFromCache(): void;
   /**
    * True when `--local-only` was set on the CLI. Threaded into provider
    * validation so a misconfigured remote provider aborts before any network
@@ -294,10 +325,51 @@ export function createAppContext(args: {
       let cursor = cursors.get(queueId);
       if (!cursor) {
         cursor = openCursor(args.db, queueId, factoryFor(queueId));
-        cursor.on("change", () => ctx.requestRender());
+        cursor.on("change", () => {
+          ctx.hydrateAssistantFromCache();
+          ctx.requestRender();
+        });
         cursors.set(queueId, cursor);
       }
       return cursor;
+    },
+    hydrateAssistantFromCache() {
+      // When the cursor lands on a record with a cached assistant
+      // response and no overlay is currently active (or the active
+      // overlay is a stale assistant state for a different record),
+      // install the cached response as the live assistant overlay.
+      // This makes the strip immediately interactive — Enter, Tab —
+      // without requiring the reviewer to press `i` first. Lazy-imports
+      // `restoreCachedAssistantState` to avoid a load-time cycle.
+      if (ctx.config.assistant?.enabled !== true) return;
+      const current = ctx.cursor?.current();
+      if (!current) return;
+      // Don't clobber an active non-assistant overlay (form, picker,
+      // configure-assistant, etc.) — the reviewer is mid-task.
+      if (ctx.overlay !== null && ctx.overlay.kind !== "assistant") return;
+      // If the current assistant overlay is already for this record,
+      // leave it alone (would clobber an in-flight stream / edit).
+      if (ctx.overlay?.kind === "assistant" && ctx.overlay.state.recordId === current.id) {
+        return;
+      }
+      const cached = hydrateAssistant(args.db, ctx.config, current);
+      if (cached === null) {
+        ctx.overlay = null;
+        return;
+      }
+      ctx.overlay = { kind: "assistant", state: cached };
+      // ADR 0004: rendering a cached assistant suggestion counts as
+      // exposure regardless of whether the reviewer presses Enter
+      // through the assistant reducer. Without this, an `a`/`x`/`s`/`r`
+      // commit on the focused record would tag `source_of_truth:
+      // "human"` even though the strip was on screen.
+      ctx.viewedAssistant.add(current.id);
+      // Signal to the `close` effect (which may follow in the same
+      // batch via commitDecision → cursor.refresh → cursor.change →
+      // here) that the overlay it would otherwise clobber was just
+      // installed by hydration. `applyEffects` resets this flag at the
+      // end of the batch.
+      ctx.overlayHydratedThisBatch = true;
     },
     hasCursor(queueId) {
       return cursors.has(queueId);
@@ -335,6 +407,22 @@ export function createAppContext(args: {
       inputPendingUntil = Date.now() + 16;
     },
     openOverlay(o) {
+      // Save+restore: when the reviewer opens a non-assistant overlay
+      // while the assistant overlay is showing a completed suggestion,
+      // suspend the assistant state so the inline strip stays populated
+      // underneath. Closing the new overlay (see `closeOverlay`) restores
+      // it. Loading/streaming/error states are not saved — the user can
+      // re-fire `i` to re-query (cache hit if applicable).
+      if (o.kind === "assistant") {
+        // Re-firing `i` (or another overlay handing back control) replaces
+        // any suspended state.
+        ctx.savedAssistantState = null;
+      } else if (ctx.overlay?.kind === "assistant") {
+        if (ctx.overlay.state.status === "done") {
+          ctx.savedAssistantState = ctx.overlay.state;
+        }
+        ctx.cancelAssistantStream();
+      }
       ctx.overlay = o;
       ctx.requestRender();
     },
@@ -344,7 +432,21 @@ export function createAppContext(args: {
       // funnel through here. Aborts that target a different record are
       // already a no-op so this is safe to call unconditionally.
       ctx.cancelAssistantStream();
-      ctx.overlay = null;
+      // Restore the suspended assistant overlay whenever one is parked,
+      // regardless of the current overlay slot. `dispatchOverlayEvent`
+      // writes `overlay = result.overlay` BEFORE running the close
+      // effect, so by the time we get here the foreground overlay has
+      // already been cleared (overlay === null). Checking the saved
+      // state directly is the only reliable signal. `commitDecision`'s
+      // handler clears `savedAssistantState` itself so commit-flows
+      // (form → Enter) do not ghost-restore the stale suggestion onto
+      // the next record.
+      if (ctx.savedAssistantState) {
+        ctx.overlay = { kind: "assistant", state: ctx.savedAssistantState };
+        ctx.savedAssistantState = null;
+      } else {
+        ctx.overlay = null;
+      }
       ctx.requestRender();
     },
     paletteHistory: [],
@@ -361,6 +463,11 @@ export function createAppContext(args: {
     clearMultiLabelDraft() {
       ctx.multiLabelDraft = null;
     },
+    savedAssistantState: null,
+    clearSavedAssistant() {
+      ctx.savedAssistantState = null;
+    },
+    overlayHydratedThisBatch: false,
     assistantAbort: null,
     cancelAssistantStream() {
       const cur = ctx.assistantAbort;

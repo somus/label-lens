@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import {
   type AssistantResponseAny,
+  isAssistantExtractionResponse,
   isAssistantMultiLabelResponse,
   isAssistantResponse,
 } from "../assistant/schema.ts";
@@ -26,7 +27,33 @@ export function getCachedAssistantResponse(
     )
     .limit(1)
     .all();
-  const json = rows[0]?.responseJson;
+  return parseStored(rows[0]?.responseJson);
+}
+
+/**
+ * Lookup by record id alone, returning the most recent cached response
+ * regardless of `prompt_hash`. Powers the on-focus auto-display path:
+ * when a reviewer lands on a record that was previously queried, the
+ * assistant strip can show the suggestion without a fresh network call
+ * or knowledge of which prompt-template version produced it. Falls
+ * back to `null` when no row exists OR the stored shape no longer
+ * matches the schemas (caller treats both identically).
+ */
+export function getLatestCachedAssistantResponse(
+  db: Db,
+  recordId: string,
+): AssistantResponseAny | null {
+  const rows = db
+    .select({ responseJson: assistantQueries.responseJson })
+    .from(assistantQueries)
+    .where(eq(assistantQueries.recordId, recordId))
+    .orderBy(sql`${assistantQueries.createdAt} DESC`)
+    .limit(1)
+    .all();
+  return parseStored(rows[0]?.responseJson);
+}
+
+function parseStored(json: string | undefined | null): AssistantResponseAny | null {
   if (!json) return null;
   let parsed: unknown;
   try {
@@ -36,6 +63,7 @@ export function getCachedAssistantResponse(
   }
   if (isAssistantResponse(parsed)) return parsed;
   if (isAssistantMultiLabelResponse(parsed)) return parsed;
+  if (isAssistantExtractionResponse(parsed)) return parsed;
   return null;
 }
 

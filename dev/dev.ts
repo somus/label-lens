@@ -11,7 +11,7 @@
  *   --reset                        # force re-seed even if data.jsonl exists
  *   --count <n>                    # records to generate (default 150)
  *   --seed <n>                     # PRNG seed (default 1)
- *   --task <classification|boundary|multi-label>  # dataset flavor (default classification)
+ *   --task <classification|boundary|multi-label|extraction>  # dataset flavor (default classification)
  *
  * Same flags pass through to dev/seed-dev.ts.
  */
@@ -112,7 +112,7 @@ function status(): void {
 
 function usage(): never {
   console.error(
-    "usage: bun run dev/dev.ts <up | down | status> [--reset] [--count N] [--seed N] [--task classification|boundary|multi-label] [--with-marks N] [--with-reviews N] [--with-notes N] [--with-duplicates N] [--with-many-labels] [--with-boundary-multi-source] [--no-prefill]",
+    "usage: bun run dev/dev.ts <up | down | status> [--reset] [--count N] [--seed N] [--task classification|boundary|multi-label|extraction] [--with-marks N] [--with-reviews N] [--with-notes N] [--with-duplicates N] [--with-many-labels] [--with-boundary-multi-source] [--no-prefill]",
   );
   process.exit(2);
 }

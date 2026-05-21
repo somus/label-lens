@@ -1,9 +1,9 @@
-import type { LabelConfigEntry } from "../../../config/config.ts";
+import type { ExtractionField, LabelConfigEntry } from "../../../config/config.ts";
 import type { Box } from "../../../render/box.ts";
 import type { ResolvedDisplay } from "../../../render/capability.ts";
 import type { RecordWithPrimaryPrediction } from "../../../types.ts";
 
-export type TaskKind = "classification" | "boundary" | "multi-label";
+export type TaskKind = "classification" | "boundary" | "multi-label" | "extraction";
 
 export type DecisionRenderArgs = {
   record: RecordWithPrimaryPrediction | null;
@@ -16,6 +16,8 @@ export type DecisionRenderArgs = {
    * Renderers ignore this when undefined or when the task is single-label.
    * Threaded from `AppContext.multiLabelDraft` by the review screen. */
   multiLabelDraft?: Set<string>;
+  /** Configured extraction fields. Required for the extraction renderer. */
+  extractionFields?: ExtractionField[];
 };
 
 /**

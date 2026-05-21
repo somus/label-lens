@@ -1,6 +1,7 @@
 import { reduceAssistant } from "./assistant.ts";
 import { reduceBulkConfirm } from "./bulk-confirm.ts";
 import { reduceConfigureAssistant } from "./configure-assistant.ts";
+import { reduceExtractionForm } from "./extraction-form.ts";
 import { reduceFilterBuilder } from "./filter-builder.ts";
 import { reduceGuidelines } from "./guidelines.ts";
 import { reduceHelp } from "./help.ts";
@@ -19,6 +20,8 @@ export function reduceOverlay(overlay: Overlay, event: OverlayEvent): ReduceResu
       return reducePicker(overlay.state, event);
     case "multi-label-picker":
       return reduceMultiLabelPicker(overlay.state, event);
+    case "extraction-form":
+      return reduceExtractionForm(overlay.state, event);
     case "note":
       return reduceNote(overlay.state, event);
     case "assistant":

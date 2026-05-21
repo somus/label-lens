@@ -1,4 +1,5 @@
-import type { OutputFieldOverrides } from "../config/config.ts";
+import type { ExtractionField, OutputFieldOverrides } from "../config/config.ts";
+import { validateExportExtractionObject } from "../labels/extraction-object.ts";
 import { validateExportLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
@@ -12,6 +13,9 @@ export type ExportJsonlOptions = {
   includeOrphans?: boolean;
   /** When true, decode `final_label` as a JSON array text and emit `string[]`. */
   multiLabel?: boolean;
+  /** When set, decode `final_label` as a JSON object and emit the corrected
+   * extraction object. Required-field validation aborts on missing values. */
+  extraction?: { fields: ExtractionField[] };
   fieldOverrides?: OutputFieldOverrides;
 };
 
@@ -37,12 +41,23 @@ export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string
     if (!accepted && !(rejected && opts.includeRejected) && !(skipped && opts.includeSkipped))
       continue;
     const meta = projectMeta(record.raw);
+    if (accepted && opts.extraction && review.final_label === null) {
+      // Defense-in-depth: form + accept gates refuse to write null for
+      // accepted/relabeled extraction rows. A null here means upstream
+      // corruption or a bypassed gate; fail loud rather than emit an
+      // implicitly-wrong `label: null` row.
+      throw new Error(
+        `record ${record.id}: accepted extraction row has null final_label; storage is corrupt`,
+      );
+    }
     const labelValue = accepted
-      ? opts.multiLabel
-        ? review.final_label === null
-          ? null
-          : validateExportLabelSet(review.final_label, record.id)
-        : review.final_label
+      ? opts.extraction
+        ? validateExportExtractionObject(review.final_label!, record.id, opts.extraction.fields)
+        : opts.multiLabel
+          ? review.final_label === null
+            ? null
+            : validateExportLabelSet(review.final_label, record.id)
+          : review.final_label
       : null;
     const row: Record<string, unknown> = {
       [keys.id]: record.id,
