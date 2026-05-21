@@ -37,9 +37,14 @@ export function canonicalizeExtractionObject(
   const source = input as Record<string, unknown>;
   const claimed = new Set<string>();
   for (const f of fields) {
-    const sourceKey = f.key ?? f.name;
-    claimed.add(sourceKey);
-    const raw = source[sourceKey];
+    // Try the alias first (source-JSON shape at ingest), then fall back to
+    // the canonical name. Re-encoding an already-canonical object (form
+    // commit, assistant tool output keyed by `f.name`) must still find
+    // the value when `key` is set.
+    const aliasKey = f.key ?? f.name;
+    claimed.add(aliasKey);
+    if (f.key && f.key !== f.name) claimed.add(f.name);
+    const raw = source[aliasKey] !== undefined ? source[aliasKey] : source[f.name];
     if (typeof raw === "string") {
       const trimmed = raw.trim();
       object[f.name] = trimmed.length === 0 ? null : trimmed;
