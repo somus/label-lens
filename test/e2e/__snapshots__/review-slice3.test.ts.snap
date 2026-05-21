@@ -23,7 +23,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: focused record 
   labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queue… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] que… 
                                                                                                     
 "
 `;
@@ -51,7 +51,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor: pressing 'j' mo
   labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
     [1]  food    ◆ [2]  travel  88%      [3]  other                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queue… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] que… 
                                                                                                     
 "
 `;
@@ -79,7 +79,7 @@ exports[`slice 3: review screen banding + focus + pin 16-color: plain border + �
   labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   * [1]  food  92%      [2]  travel      [3]  other                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queue… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] que… 
                                                                                                     
 "
 `;
@@ -107,7 +107,7 @@ exports[`slice 3: review screen banding + focus + pin mono: same plain border + 
   labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   * [1]  food  92%      [2]  travel      [3]  other                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queue… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] que… 
                                                                                                     
 "
 `;
@@ -135,7 +135,7 @@ exports[`slice 3: review screen banding + focus + pin 256-color: rounded border,
   labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queue… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] que… 
                                                                                                     
 "
 `;
@@ -163,7 +163,7 @@ exports[`slice 3: review screen banding + focus + pin truecolor + dark theme: ro
   labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queue… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] que… 
                                                                                                     
 "
 `;
@@ -191,7 +191,7 @@ exports[`slice 3: review screen banding + focus + pin display.banding = off at t
   labels ────────────────────────────────────────────────────────────────────────────────────────── 
                                                                                                     
   ◆ [1]  food  92%      [2]  travel      [3]  other                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queue… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] que… 
                                                                                                     
 "
 `;

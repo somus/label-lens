@@ -108,8 +108,17 @@ export function collectFooterEntries(
     // Disabled commands stay visible (rendered dimmed with an `(unavailable)`
     // suffix by entriesToSegments) so the binding stays discoverable. ADR 0008.
     const enabled = cmd.enabled ? cmd.enabled(ctx) : true;
-    const label =
-      cmd.name === "queue.openScreen" ? `${cmd.footer.label}${cycleSuffix}` : cmd.footer.label;
+    let label = cmd.footer.label;
+    if (cmd.name === "queue.openScreen") {
+      label = `${label}${cycleSuffix}`;
+    } else if (cmd.name === "record.openAssistant" && ctx.config.assistant?.enabled !== true) {
+      // First-press flow: `i` opens the configure-assistant overlay when
+      // the assistant has not been set up yet. Rename the chip so the
+      // affordance reads as "set this up", not "ask". Kept short to fit
+      // the same 9ch slot `[i] ask` occupies — chrome.test.ts asserts
+      // both `[:] palette` and `[t] stats` survive at 120 cols.
+      label = "setup";
+    }
     // `record.next` renders the combined `next/prev` key cluster so reviewers
     // see both nav directions in one slot. Falls back to the single binding
     // when the partner command is unbound.

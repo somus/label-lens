@@ -24,7 +24,7 @@ import type {
   PickerCandidate,
   PickerState,
 } from "../overlay/types.ts";
-import { fadeIn, pulse } from "../render/anim.ts";
+import { pulse } from "../render/anim.ts";
 import { Box } from "../render/box.ts";
 import {
   pickQueuePreview,
@@ -97,9 +97,6 @@ export function mountReviewScreen(args: {
   // Track chord pending key across renders so we only start the fade-out
   // motion on transition (calling play() per frame would reset progress).
   let lastChordKey: string | null = null;
-  // Track assistant strip visibility across renders so the fade-in plays once
-  // when it first appears (not on every keystroke while the overlay is open).
-  let lastAssistantVisible = false;
 
   const renderState = () => {
     if (!mounted) return;
@@ -267,25 +264,18 @@ export function mountReviewScreen(args: {
       total: queueTotal,
       contentWidth,
     });
-    // Inline assistant strip slots right below the chip rail (decision)
-    // when the overlay is active — keeps suggestion + label set in the same
-    // eye-line per the inline-footer design (ADR 0009).
-    const assistantVisible = app.overlay?.kind === "assistant";
-    if (assistantVisible !== lastAssistantVisible) {
-      const becameVisible = assistantVisible;
-      lastAssistantVisible = assistantVisible;
-      // Fade-in plays once on appearance; the motion controller is a no-op at
-      // mono / 16-color (display.motion=false) so this respects the config
-      // override automatically.
-      if (becameVisible) app.motion.play("assistant.strip.appear", fadeIn(220));
-    }
-    const assistantStrip = assistantVisible
-      ? renderAssistantStrip(
-          (app.overlay as { kind: "assistant"; state: AssistantState }).state,
-          app.display,
-          contentWidth,
-          app.motion.snapshot("assistant.strip.appear"),
-        )
+    // Inline assistant section (ADR 0009). The strip is always present
+    // when the assistant is configured, so pressing `i` populates it
+    // in-place without shifting the surrounding layout. When the
+    // assistant overlay is open we render its state; otherwise we
+    // render an idle placeholder occupying the same single-row footprint.
+    // When the assistant is not enabled in config the strip is hidden
+    // entirely — discovery happens via the `[i] setup assistant` chip
+    // in the action footer.
+    const assistantEnabled = app.config.assistant?.enabled === true;
+    const assistantState = app.overlay?.kind === "assistant" ? app.overlay.state : null;
+    const assistantStrip = assistantEnabled
+      ? renderAssistantStrip(assistantState, app.display, contentWidth)
       : Box({});
     const body = Box(
       { flexDirection: "column", flexGrow: 1, overflow: "hidden" },
@@ -597,19 +587,14 @@ function renderOverlay(
  * the summary row.
  */
 function renderAssistantStrip(
-  state: AssistantState,
+  state: AssistantState | null,
   display: ResolvedDisplay,
   contentWidth: number,
-  fadeSnapshot?: import("../render/anim.ts").MotionSnapshot,
 ): ReturnType<typeof Box> {
-  const reason = state.status === "done" ? state.reason : null;
-  const expanded = state.reasoningExpanded && reason !== null;
-  const segs = buildAssistantSegments(state);
-  const trailing = buildAssistantStatusTrailing(state);
-  // During fade-in (motion progress < 1) drop BOLD on the summary line so the
-  // strip visibly settles in rather than snapping to full weight. At mono /
-  // 16-color the motion controller stays inactive so this is a no-op.
-  const fadingIn = (fadeSnapshot?.active ?? false) && (fadeSnapshot?.progress ?? 1) < 1;
+  const reason = state?.status === "done" ? state.reason : null;
+  const expanded = state?.reasoningExpanded === true && reason !== null;
+  const segs = state === null ? buildAssistantIdleSegments() : buildAssistantSegments(state);
+  const trailing = state === null ? undefined : buildAssistantStatusTrailing(state);
 
   const children: ReturnType<typeof Text | typeof Box>[] = [];
   children.push(SectionHeader({ display, label: "assistant", width: contentWidth, trailing }));
@@ -632,13 +617,24 @@ function renderAssistantStrip(
       { flexDirection: "column", flexShrink: 0, width: contentWidth },
       Text({
         content: segmentsToStyledText(segs, display),
-        attributes: fadingIn ? TextAttributes.DIM : TextAttributes.BOLD,
+        attributes: state === null ? TextAttributes.DIM : TextAttributes.BOLD,
         wrapMode: "word",
       }),
     ),
   );
 
   return Box({ flexDirection: "column", marginTop: 1, flexShrink: 0 }, ...children);
+}
+
+function buildAssistantIdleSegments(): Segment[] {
+  // Single row matching the height of `buildAssistantSegments` so opening
+  // the assistant overlay (`i`) does not shift surrounding content. Keep
+  // the chip count low — this is dim helper text, not a call to action.
+  return [
+    { text: " ", tone: "default" },
+    { text: "[i]", tone: "accent" },
+    { text: " ask the LLM for a suggestion", tone: "muted" },
+  ];
 }
 
 function buildAssistantSegments(state: AssistantState): Segment[] {

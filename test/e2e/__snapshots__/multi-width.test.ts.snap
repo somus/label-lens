@@ -29,7 +29,7 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 80x30 1`] = `
                                                                                 
                                                                                 
                                                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊ 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note 
                                                                                 
 "
 `;
@@ -63,7 +63,7 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 80x30 1`] = `
                                                                                 
                                                                                 
                                                                                 
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊ 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note 
                                                                                 
 "
 `;
@@ -131,7 +131,7 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 120x30 1`] = `
                                                                                     Signals ──────────────────────────  
                                                                                                                         
                                                                                     ●  label_issue                   1  
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] palette ┊… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] palette… 
                                                                                                                         
 "
 `;
@@ -165,7 +165,7 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 120x30 1`] = `
                                                                                     Signals ──────────────────────────  
                                                                                                                         
                                                                                     ●  label_issue                   1  
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] palette ┊… 
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note ┊[gd] doc ┊[Q] queues [/] ┊[:] palette… 
                                                                                                                         
 "
 `;
@@ -233,7 +233,7 @@ exports[`multi-width snapshot sweep (plan A16) review screen @ 160x30 1`] = `
                                                                                                                 Signals ──────────────────────────────────────  
                                                                                                                                                                 
                                                                                                                 ●  label_issue                               1  
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note                                 [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note                               [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
                                                                                                                                                                 
 "
 `;
@@ -267,7 +267,7 @@ exports[`multi-width snapshot sweep (plan A16) stats overlay @ 160x30 1`] = `
                                                                                                                 Signals ──────────────────────────────────────  
                                                                                                                                                                 
                                                                                                                 ●  label_issue                               1  
-  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] ask ┊[x] reject ┊[s] skip ┊[n] note                                 [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
+  [j/k] nav ┊[a] accept ┊[r] relabel ┊[i] setup ┊[x] reject ┊[s] skip ┊[n] note                               [gd] doc ┊[Q] queues [/] ┊[:] palette ┊[t] stats  
                                                                                                                                                                 
 "
 `;
