@@ -654,15 +654,18 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
   }
   // done — narrowed by the early returns above
   const hasReason = state.reason.trim().length > 0;
-  // Multi-label responses store the set in `suggestionSet` and leave
-  // `suggestion` as "". Render the joined set so the footer shows "accept →
-  // spam, toxicity" instead of "accept → " (empty).
+  // Multi-label responses store the set in `suggestionSet`, extraction
+  // responses in `suggestionObject`, single-label in `suggestion`. Render
+  // a compact preview for each so the footer never shows "accept → "
+  // (empty) and the reviewer can see what Enter would commit.
   const suggestionText =
-    state.suggestionSet !== undefined
-      ? state.suggestionSet.length > 0
-        ? state.suggestionSet.join(", ")
-        : "∅"
-      : state.suggestion;
+    state.suggestionObject !== undefined
+      ? truncate(formatExtractionPreview(state.suggestionObject), 80)
+      : state.suggestionSet !== undefined
+        ? state.suggestionSet.length > 0
+          ? state.suggestionSet.join(", ")
+          : "∅"
+        : state.suggestion;
   const segs: Segment[] = [
     { text: " ◆", tone: "accent" },
     { text: " ", tone: "default" },
@@ -696,6 +699,19 @@ function buildAssistantStatusTrailing(state: AssistantState): Segment[] | undefi
 
 function truncate(s: string, max: number): string {
   return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
+/**
+ * Compact one-line preview of an extraction object for the assistant
+ * footer. Renders as `field=value · field=value` so the reviewer sees
+ * exactly what Enter would commit. Null fields show as `field=∅`.
+ */
+function formatExtractionPreview(object: Record<string, string | null>): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(object)) {
+    parts.push(`${k}=${v === null ? "∅" : v}`);
+  }
+  return parts.length === 0 ? "∅" : parts.join(" · ");
 }
 
 function renderConfigureAssistant(
