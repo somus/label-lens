@@ -490,6 +490,35 @@ export function validateConfigSchema(raw: unknown): string[] {
   if (cfg.task === "extraction" && (!cfg.extraction || cfg.extraction.fields.length === 0)) {
     errors.push('/extraction: required when task is "extraction"');
   }
+  if (cfg.task === "extraction" && cfg.extraction && cfg.extraction.fields.length > 0) {
+    // Duplicate canonical `name` collapses the stored object's key space —
+    // ingest, form draft, and export all key by `name`, so two rows with
+    // the same name silently overwrite each other.
+    const names = new Set<string>();
+    const dupeNames = new Set<string>();
+    for (const f of cfg.extraction.fields) {
+      if (names.has(f.name)) dupeNames.add(f.name);
+      names.add(f.name);
+    }
+    for (const n of dupeNames) {
+      errors.push(`/extraction/fields: duplicate field name "${n}"`);
+    }
+    // Effective input keys must also be unique: `key ?? name` is what
+    // canonicalize reads from source JSON. Two fields claiming the same
+    // source key would map one input column into multiple canonical
+    // fields.
+    const inputKeys = new Map<string, string>();
+    const dupeKeys = new Set<string>();
+    for (const f of cfg.extraction.fields) {
+      const k = f.key ?? f.name;
+      const prior = inputKeys.get(k);
+      if (prior !== undefined && prior !== f.name) dupeKeys.add(k);
+      inputKeys.set(k, f.name);
+    }
+    for (const k of dupeKeys) {
+      errors.push(`/extraction/fields: duplicate input key "${k}"`);
+    }
+  }
   return errors;
 }
 
