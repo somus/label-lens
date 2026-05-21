@@ -45,12 +45,14 @@ function renderExtractionFieldRail(
 
   const hintSegments: Segment[] = [
     { text: " ", tone: "default" },
-    { text: "[j/k]", tone: "accent" },
-    { text: " focus · ", tone: "muted" },
-    { text: "[enter]", tone: "accent" },
-    { text: " edit / commit · ", tone: "muted" },
+    { text: "[a]", tone: "accent" },
+    { text: " accept · ", tone: "muted" },
     { text: "[r]", tone: "accent" },
-    { text: " form", tone: "muted" },
+    { text: " edit · ", tone: "muted" },
+    { text: "[x]", tone: "accent" },
+    { text: " reject · ", tone: "muted" },
+    { text: "[s]", tone: "accent" },
+    { text: " skip", tone: "muted" },
   ];
 
   const confidenceRow =
