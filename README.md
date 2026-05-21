@@ -19,7 +19,7 @@ LabelLens is the missing keyboard reviewer in the middle. Accept, reject, relabe
 
 Local-first, runs over SSH, ships as a single Bun-compiled binary. State lives next to the source JSONL; the dataset never leaves the box unless you turn on the LLM assistant.
 
-> **Status:** v0.1 release candidate. See [PRD.md](./PRD.md) and [docs/adr/](./docs/adr/) for design.
+> **Status:** v0.3. See [PRD.md](./PRD.md) and [docs/adr/](./docs/adr/) for design.
 
 <a href="docs/media/hero.webm">
   <img src="docs/media/hero.gif" alt="LabelLens review loop" width="800">
@@ -31,12 +31,12 @@ Current support is configured with [`task`](./docs/reference/config.md#task-requ
 
 | Task type | Status | Use it for |
 |---|---|---|
-| `classification` | Supported now | One label per record, such as intent, topic, or category review. |
-| `boundary` | Supported now | Document or line segmentation where surrounding context matters. |
-| `multi-label` | Planned V1 | Records that can carry multiple labels via toggle-style review. |
-| Extraction review | Planned V1 | Form-style correction of structured fields, without span editing. |
+| `classification` | Supported | One label per record, such as intent, topic, or category review. |
+| `boundary` | Supported | Document or line segmentation where surrounding context matters. |
+| `multi-label` | Supported | Records that can carry multiple labels via toggle-style review. |
+| `extraction` | Supported | Form-style correction of structured fields, without span editing. |
 | Pairwise / preference | Planned later | LLM output comparison and evaluation workflows. |
-| NER / span review | Planned V2 / future | Character-level span correction; deferred because terminal span editing is the hard part. See [PRD §19](./PRD.md#19-why-ner-and-extraction-with-spans-are-deferred). |
+| NER / span review | Planned later | Character-level span correction; deferred because terminal span editing is the hard part. See [PRD §19](./PRD.md#19-why-ner-and-extraction-with-spans-are-deferred). |
 
 ## Install
 
@@ -64,6 +64,7 @@ labellens                   # open the review screen
 In the TUI (default `simple` preset — arrow keys; see [docs/reference/keybindings.md](./docs/reference/keybindings.md) for the full table covering both `simple` and `vim` presets):
 
 - `a` accept · `r` relabel · `1`–`9` quick-relabel · `x` reject · `s` skip
+- `m` mark record · `:bulk-accept` / `:bulk-relabel <label>` / `:bulk-reject` / `:bulk-skip` act on all marked
 - `↓` / `↑` navigate · `→` / `←` cycle queues
 - `i` LLM assistant (configures on first press) · `t` stats · `?` help · `q` quit
 
@@ -82,7 +83,7 @@ labellens export stats       # Markdown summary
 | **[How-to guides](./docs/how-to/)** | Configure the assistant, work with queues, bulk-relabel, export, migrate labels, run over SSH, use Ollama locally. |
 | **[Reference](./docs/reference/)** | Config schema, keybindings, queue grammar, CLI flags, output formats. |
 | **[Explanation](./docs/explanation/)** | Domain model, why skipped is its own state, audit semantics. |
-| **[Roadmap](./ROADMAP.md)** | What's deferred past v0.1. |
+| **[Roadmap](./ROADMAP.md)** | What's deferred past v0.3. |
 | **[`labellens guide`](./src/cli/guide.ts)** | Print the tutorial offline (SSH-friendly). |
 | **`labellens --help`** | Quick reference printed to stdout. |
 | **`man labellens`** | Man page (installed by curl-installer). |
