@@ -105,6 +105,15 @@ export type AppContext = {
   overlay: Overlay | null;
   openOverlay(o: Overlay): void;
   closeOverlay(): void;
+  /**
+   * Transient flag set by `hydrateAssistantFromCache` when it installs a
+   * fresh cached assistant overlay during an effect batch (typically
+   * fired from `cursor.on("change")` after `commitDecision`'s queue
+   * refresh). Read by the `close` effect to avoid clobbering an
+   * overlay that was just installed by hydration. Reset at the end of
+   * `applyEffects`.
+   */
+  overlayHydratedThisBatch: boolean;
   /** The active Cursor + queue when a review screen is mounted. Null otherwise. */
   cursor: Cursor | null;
   queueId: QueueId | null;
@@ -344,7 +353,23 @@ export function createAppContext(args: {
         return;
       }
       const cached = hydrateAssistant(args.db, ctx.config, current);
-      ctx.overlay = cached === null ? null : { kind: "assistant", state: cached };
+      if (cached === null) {
+        ctx.overlay = null;
+        return;
+      }
+      ctx.overlay = { kind: "assistant", state: cached };
+      // ADR 0004: rendering a cached assistant suggestion counts as
+      // exposure regardless of whether the reviewer presses Enter
+      // through the assistant reducer. Without this, an `a`/`x`/`s`/`r`
+      // commit on the focused record would tag `source_of_truth:
+      // "human"` even though the strip was on screen.
+      ctx.viewedAssistant.add(current.id);
+      // Signal to the `close` effect (which may follow in the same
+      // batch via commitDecision → cursor.refresh → cursor.change →
+      // here) that the overlay it would otherwise clobber was just
+      // installed by hydration. `applyEffects` resets this flag at the
+      // end of the batch.
+      ctx.overlayHydratedThisBatch = true;
     },
     hasCursor(queueId) {
       return cursors.has(queueId);
@@ -442,6 +467,7 @@ export function createAppContext(args: {
     clearSavedAssistant() {
       ctx.savedAssistantState = null;
     },
+    overlayHydratedThisBatch: false,
     assistantAbort: null,
     cancelAssistantStream() {
       const cur = ctx.assistantAbort;
