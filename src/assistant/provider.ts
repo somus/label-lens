@@ -42,15 +42,22 @@ function buildExtractionSubmitTool(fields: ExtractionField[]): Tool {
   const properties: Record<string, ReturnType<typeof Type.Union>> = {};
   const required: string[] = [];
   for (const f of fields) {
+    // The per-field description is the LLM's last-line guard against
+    // drifting between reasoning and payload. Gemini in particular has
+    // been observed to write a plausible reasoning narrative ("set
+    // amount to $325.50") but emit a contradictory tool payload
+    // (`amount: "0"`). Spelling out "copy the substring verbatim" at
+    // the property level helps it anchor to the candidate text.
     properties[f.name] = Type.Union([Type.String(), Type.Null()], {
-      description: `Value for the configured extraction field "${f.name}".`,
+      description: `Value of the "${f.name}" field. Copy the substring verbatim from the candidate text — keep currency symbols ($, €, ₹), punctuation, casing, and surrounding characters exactly as written. Do NOT normalise, round, reformat, or invent a default. Use null only if the value is genuinely absent from the candidate.${f.required ? ' This field is required; null is only acceptable when you also set recommendedAction to "reject".' : ""}`,
     });
     if (f.required) required.push(f.name);
   }
   const ExtractedObject = Type.Object(properties, {
     required,
     additionalProperties: false,
-    description: "Complete suggested extraction object keyed by configured field names.",
+    description:
+      "Complete suggested extraction object keyed by configured field names. Every property must be a verbatim string copy from the candidate text (or null if absent). The keys here MUST exactly match the configured field names — no extras, no nesting, no renaming. If your `reasoning` says you set a field to a particular value, the JSON below must contain that same string.",
   } as never);
   const Constrained = Type.Object({
     extractedObject: ExtractedObject,
@@ -58,7 +65,8 @@ function buildExtractionSubmitTool(fields: ExtractionField[]): Tool {
       description: "Assistant's confidence in its own recommendation.",
     }),
     reasoning: Type.String({
-      description: "Markdown-formatted explanation of the recommendation.",
+      description:
+        "1–2 sentence explanation of which fields you changed and why. The values you describe here MUST exactly match the corresponding values in `extractedObject`. Do not mention a value in reasoning that isn't present in the object.",
     }),
     evidenceFor: Type.Array(Type.String(), {
       description: "Short bullet phrases supporting the suggested object.",
@@ -67,13 +75,14 @@ function buildExtractionSubmitTool(fields: ExtractionField[]): Tool {
       description: "Short bullet phrases against the suggested object.",
     }),
     recommendedAction: StringEnum(["accept", "relabel", "reject", "skip"], {
-      description: "How the reviewer should commit.",
+      description:
+        "accept = `extractedObject` exactly matches the highest-confidence existing prediction; relabel = you corrected one or more fields; reject = candidate is unrelated to the extraction task OR a required field is absent from the candidate; skip = candidate is genuinely ambiguous.",
     }),
   });
   return {
     name: SUBMIT_TOOL_NAME,
     description:
-      "Submit your extraction suggestion for the candidate record. Call this exactly once with the complete object.",
+      "Submit your extraction suggestion for the candidate record. Call this exactly once. `extractedObject` is your final corrected object; `reasoning` MUST stay consistent with `extractedObject` value-for-value.",
     parameters: Constrained,
   };
 }

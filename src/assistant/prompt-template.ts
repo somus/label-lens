@@ -6,7 +6,7 @@ import type { CanonicalPromptInput } from "./prompt.ts";
  * conventions). Hash includes this so stale cache entries are invalidated
  * automatically — reviewers don't need to wipe the DB after a prompt edit.
  */
-export const PROMPT_TEMPLATE_VERSION = "1.1.0";
+export const PROMPT_TEMPLATE_VERSION = "1.2.0";
 
 export type AssistantPromptParts = {
   systemPrompt: string;
@@ -87,8 +87,9 @@ function buildExtractionPrompt(input: CanonicalPromptInput): AssistantPromptPart
     "You are an expert at extracting structured fields from short text records.",
     "Always call the `submit_label_suggestion` tool exactly once with your analysis.",
     "`extractedObject` MUST be an object whose keys are EXACTLY the configured field names — no other keys, no nested objects, values are strings or null only.",
-    "Copy values verbatim from the candidate text whenever they appear there; do not paraphrase, round, or invent values. Use null only when the value is genuinely absent from the candidate.",
-    'Treat the existing predictions as your starting point: when an existing prediction is already correct, return its values unchanged and set `recommendedAction: "accept"`. When you correct any field, set `recommendedAction: "relabel"`. Use `reject` only when the candidate is unrelated to the task, and `skip` when it is genuinely ambiguous.',
+    "Copy values verbatim from the candidate text whenever they appear there. Keep currency symbols ($, €, ₹), punctuation, casing, and decimals exactly as written. Do NOT round, drop a `$`, normalise `2026/05/15` to `2026-05-15`, or invent a default like `0` or `n/a`. Use null only when the value is genuinely absent from the candidate.",
+    'CRITICAL: `reasoning` and `extractedObject` MUST agree value-for-value. If reasoning says "set amount to $325.50", `extractedObject.amount` MUST be exactly the string "$325.50". Never describe one value in reasoning and emit a different value (e.g. "0", null, empty string) in the structured payload — verify each field after writing reasoning before submitting.',
+    'Treat the existing predictions as your starting point: when an existing prediction is already correct, return its values unchanged and set `recommendedAction: "accept"`. When you correct any field, set `recommendedAction: "relabel"`. Use `reject` only when the candidate is unrelated to the task or a required field is genuinely absent from the candidate; `skip` when ambiguous.',
     'Required fields must never be null when `recommendedAction` is `accept` or `relabel`. If a required field is truly missing from the candidate, set `recommendedAction: "reject"` instead.',
     "Keep `reasoning` to 1-2 sentences focused on which fields you changed and why. `evidenceFor` / `evidenceAgainst` are short phrases (one per item, optional).",
     `Task: extraction`,
