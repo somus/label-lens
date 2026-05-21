@@ -1,9 +1,5 @@
 import type { ExtractionField } from "../config/config.ts";
-import {
-  canonicalizeExtractionObject,
-  type ExtractionObject,
-  encodeExtractionObject,
-} from "../labels/extraction-object.ts";
+import { type ExtractionObject, encodeExtractionObject } from "../labels/extraction-object.ts";
 import { encodeLabelSet, labelSetsEqual, normalizeLabelSet } from "../labels/label-set.ts";
 import type {
   AssistantBase,
@@ -277,13 +273,27 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
             effects: [],
           };
         }
-        const { object } = canonicalizeExtractionObject(r.extractedObject, state.extraction.fields);
+        // The LLM produces canonical-shape objects keyed by configured
+        // field name (the tool schema is `properties[f.name]`); the
+        // ingest-side `canonicalizeExtractionObject` is for the source
+        // JSON shape, which uses the `key` alias. Calling that helper
+        // here would mis-read every aliased field — e.g. for an
+        // `amount` field with `key: "amt"`, it would look up
+        // `source["amt"]` (always undefined in LLM responses) and
+        // collapse the value to null. Mirror the read pattern used by
+        // `restoreCachedAssistantState`: read by `f.name`, accept
+        // strings (any other type becomes null).
+        const suggestionObject: ExtractionObject = {};
+        for (const f of state.extraction.fields) {
+          const raw = r.extractedObject[f.name];
+          suggestionObject[f.name] = typeof raw === "string" ? raw : null;
+        }
         return {
           overlay: packed({
             ...baseOf(state),
             status: "done",
             suggestion: "",
-            suggestionObject: object,
+            suggestionObject,
             confidence: r.confidence,
             recommendedAction: r.recommendedAction,
             reason: r.reasoning,

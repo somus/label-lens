@@ -25,6 +25,43 @@ describe("assistant overlay — extraction task", () => {
     expect(state.extraction?.predictedObject.company).toBe("Acme");
   });
 
+  test("streamEnd reads LLM values by `f.name`, ignoring the source-side `key` alias", () => {
+    // Regression for the user-reported "amount=0" / "amount=∅" bug.
+    // The tool schema is keyed by `f.name`, so the LLM returns
+    // `{ amount: "19.99" }` (not `{ amt: "19.99" }`) even when the
+    // configured field declares `key: "amt"`. The streamEnd reducer
+    // used to call `canonicalizeExtractionObject`, which is for the
+    // ingest-side source JSON shape and reads by `f.key ?? f.name`;
+    // it would silently null out every aliased field on the LLM
+    // response.
+    const aliasedFields: ExtractionField[] = [
+      { name: "company", type: "string", required: true },
+      { name: "amount", type: "string", required: true, key: "amt" },
+    ];
+    const initial = openAssistant("rec1", null, {
+      extraction: { fields: aliasedFields, predictedObject: { company: "Acme", amount: null } },
+    });
+    const result = reduceAssistant(
+      initial,
+      streamEnd({
+        extractedObject: { company: "Acme", amount: "19.99" },
+        confidence: "high",
+        reasoning: "",
+        evidenceFor: [],
+        evidenceAgainst: [],
+        recommendedAction: "relabel",
+      }),
+    );
+    if (result.overlay?.kind === "assistant" && result.overlay.state.status === "done") {
+      expect(result.overlay.state.suggestionObject).toEqual({
+        company: "Acme",
+        amount: "19.99",
+      });
+    } else {
+      throw new Error("expected done state");
+    }
+  });
+
   test("streamEnd canonicalises suggestedObject against configured fields", () => {
     const initial = openAssistant("rec1", null, {
       extraction: {
