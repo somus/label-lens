@@ -129,6 +129,85 @@ describe("restoreCachedAssistantState", () => {
     expect(got).toBeNull();
   });
 
+  test("hydrateAssistantFromCache installs the cached state into app.overlay so Enter is interactive", async () => {
+    // The render path used to synthesise the strip state at frame time
+    // without installing it as `app.overlay`. Enter on the strip then
+    // dispatched through the review scope (where Enter is unbound) and
+    // no-op'd. The hydrate hook now installs the cached state into the
+    // overlay slot on cursor change so the assistant reducer receives
+    // key events normally.
+    const { createAppContext, enterReview } = await import("../../src/app/context.ts");
+    const { defaultDisplay } = await import("../../src/render/capability.ts");
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const response: AssistantResponse = {
+      suggestedLabel: "travel",
+      confidence: "high",
+      reasoning: "ride to airport",
+      evidenceFor: [],
+      evidenceAgainst: [],
+      recommendedAction: "relabel",
+    };
+    cacheAssistantResponse(store.db, id, "h1", response);
+    const app = createAppContext({
+      db: store.db,
+      config: {
+        ...classificationConfig,
+        assistant: {
+          enabled: true,
+          provider: "ollama",
+          model: "llama3",
+          privacyAcknowledged: true,
+        },
+      },
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    enterReview(app, "pending");
+    app.hydrateAssistantFromCache();
+    expect(app.overlay?.kind).toBe("assistant");
+    if (app.overlay?.kind === "assistant" && app.overlay.state.status === "done") {
+      expect(app.overlay.state.recordId).toBe(id);
+      expect(app.overlay.state.suggestion).toBe("travel");
+    }
+  });
+
+  test("hydrateAssistantFromCache does NOT clobber an active non-assistant overlay", async () => {
+    const { createAppContext, enterReview } = await import("../../src/app/context.ts");
+    const { defaultDisplay } = await import("../../src/render/capability.ts");
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    cacheAssistantResponse(store.db, id, "h1", {
+      suggestedLabel: "food",
+      confidence: "high",
+      reasoning: "",
+      evidenceFor: [],
+      evidenceAgainst: [],
+      recommendedAction: "accept",
+    });
+    const app = createAppContext({
+      db: store.db,
+      config: {
+        ...classificationConfig,
+        assistant: {
+          enabled: true,
+          provider: "ollama",
+          model: "llama3",
+          privacyAcknowledged: true,
+        },
+      },
+      display: defaultDisplay(),
+      requestRender: () => {},
+      onQuit: () => {},
+    });
+    enterReview(app, "pending");
+    // Simulate the reviewer mid-task in a different modal.
+    app.overlay = { kind: "note" } as unknown as NonNullable<typeof app.overlay>;
+    app.hydrateAssistantFromCache();
+    expect(app.overlay?.kind).toBe("note");
+  });
+
   test("getLatestCachedAssistantResponse returns the most recent row regardless of prompt hash", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;

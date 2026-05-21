@@ -1,4 +1,5 @@
 import type { CommandRegistry } from "../actions/command.ts";
+import { restoreCachedAssistantState as hydrateAssistant } from "../assistant/restore-cached.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import { createSmartLearning, type SmartLearning } from "../learning/smart-learning.ts";
@@ -162,6 +163,16 @@ export type AppContext = {
   savedAssistantState: AssistantState | null;
   clearSavedAssistant(): void;
   /**
+   * Install the most recent cached assistant response (if any) as the
+   * active assistant overlay for the cursor's current record. Called
+   * on cursor change and on review-screen mount so the strip is
+   * immediately interactive (Enter, Tab) without requiring `i`.
+   * No-op when the assistant is disabled, no record is focused, the
+   * current overlay is a non-assistant modal, or the assistant
+   * overlay is already pointing at this record.
+   */
+  hydrateAssistantFromCache(): void;
+  /**
    * True when `--local-only` was set on the CLI. Threaded into provider
    * validation so a misconfigured remote provider aborts before any network
    * call.
@@ -312,10 +323,35 @@ export function createAppContext(args: {
       let cursor = cursors.get(queueId);
       if (!cursor) {
         cursor = openCursor(args.db, queueId, factoryFor(queueId));
-        cursor.on("change", () => ctx.requestRender());
+        cursor.on("change", () => {
+          ctx.hydrateAssistantFromCache();
+          ctx.requestRender();
+        });
         cursors.set(queueId, cursor);
       }
       return cursor;
+    },
+    hydrateAssistantFromCache() {
+      // When the cursor lands on a record with a cached assistant
+      // response and no overlay is currently active (or the active
+      // overlay is a stale assistant state for a different record),
+      // install the cached response as the live assistant overlay.
+      // This makes the strip immediately interactive — Enter, Tab —
+      // without requiring the reviewer to press `i` first. Lazy-imports
+      // `restoreCachedAssistantState` to avoid a load-time cycle.
+      if (ctx.config.assistant?.enabled !== true) return;
+      const current = ctx.cursor?.current();
+      if (!current) return;
+      // Don't clobber an active non-assistant overlay (form, picker,
+      // configure-assistant, etc.) — the reviewer is mid-task.
+      if (ctx.overlay !== null && ctx.overlay.kind !== "assistant") return;
+      // If the current assistant overlay is already for this record,
+      // leave it alone (would clobber an in-flight stream / edit).
+      if (ctx.overlay?.kind === "assistant" && ctx.overlay.state.recordId === current.id) {
+        return;
+      }
+      const cached = hydrateAssistant(args.db, ctx.config, current);
+      ctx.overlay = cached === null ? null : { kind: "assistant", state: cached };
     },
     hasCursor(queueId) {
       return cursors.has(queueId);
