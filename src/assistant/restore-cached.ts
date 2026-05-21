@@ -76,8 +76,13 @@ export function restoreCachedAssistantState(
     };
   }
 
-  // Single-label (classification / boundary).
+  // Single-label (classification / boundary). Validate against the live
+  // label set so a cached row produced before a rename/removal cannot
+  // hand the reviewer an out-of-config label that Enter would commit.
+  // Matches `queryAssistant`'s post-decode check on `labelNames`.
   if ("suggestedLabel" in cached && typeof cached.suggestedLabel === "string") {
+    const configured = new Set(config.labels.map((e) => labelName(e)));
+    if (!configured.has(cached.suggestedLabel)) return null;
     return {
       recordId: record.id,
       predictedLabel,

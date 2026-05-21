@@ -67,6 +67,22 @@ describe("restoreCachedAssistantState", () => {
     expect(got).toBeNull();
   });
 
+  test("returns null when cached single-label is not in current config", async () => {
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+    const response: AssistantResponse = {
+      suggestedLabel: "renamed",
+      confidence: "high",
+      reasoning: "stale",
+      evidenceFor: [],
+      evidenceAgainst: [],
+      recommendedAction: "relabel",
+    };
+    cacheAssistantResponse(store.db, id, "h1", response);
+    const got = restoreCachedAssistantState(store.db, classificationConfig, record(id, "food"));
+    expect(got).toBeNull();
+  });
+
   test("rebuilds a single-label done state from the latest cached row", async () => {
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const id = store.db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
