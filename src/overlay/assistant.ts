@@ -369,16 +369,17 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
 }
 
 function reduceKey(state: AssistantState, name: string): ReduceResult {
-  if (name === "escape") return dismiss(state);
   if (name === "tab") {
     const toggled: AssistantState = { ...state, reasoningExpanded: !state.reasoningExpanded };
     return { overlay: packed(toggled), effects: [] };
   }
   if (name === "return") return commit(state);
-  // Assistant is an inline section (ADR 0009), not a modal stack — any
-  // key it doesn't itself handle should fall through to the review scope
-  // so `q`, `a`, `x`, `s`, `j/k`, `:`, `?`, etc. continue to work while
-  // the suggestion footer is visible. Multi-label picker and the
-  // extraction form use the same pattern.
+  // Assistant is an inline section (ADR 0009) that the reviewer cannot
+  // dismiss directly — once a suggestion is on screen it stays visible
+  // until they navigate to another record. `Esc` therefore propagates
+  // to the review scope alongside every other unhandled key
+  // (`q`, `a`, `x`, `s`, `j/k`, `:`, `?`, …). Multi-label picker and
+  // the extraction form use the same propagation pattern for keys they
+  // do not own.
   return { overlay: packed(state), effects: [], propagated: true };
 }

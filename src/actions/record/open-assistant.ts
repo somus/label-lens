@@ -95,6 +95,12 @@ export const openAssistantCommand: Command = {
         : undefined;
     const state = openAssistant(fireRecordId, predictedLabel, openOptions);
     ctx.openOverlay({ kind: "assistant", state });
+    // ADR 0004: opening the panel counts as exposure regardless of how
+    // the reviewer dismisses it. With `Esc` no longer closing the
+    // assistant (the strip is now permanent until the reviewer
+    // navigates), tag the record here so every subsequent commit on it
+    // carries `source_of_truth: "human+assistant"`.
+    ctx.viewedAssistant.add(fireRecordId);
 
     let model: import("@earendil-works/pi-ai").Model<string>;
     try {

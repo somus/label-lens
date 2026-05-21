@@ -175,7 +175,11 @@ describe("assistant flow e2e", () => {
     expect(frame).not.toContain("[tab] reasoning");
   });
 
-  test("Esc dismisses but next `record.accept` still tagged human+assistant (ADR 0004)", async () => {
+  test("Esc no longer dismisses; next `record.accept` is still tagged human+assistant (ADR 0004)", async () => {
+    // Under the always-visible strip model the audit tag is set at open
+    // time (`openAssistantCommand`), so the tag survives even though
+    // Esc no longer closes the overlay. The strip itself stays present;
+    // we only assert the source_of_truth tag carries forward.
     using store = await openTmpStore({ ingest: "tiny.jsonl" });
     const ctx = await mount(store, {
       enabled: true,
@@ -194,7 +198,8 @@ describe("assistant flow e2e", () => {
     await new Promise((r) => setTimeout(r, 30));
     await ctx.renderOnce();
 
-    expect(ctx.app.overlay).toBeNull();
+    // Strip stays visible — Esc propagates to review scope (no-op there).
+    expect(ctx.app.overlay?.kind).toBe("assistant");
     ctx.mockInput.pressKey("a");
     await ctx.renderOnce();
     const cur = currentReview(store.db, id);
