@@ -1,0 +1,5 @@
+{"text":"Invoice #4012 from Acme Industries for $1,250.00 dated 2026-05-10","predictions":[{"label":{"company":"Acme Industries","amt":"1250.00","date":"2026-05-10"},"confidence":0.92,"source":"extractor:gpt"}]}
+{"text":"Receipt from BetaCorp; total 99.99 USD","predictions":[{"label":{"company":"BetaCorp","amt":"99.99"},"confidence":0.78,"source":"extractor:gpt"}]}
+{"text":"Wire transfer to Gamma LLC — see attached","predictions":[{"label":{"company":"Gamma LLC","amt":null},"confidence":0.62,"source":"extractor:gpt"}]}
+{"text":"Refund issued by Delta on May 3","predictions":[{"label":{"company":"Delta","amt":"40","date":"May 3"},"confidence":0.55,"source":"extractor:gpt"}]}
+{"text":"Untagged blob with no extraction","predictions":[{"label":{"company":null,"amt":null},"confidence":0.21,"source":"extractor:gpt"}]}

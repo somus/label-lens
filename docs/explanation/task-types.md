@@ -153,6 +153,10 @@ Bulk multi-label operations and exact-set / per-label set correction metrics are
 
 ## Extraction review
 
+<a href="../media/extraction.webm">
+  <img src="../media/extraction.gif" alt="Extraction review — form-style structured-field correction" width="800">
+</a>
+
 Use `extraction` when each record carries a structured object the reviewer should correct field-by-field — names, dates, amounts, companies. Extraction is form-style structured-field correction only: no character spans, no offsets, no NER. #112 supports `string | null` field values; arrays, numbers, booleans, and nested objects are future work.
 
 Good fits:
