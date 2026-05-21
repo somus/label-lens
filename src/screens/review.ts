@@ -277,8 +277,17 @@ export function mountReviewScreen(args: {
     // covers the case where the reviewer opened a non-assistant overlay
     // (e.g. the extraction form) on top of a completed suggestion —
     // the strip stays populated while the foreground overlay is up.
-    const assistantState =
+    // Guard the state against record-id mismatch: navigation (j/k, ]/[)
+    // does not synchronously close the assistant overlay; if the cursor
+    // has moved we render the idle placeholder instead of leaking the
+    // previous record's suggestion onto the new row.
+    const rawAssistantState =
       app.overlay?.kind === "assistant" ? app.overlay.state : app.savedAssistantState;
+    const currentRecordId = cursor?.current()?.id ?? null;
+    const assistantState =
+      rawAssistantState !== null && rawAssistantState.recordId === currentRecordId
+        ? rawAssistantState
+        : null;
     const assistantStrip = assistantEnabled
       ? renderAssistantStrip(assistantState, app.display, contentWidth)
       : Box({});
