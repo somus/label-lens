@@ -647,9 +647,6 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
     return [
       { text: " LLM ", tone: "accent" },
       { text: "thinking…", tone: "muted" },
-      { text: "   ", tone: "default" },
-      { text: "[esc]", tone: "accent" },
-      { text: " cancel", tone: "muted" },
     ];
   }
   if (state.status === "streaming") {
@@ -662,9 +659,6 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
     return [
       { text: " ✗ ", tone: "danger" },
       { text: state.errorMessage ?? "unknown error", tone: "muted" },
-      { text: "   ", tone: "default" },
-      { text: "[esc]", tone: "accent" },
-      { text: " dismiss", tone: "muted" },
     ];
   }
   // done — narrowed by the early returns above
@@ -696,12 +690,7 @@ function buildAssistantSegments(state: AssistantState): Segment[] {
   if (hasReason) {
     segs.push({ text: "[tab]", tone: "accent" }, { text: " reasoning · ", tone: "muted" });
   }
-  segs.push(
-    { text: "[enter]", tone: "accent" },
-    { text: " commit · ", tone: "muted" },
-    { text: "[esc]", tone: "accent" },
-    { text: " dismiss", tone: "muted" },
-  );
+  segs.push({ text: "[enter]", tone: "accent" }, { text: " commit", tone: "muted" });
   return segs;
 }
 
