@@ -364,6 +364,13 @@ export function mountReviewScreen(args: {
     contextScope: Scope,
   ) => {
     app.activeScope = contextScope;
+    // Read-only overlays (stats, help, guidelines, queue) propagate
+    // unhandled keys but must not let review-scope decisions like `a` /
+    // `x` / `s` fire accidentally while the reviewer is reading docs.
+    // Feed `chord` with the literal "global" scope so only global-scope
+    // bindings (`q` quit, `:` palette, `^p` palette history) match.
+    // The interactive inline assistant overlay bypasses this helper —
+    // see `onKey` for the special-case full-dispatch path.
     const action = chord.feed("global", {
       name: event.name,
       ctrl: event.ctrl,
@@ -390,7 +397,15 @@ export function mountReviewScreen(args: {
       const queueId = app.queueId ?? initialQueueId;
       applyEffects(app, queueId, result.effects, dispatchCommand);
       if (result.propagated) {
-        dispatchPropagatedKey(event, propagatedScope(sourceOverlay, app));
+        if (sourceOverlay.kind === "assistant") {
+          // Assistant renders inline (ADR 0009); reviewer expects the
+          // full review-scope keymap to keep working. Route through
+          // `dispatchKey`, not the global-only `dispatchPropagatedKey`,
+          // so `r` open form, `a` accept, `x` reject, etc. all fire.
+          dispatchKey(event);
+        } else {
+          dispatchPropagatedKey(event, propagatedScope(sourceOverlay, app));
+        }
       } else if (mounted) {
         renderState();
       }

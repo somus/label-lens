@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import {
   type AssistantResponseAny,
+  isAssistantExtractionResponse,
   isAssistantMultiLabelResponse,
   isAssistantResponse,
 } from "../assistant/schema.ts";
@@ -36,6 +37,7 @@ export function getCachedAssistantResponse(
   }
   if (isAssistantResponse(parsed)) return parsed;
   if (isAssistantMultiLabelResponse(parsed)) return parsed;
+  if (isAssistantExtractionResponse(parsed)) return parsed;
   return null;
 }
 

@@ -142,4 +142,26 @@ describe("overlay propagation e2e", () => {
     expect(queue.app.overlay?.kind).toBe("queue");
     expect(reviewCount(queue)).toBe(0);
   });
+
+  test("inline assistant overlay propagates review-scope decisions and openers", async () => {
+    // ADR 0009 puts the assistant beneath the chip rail, not in a modal
+    // stack, so reviewers expect the full review keymap to keep working.
+    // Open the assistant manually (no provider call needed for this
+    // test); we just need overlay.kind === "assistant" so the dispatcher
+    // takes the special-case branch.
+    const ctx = await setup();
+    using _store = ctx.store;
+    ctx.app.overlay = {
+      kind: "assistant",
+      state: {
+        recordId: ctx.app.cursor!.current()!.id,
+        predictedLabel: "food",
+        reasoningExpanded: false,
+        status: "loading",
+      },
+    };
+    ctx.mockInput.pressKey("a");
+    await ctx.renderOnce();
+    expect(reviewCount(ctx)).toBe(1);
+  });
 });
