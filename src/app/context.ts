@@ -378,10 +378,16 @@ export function createAppContext(args: {
       // funnel through here. Aborts that target a different record are
       // already a no-op so this is safe to call unconditionally.
       ctx.cancelAssistantStream();
-      if (ctx.overlay !== null && ctx.overlay.kind !== "assistant" && ctx.savedAssistantState) {
-        // Restore the suspended assistant overlay instead of closing to
-        // null. The strip stays interactive (Tab, Enter, Esc) and the
-        // reviewer can dismiss it on the next Esc.
+      // Restore the suspended assistant overlay whenever one is parked,
+      // regardless of the current overlay slot. `dispatchOverlayEvent`
+      // writes `overlay = result.overlay` BEFORE running the close
+      // effect, so by the time we get here the foreground overlay has
+      // already been cleared (overlay === null). Checking the saved
+      // state directly is the only reliable signal. `commitDecision`'s
+      // handler clears `savedAssistantState` itself so commit-flows
+      // (form → Enter) do not ghost-restore the stale suggestion onto
+      // the next record.
+      if (ctx.savedAssistantState) {
         ctx.overlay = { kind: "assistant", state: ctx.savedAssistantState };
         ctx.savedAssistantState = null;
       } else {

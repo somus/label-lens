@@ -119,6 +119,15 @@ export function applyEffects(
         if (app.extractionDraft?.recordId === effect.recordId) {
           app.clearExtractionDraft();
         }
+        // A commit means the reviewer is done with this record's
+        // assistant session. Drop the suspended state so the trailing
+        // `close` effect doesn't ghost-restore the stale suggestion
+        // onto the next record (the form's Enter emits
+        // commitDecision → close; without this, closeOverlay would
+        // hand the assistant overlay back).
+        if (app.savedAssistantState?.recordId === effect.recordId) {
+          app.clearSavedAssistant();
+        }
         const cursor = refreshQueue(app, queueId);
         if (effect.status === "accepted") {
           app.motion.play("footer.accept", flash(80, "success"));

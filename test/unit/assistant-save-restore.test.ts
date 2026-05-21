@@ -98,4 +98,26 @@ describe("assistant save+restore", () => {
     app.clearSavedAssistant();
     expect(app.savedAssistantState).toBeNull();
   });
+
+  test("Esc-from-form-then-Enter restores even when dispatch zeroed overlay first", async () => {
+    // Reproduces the bug from the assistant flow: dispatchOverlayEvent
+    // writes `app.overlay = result.overlay` (null on form Esc) before
+    // applyEffects runs the trailing `close` effect. closeOverlay then
+    // sees overlay === null and used to fall through to overlay=null —
+    // losing the suspended assistant state and breaking the next
+    // Enter-opens-form gesture. The fix restores whenever
+    // savedAssistantState is set, regardless of current overlay value.
+    using store = await openTmpStore({ ingest: "tiny.jsonl" });
+    const app = makeApp(store.db);
+    app.openOverlay({ kind: "assistant", state: doneState("rec-1") });
+    app.openOverlay(fakeExtractionForm); // saves assistant
+    // Simulate the dispatch order: form Esc reducer returned
+    // `overlay: null`, then close effect fires.
+    app.overlay = null;
+    app.closeOverlay();
+    const restored = app.overlay as { kind: string; state: { recordId: string } } | null;
+    expect(restored?.kind).toBe("assistant");
+    expect(restored?.state.recordId).toBe("rec-1");
+    expect(app.savedAssistantState).toBeNull();
+  });
 });
