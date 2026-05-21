@@ -251,7 +251,19 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   // All three are acceptable per PRD §10.5 — cache is content-addressed by
   // prompt_hash, not by current config state.
   const cached = getCachedAssistantResponse(db, recordId, promptHash);
-  if (cached) return { response: cached, wasCached: true };
+  if (cached) {
+    // Re-validate cache hits against the current config so a stale row
+    // produced before the field list / label set changed cannot leak
+    // through the gate. Mismatch falls through to a fresh query rather
+    // than throwing — matches the "no row" path so the reviewer is
+    // never stuck with a poisoned cache slot.
+    const reason = validateAssistantResponseShape(cached, {
+      labelNames,
+      multiLabel: multiLabel === true,
+      extraction,
+    });
+    if (reason === null) return { response: cached, wasCached: true };
+  }
 
   if (!assistant.enabled) {
     throw new AssistantQueryError("not-enabled", "Assistant is disabled in config.");
@@ -359,28 +371,9 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
       );
     }
     const response = finalToolCall.arguments as AssistantExtractionResponse;
-    const configured = new Set(extraction.fields.map((f) => f.name));
-    const unknown = Object.keys(response.extractedObject).filter((k) => !configured.has(k));
-    if (unknown.length > 0) {
-      throw new AssistantQueryError(
-        "invalid-label",
-        `Model suggested fields not in extraction.fields: ${unknown.join(", ")}.`,
-      );
-    }
-    const missing = extraction.fields
-      .filter((f) => f.required)
-      .filter(
-        (f) =>
-          response.extractedObject[f.name] === undefined ||
-          response.extractedObject[f.name] === null ||
-          response.extractedObject[f.name] === "",
-      )
-      .map((f) => f.name);
-    if (missing.length > 0) {
-      throw new AssistantQueryError(
-        "invalid-label",
-        `Model omitted required extraction field(s): ${missing.join(", ")}.`,
-      );
+    const reason = validateExtractionResponse(response, extraction);
+    if (reason !== null) {
+      throw new AssistantQueryError("invalid-label", reason);
     }
     cacheAssistantResponse(db, recordId, promptHash, response);
     return { response, wasCached: false };
@@ -423,6 +416,66 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   }
   cacheAssistantResponse(db, recordId, promptHash, response);
   return { response, wasCached: false };
+}
+
+/**
+ * Validate an extraction response against the current configured fields.
+ * Returns null when valid, else a short human-readable reason. Treats
+ * whitespace-only required values as missing (the encode path trims
+ * blanks to null, so a downstream export would fail with a required-
+ * field error). When `recommendedAction === "reject"`, required fields
+ * may be null — the tool contract and prompt explicitly allow that path
+ * for candidates where the value is genuinely absent.
+ */
+function validateExtractionResponse(
+  response: AssistantExtractionResponse,
+  extraction: { fields: ExtractionField[] },
+): string | null {
+  const configured = new Set(extraction.fields.map((f) => f.name));
+  const unknown = Object.keys(response.extractedObject).filter((k) => !configured.has(k));
+  if (unknown.length > 0) {
+    return `Model suggested fields not in extraction.fields: ${unknown.join(", ")}.`;
+  }
+  if (response.recommendedAction === "reject") return null;
+  const missing = extraction.fields
+    .filter((f) => f.required)
+    .filter((f) => {
+      const v = response.extractedObject[f.name];
+      if (v === undefined || v === null) return true;
+      return typeof v === "string" && v.trim().length === 0;
+    })
+    .map((f) => f.name);
+  if (missing.length > 0) {
+    return `Model omitted required extraction field(s): ${missing.join(", ")}.`;
+  }
+  return null;
+}
+
+/**
+ * Validate any cached assistant response against the live config slice
+ * before returning it as a cache hit. Stale rows (config fields removed,
+ * labels renamed) fail this check and fall through to a fresh query.
+ */
+function validateAssistantResponseShape(
+  response: AssistantResponseAny,
+  args: {
+    labelNames: readonly string[];
+    multiLabel: boolean;
+    extraction?: { fields: ExtractionField[] };
+  },
+): string | null {
+  if (args.extraction) {
+    if (!isAssistantExtractionResponse(response)) return "shape mismatch";
+    return validateExtractionResponse(response, args.extraction);
+  }
+  if (args.multiLabel) {
+    if (!isAssistantMultiLabelResponse(response)) return "shape mismatch";
+    const set = new Set(args.labelNames);
+    const bad = response.suggestedLabels.filter((l) => !set.has(l));
+    return bad.length === 0 ? null : `unknown labels: ${bad.join(", ")}`;
+  }
+  if (!isAssistantResponse(response)) return "shape mismatch";
+  return args.labelNames.includes(response.suggestedLabel) ? null : "unknown label";
 }
 
 /**
