@@ -201,7 +201,7 @@ Review actions:
 
 - `a` accepts the primary Prediction object verbatim — refused (with a flash) if any required field is null/empty in that object.
 - `r` opens the form overlay. The draft is pre-populated from the prior committed Review value if one exists, else from the primary Prediction object.
-- Inside the form, `j` / `k` (or arrows) move focus between fields. `Enter` on a focused field opens inline edit; `Enter` while editing commits the typed value to the draft and exits edit; pressing `Enter` again on the same field (with no in-flight edit) commits the Review. `Esc` cancels an in-flight edit first, then closes the form.
+- Inside the form, `↑` / `↓` (or `k` / `j` under the vim preset) move focus between fields. `e` opens inline edit on the focused field; `Enter` while editing commits the typed value to the draft and exits edit; `Enter` without an in-flight edit commits the Review. `Esc` cancels an in-flight edit first, then closes the form.
 - Status follows object equality with the primary Prediction object: `accepted` when equal, `relabeled` when different.
 - Required-field validation also gates form-commit — the overlay refuses to commit a Review while any required field is null/empty.
 - `x` (reject) writes `final_label: null`; `s` (skip) writes `status: "skipped"`. `u` (undo) reverses the most recent decision. Effective Review and `human+assistant` audit semantics are unchanged.

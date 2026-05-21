@@ -21,12 +21,6 @@ export type ExtractionFormState = {
   editing: boolean;
   /** Buffer of in-flight typed value. Committed to `draft` on Enter. */
   editBuffer: string;
-  /** True iff the previous key event was an Enter that committed an edit (or
-   * an Esc that cancelled one) and the focus has not moved since. Drives the
-   * two-press Enter-to-commit-Review choreography: first Enter opens edit,
-   * Enter inside edit commits the value, the next Enter (with no in-flight
-   * edit) commits the Review. Reset on focus move / open-edit. */
-  justExitedEdit: boolean;
   /** Sticky source-of-truth tag — set when the assistant panel was viewed. */
   assistantViewed: boolean;
 };
@@ -56,7 +50,6 @@ export function openExtractionForm(args: OpenExtractionFormArgs): ExtractionForm
     focus: 0,
     editing: false,
     editBuffer: "",
-    justExitedEdit: false,
     assistantViewed: args.assistantViewed ?? false,
   };
 }
@@ -68,14 +61,14 @@ function packed(state: ExtractionFormState): Overlay {
 function withFocus(state: ExtractionFormState, focus: number): ExtractionFormState {
   if (state.fields.length === 0) return state;
   const next = Math.max(0, Math.min(focus, state.fields.length - 1));
-  return { ...state, focus: next, justExitedEdit: false };
+  return { ...state, focus: next };
 }
 
 function enterEdit(state: ExtractionFormState): ExtractionFormState {
   const field = state.fields[state.focus];
   if (!field) return state;
   const current = state.draft[field.name] ?? "";
-  return { ...state, editing: true, editBuffer: current, justExitedEdit: false };
+  return { ...state, editing: true, editBuffer: current };
 }
 
 function commitEditValue(state: ExtractionFormState): ExtractionFormState {
@@ -86,13 +79,12 @@ function commitEditValue(state: ExtractionFormState): ExtractionFormState {
     ...state,
     editing: false,
     editBuffer: "",
-    justExitedEdit: true,
     draft: { ...state.draft, [field.name]: value },
   };
 }
 
 function cancelEdit(state: ExtractionFormState): ExtractionFormState {
-  return { ...state, editing: false, editBuffer: "", justExitedEdit: true };
+  return { ...state, editing: false, editBuffer: "" };
 }
 
 function missingRequired(state: ExtractionFormState): string[] {
@@ -181,16 +173,8 @@ function reduceKey(
     return { overlay: packed(state), effects: [] };
   }
   if (name === "escape") return { overlay: null, effects: [{ kind: "close" }] };
-  if (name === "return") {
-    // Two-press choreography (per #112 design):
-    // 1. First Enter on a focused field opens inline edit.
-    // 2. Enter inside edit commits the typed value and sets `justExitedEdit`.
-    // 3. The next Enter (still on the same field, no in-flight edit) commits
-    //    the Review. Moving focus resets `justExitedEdit` so an accidental
-    //    Enter elsewhere doesn't fire.
-    if (state.justExitedEdit) return commitReview(state);
-    return { overlay: packed(enterEdit(state)), effects: [] };
-  }
+  if (name === "return") return commitReview(state);
+  if (name === "e") return { overlay: packed(enterEdit(state)), effects: [] };
   if (isOverlayPrev(evt.event, evt.preset)) {
     return { overlay: packed(withFocus(state, state.focus - 1)), effects: [] };
   }

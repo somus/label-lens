@@ -119,7 +119,8 @@ The form overlay edits the structured object field-by-field. The draft is pre-po
 |---|---|
 | `↓` (or `j` under the vim preset) | Move focus to the next field |
 | `↑` (or `k` under the vim preset) | Move focus to the previous field |
-| `Enter` | If editing → commit the typed value to the draft (exit edit). If not editing and the previous press just committed an edit → commit the Review. Otherwise → open inline edit on the focused field. |
+| `e` | Open inline edit on the focused field |
+| `Enter` | If editing → commit the typed value to the draft (exit edit). Otherwise → commit the Review. |
 | `<char>` / `backspace` | While editing → append / pop from the edit buffer |
 | `Esc` | If editing → cancel the in-flight edit (revert to current draft value). If not editing → close the form. |
 

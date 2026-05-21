@@ -63,8 +63,8 @@ describe("extraction form reducer", () => {
     expect(state.focus).toBe(1);
   });
 
-  test("first Enter on a focused field opens edit mode with current value as buffer", () => {
-    const { state } = dispatch(open(), keyEvent("return"));
+  test("`e` on a focused field opens edit mode with current value as buffer", () => {
+    const { state } = dispatch(open(), keyEvent("e"));
     expect(state.editing).toBe(true);
     expect(state.editBuffer).toBe("Acme");
   });
@@ -72,8 +72,7 @@ describe("extraction form reducer", () => {
   test("typing characters in edit appends to buffer; backspace removes", () => {
     const { state } = dispatch(
       open(),
-      keyEvent("return"),
-      // typing in edit mode (Acme becomes Acmex then Acme)
+      keyEvent("e"),
       { kind: "key", event: { name: "x", sequence: "x" } as never },
       keyEvent("backspace"),
     );
@@ -83,44 +82,47 @@ describe("extraction form reducer", () => {
   test("Enter inside edit commits the value to draft and exits edit", () => {
     const { state } = dispatch(
       open(),
-      keyEvent("return"),
+      keyEvent("e"),
       { kind: "key", event: { name: "1", sequence: "1" } as never },
       keyEvent("return"),
     );
     expect(state.editing).toBe(false);
     expect(state.draft.company).toBe("Acme1");
-    expect(state.justExitedEdit).toBe(true);
   });
 
-  test("Enter after committing an edit commits the Review (two-press choreography)", () => {
+  test("Enter on a focused field commits the Review (no two-press required)", () => {
     const { effects } = dispatch(
       open(),
-      keyEvent("return"),
+      keyEvent("e"),
       { kind: "key", event: { name: "1", sequence: "1" } as never },
-      keyEvent("return"),
-      keyEvent("return"),
+      keyEvent("return"), // commit edit
+      keyEvent("return"), // commit Review
     );
     const commit = effects.find((e) => e.kind === "commitDecision");
     expect(commit).toBeDefined();
     expect((commit as { status: string }).status).toBe("relabeled");
   });
 
-  test("moving focus resets justExitedEdit (no accidental Review commit)", () => {
-    const { state, effects } = dispatch(
+  test("Enter commits the Review even after focus moved post-edit", () => {
+    // Reproduces the UX bug from the original two-press design: edit a
+    // field, move focus to inspect another, then Enter should still
+    // commit the Review.
+    const { effects } = dispatch(
       open(),
-      keyEvent("return"),
+      keyEvent("e"),
       { kind: "key", event: { name: "1", sequence: "1" } as never },
-      keyEvent("return"), // committed edit
-      keyEvent("j"), // move focus → reset
-      keyEvent("return"), // should re-open edit, NOT commit Review
+      keyEvent("return"), // commit edit
+      keyEvent("j"), // move focus
+      keyEvent("return"), // commit Review
     );
-    expect(state.editing).toBe(true);
-    expect(effects.find((e) => e.kind === "commitDecision")).toBeUndefined();
+    const commit = effects.find((e) => e.kind === "commitDecision");
+    expect(commit).toBeDefined();
+    expect((commit as { status: string }).status).toBe("relabeled");
   });
 
   test("Esc mid-edit cancels the edit only; overlay stays open", () => {
     const result = reduceExtractionForm(
-      dispatch(open(), keyEvent("return"), {
+      dispatch(open(), keyEvent("e"), {
         kind: "key",
         event: { name: "x", sequence: "x" } as never,
       }).state,
@@ -141,32 +143,25 @@ describe("extraction form reducer", () => {
   });
 
   test("commit Review refused when a required field is empty/null", () => {
-    // Open then clear company by entering edit, backspacing all 4 chars, committing edit.
+    // Open, edit company, backspace all 4 chars, commit edit → draft.company=null
     const s1 = dispatch(
       open(),
+      keyEvent("e"),
+      keyEvent("backspace"),
+      keyEvent("backspace"),
+      keyEvent("backspace"),
+      keyEvent("backspace"),
       keyEvent("return"),
-      keyEvent("backspace"),
-      keyEvent("backspace"),
-      keyEvent("backspace"),
-      keyEvent("backspace"),
-      keyEvent("return"), // commit "" → draft.company = null
     ).state;
     expect(s1.draft.company).toBeNull();
-    const result = reduceExtractionForm(s1, keyEvent("return")); // second Enter
-    // Overlay stays open because required field is null.
+    const result = reduceExtractionForm(s1, keyEvent("return")); // commit Review attempt
     expect(result.overlay?.kind).toBe("extraction-form");
     expect(result.effects).toEqual([]);
   });
 
   test("commit Review writes status=accepted when draft equals predicted", () => {
-    // Pre-populated draft matches predicted. Open then immediately:
-    //   Enter (open edit) → Enter (commit value "Acme") → Enter (commit Review)
-    const { effects } = dispatch(
-      open(),
-      keyEvent("return"),
-      keyEvent("return"),
-      keyEvent("return"),
-    );
+    // Pre-populated draft matches predicted; Enter immediately commits.
+    const { effects } = dispatch(open(), keyEvent("return"));
     const commit = effects.find((e) => e.kind === "commitDecision");
     expect(commit).toBeDefined();
     expect((commit as { status: string }).status).toBe("accepted");
@@ -181,7 +176,7 @@ describe("extraction form reducer", () => {
       previousReview: null,
       assistantViewed: true,
     });
-    const { effects } = dispatch(s, keyEvent("return"), keyEvent("return"), keyEvent("return"));
+    const { effects } = dispatch(s, keyEvent("return"));
     const commit = effects.find((e) => e.kind === "commitDecision");
     expect((commit as { sourceOfTruth: string }).sourceOfTruth).toBe("human+assistant");
   });

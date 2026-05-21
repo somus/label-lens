@@ -1277,9 +1277,7 @@ function renderExtractionForm(
     Text({
       content: state.editing
         ? " [enter] commit value · [esc] cancel edit"
-        : state.justExitedEdit
-          ? " [enter] commit review · [↑/↓] move focus · [esc] close"
-          : " [enter] edit · [↑/↓] move focus · [esc] close",
+        : " [e] edit · [enter] commit review · [↑/↓] move focus · [esc] close",
       attributes: TextAttributes.DIM,
     }),
   );
