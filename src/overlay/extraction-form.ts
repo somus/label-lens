@@ -88,9 +88,10 @@ function cancelEdit(state: ExtractionFormState): ExtractionFormState {
 }
 
 function missingRequired(state: ExtractionFormState): string[] {
-  return state.fields
-    .filter((f) => f.required && (state.draft[f.name] ?? "") === "")
-    .map((f) => f.name);
+  // commitEditValue stores `null` for any blank buffer, so a missing
+  // required field is always exactly `null` — empty-string never
+  // reaches the draft via supported paths.
+  return state.fields.filter((f) => f.required && state.draft[f.name] === null).map((f) => f.name);
 }
 
 function commitReview(state: ExtractionFormState): ReduceResult {

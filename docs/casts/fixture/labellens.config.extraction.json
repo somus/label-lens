@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/somus/label-lens/main/schema/labellens.config.schema.json",
   "task": "extraction",
-  "labels": ["__placeholder__"],
+  "labels": [],
   "extraction": {
     "fields": [
       { "name": "company", "type": "string", "required": true },

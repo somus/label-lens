@@ -170,7 +170,6 @@ Minimal config shape:
 ```jsonc
 {
   "task": "extraction",
-  "labels": ["__placeholder__"],
   "extraction": {
     "fields": [
       { "name": "company", "type": "string", "required": true },

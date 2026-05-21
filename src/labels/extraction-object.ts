@@ -123,11 +123,18 @@ export function decodeExtractionObjectStrict(text: string): ExtractionObject {
 /**
  * Decode + validate a stored extraction object for export.
  *
- * - record-id-prefixed error messages so the bad row is locatable,
+ * - record-id-prefixed error messages so the bad row is locatable.
  * - required-field check: any configured `required: true` field that is
- *   null/missing aborts the export.
- * - keys present in storage but not configured are passed through (extra
- *   data preserved verbatim for downstream consumers).
+ *   `null` aborts the export. Empty strings never reach storage —
+ *   `canonicalizeExtractionObject` (ingest) and the form's
+ *   `commitEditValue` (review) both trim blanks to `null` — so the
+ *   `=== null` check is sufficient.
+ * - keys present in storage but not in `extraction.fields` are dropped
+ *   from the exported object. `predictions.raw` / `records.raw` still
+ *   hold the verbatim source for forensics; the corrected export only
+ *   surfaces configured fields. This avoids silent collisions when a
+ *   future config adds a field whose name happens to match an existing
+ *   unknown stored key.
  */
 export function validateExportExtractionObject(
   text: string,
@@ -144,14 +151,10 @@ export function validateExportExtractionObject(
   const ordered: ExtractionObject = {};
   for (const f of fields) {
     const v = object[f.name] ?? null;
-    if (f.required && (v === null || v === "")) {
-      throw new Error(`record ${recordId}: required extraction field "${f.name}" is empty/null`);
+    if (f.required && v === null) {
+      throw new Error(`record ${recordId}: required extraction field "${f.name}" is null`);
     }
     ordered[f.name] = v;
-  }
-  // Preserve unknown keys (verbatim, after configured ones).
-  for (const [k, v] of Object.entries(object)) {
-    if (!(k in ordered)) ordered[k] = v;
   }
   return ordered;
 }

@@ -216,4 +216,32 @@ describe("validateConfigSchema", () => {
     const errors = validateConfigSchema(bad);
     expect(errors.length).toBeGreaterThan(0);
   });
+
+  test("accepts task: extraction with labels omitted entirely", () => {
+    // Extraction stores structured objects, not flat labels — `labels`
+    // should not be required.
+    const cfg = makeValid({
+      task: "extraction",
+      labels: [],
+      extraction: {
+        fields: [{ name: "company", type: "string", required: true }],
+      },
+    } as Partial<LabellensConfig>);
+    expect(validateConfigSchema(cfg)).toEqual([]);
+  });
+
+  test("rejects empty labels for non-extraction tasks", () => {
+    const bad = makeValid({ task: "classification", labels: [] });
+    const errors = validateConfigSchema(bad);
+    expect(errors.join("\n")).toMatch(/labels.*at least 1/);
+  });
+
+  test("rejects task: extraction without an extraction block", () => {
+    const bad = makeValid({
+      task: "extraction",
+      labels: [],
+    } as unknown as Partial<LabellensConfig>);
+    const errors = validateConfigSchema(bad);
+    expect(errors.join("\n")).toMatch(/extraction.*required/);
+  });
 });

@@ -403,7 +403,10 @@ export const LabellensConfigSchema = Type.Object(
       },
     ),
     labels: Type.Array(LabelConfigEntrySchema, {
-      minItems: 1,
+      // minItems is enforced in `validateConfigSchema` per-task so extraction
+      // can omit / empty `labels` (it stores structured objects keyed by
+      // `extraction.fields`, not a flat label set). All other tasks still
+      // require at least one configured label.
       description: "Configured label set. Used for review, queues, and exports.",
     }),
     guidelines: Type.Optional(
@@ -462,17 +465,30 @@ export const CONFIG_SCHEMA_URL =
  * of human-readable error strings; empty array means valid.
  */
 export function validateConfigSchema(raw: unknown): string[] {
-  if (Value.Check(LabellensConfigSchema as TSchema, raw)) return [];
   const errors: string[] = [];
-  let seen = 0;
-  for (const e of Value.Errors(LabellensConfigSchema as TSchema, raw)) {
-    const path = e.instancePath === "" ? "(root)" : e.instancePath;
-    errors.push(`${path}: ${e.message}`);
-    seen++;
-    if (seen >= 20) {
-      errors.push("…(further errors suppressed)");
-      break;
+  if (!Value.Check(LabellensConfigSchema as TSchema, raw)) {
+    let seen = 0;
+    for (const e of Value.Errors(LabellensConfigSchema as TSchema, raw)) {
+      const path = e.instancePath === "" ? "(root)" : e.instancePath;
+      errors.push(`${path}: ${e.message}`);
+      seen++;
+      if (seen >= 20) {
+        errors.push("…(further errors suppressed)");
+        return errors;
+      }
     }
+    return errors;
+  }
+  // Task-aware rules layered on top of the TypeBox shape. `labels` is
+  // schema-optional-minItems so extraction configs can omit it, but
+  // single-label / boundary / multi-label tasks still require at least
+  // one entry.
+  const cfg = raw as LabellensConfig;
+  if (cfg.task !== "extraction" && (!cfg.labels || cfg.labels.length === 0)) {
+    errors.push("/labels: must contain at least 1 element for non-extraction tasks");
+  }
+  if (cfg.task === "extraction" && (!cfg.extraction || cfg.extraction.fields.length === 0)) {
+    errors.push('/extraction: required when task is "extraction"');
   }
   return errors;
 }

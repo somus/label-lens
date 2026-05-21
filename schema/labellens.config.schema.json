@@ -69,7 +69,6 @@
         ],
         "description": "A configured label."
       },
-      "minItems": 1,
       "description": "Configured label set. Used for review, queues, and exports."
     },
     "guidelines": {

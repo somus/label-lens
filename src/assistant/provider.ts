@@ -322,7 +322,9 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
         case "error":
           throw new AssistantQueryError(
             "provider-error",
-            event.error.errorMessage ?? `provider stream error (${event.reason})`,
+            summarizeProviderError(
+              event.error.errorMessage ?? `provider stream error (${event.reason})`,
+            ),
           );
       }
     }
@@ -412,6 +414,48 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   }
   cacheAssistantResponse(db, recordId, promptHash, response);
   return { response, wasCached: false };
+}
+
+/**
+ * Cleanup for provider error payloads before they hit the assistant
+ * overlay. Some upstream providers (Google's gateway in particular)
+ * return their 5xx errors as a full HTML page wrapped in JSON; pi-ai
+ * surfaces that payload verbatim in `event.error.errorMessage`, which
+ * the overlay would otherwise render as a wall of `<!DOCTYPE html> …`
+ * markup. Collapse the noise into a short, status-shaped message:
+ *
+ * 1. If the payload parses as JSON containing `error.status` and / or
+ *    `error.code`, render `"<status> (<code>)"`.
+ * 2. If it begins with `<!DOCTYPE` or `<html`, render `"provider returned
+ *    an HTML error page (likely a 5xx)"`.
+ * 3. Otherwise truncate to 240 chars so the overlay never overflows.
+ */
+export function summarizeProviderError(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return "provider stream error (no message)";
+  // Shape 1: JSON wrapper with `error.code` / `error.status`.
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as { error?: { code?: unknown; status?: unknown } };
+      const inner = parsed.error;
+      if (inner && typeof inner === "object") {
+        const status = typeof inner.status === "string" ? inner.status : undefined;
+        const code =
+          typeof inner.code === "number" || typeof inner.code === "string" ? inner.code : undefined;
+        if (status && code !== undefined) return `provider error: ${status} (${code})`;
+        if (status) return `provider error: ${status}`;
+        if (code !== undefined) return `provider error: code ${code}`;
+      }
+    } catch {
+      // Fall through to the next shape check.
+    }
+  }
+  // Shape 2: HTML error page (Google's "Error 502 (Server Error)!!1" etc.).
+  if (/^<!doctype html|^<html/i.test(trimmed)) {
+    return "provider returned an HTML error page (likely a 5xx upstream failure)";
+  }
+  // Shape 3: passthrough with bounded length so the overlay row stays sane.
+  return trimmed.length > 240 ? `${trimmed.slice(0, 240).trimEnd()}…` : trimmed;
 }
 
 // Re-export for callers that want to inspect the canonical schema

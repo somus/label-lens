@@ -66,13 +66,16 @@ export function exportCsvString(db: Db, opts: ExportCsvOptions = {}): string {
     const skipped = review.status === "skipped";
     if (!accepted && !(rejected && opts.includeRejected) && !(skipped && opts.includeSkipped))
       continue;
+    if (accepted && opts.extraction && review.final_label === null) {
+      throw new Error(
+        `record ${record.id}: accepted extraction row has null final_label; storage is corrupt`,
+      );
+    }
     const labelValue = accepted
       ? opts.extraction
-        ? review.final_label === null
-          ? ""
-          : JSON.stringify(
-              validateExportExtractionObject(review.final_label, record.id, opts.extraction.fields),
-            )
+        ? JSON.stringify(
+            validateExportExtractionObject(review.final_label!, record.id, opts.extraction.fields),
+          )
         : opts.multiLabel
           ? formatCsvLabel(
               review.final_label === null

@@ -119,26 +119,22 @@ describe("validateExportExtractionObject", () => {
     );
   });
 
-  test("aborts with record id when a required field is the empty string", () => {
-    expect(() => validateExportExtractionObject('{"company":""}', "rec1", FIELDS)).toThrow(
-      /rec1.*required.*company/,
-    );
-  });
-
   test("aborts on malformed stored value, prefixing record id", () => {
     expect(() => validateExportExtractionObject("not json", "rec1", FIELDS)).toThrow(
       /rec1.*malformed/,
     );
   });
 
-  test("preserves unknown stored keys after configured ones (verbatim)", () => {
+  test("drops unknown stored keys from the exported object", () => {
+    // The corrected export shape is configured-only. Raw source JSON
+    // still lives in `predictions.raw` / `records.raw` for forensics.
     const out = validateExportExtractionObject(
       '{"company":"Acme","amount":"1","date":"2026","_extra":"v"}',
       "rec1",
       FIELDS,
     );
-    expect(out._extra).toBe("v");
-    expect(Object.keys(out)).toEqual(["company", "amount", "date", "_extra"]);
+    expect(Object.keys(out)).toEqual(["company", "amount", "date"]);
+    expect("_extra" in out).toBe(false);
   });
 });
 

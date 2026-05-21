@@ -170,3 +170,58 @@ describe("extraction CSV export", () => {
     }
   });
 });
+
+describe("extraction export safety", () => {
+  test("JSONL aborts when accepted row has null final_label (corrupt storage)", async () => {
+    const { db, id, dispose } = await setup({ status: "accepted", final_label: null });
+    try {
+      expect(() => exportJsonlString(db, { extraction: { fields: FIELDS } })).toThrow(
+        new RegExp(`${id}.*null.*final_label|final_label.*${id}`, "i"),
+      );
+    } finally {
+      dispose();
+    }
+  });
+
+  test("CSV aborts when accepted row has null final_label (corrupt storage)", async () => {
+    const { db, id, dispose } = await setup({ status: "accepted", final_label: null });
+    try {
+      expect(() => exportCsvString(db, { extraction: { fields: FIELDS } })).toThrow(
+        new RegExp(`${id}.*null.*final_label|final_label.*${id}`, "i"),
+      );
+    } finally {
+      dispose();
+    }
+  });
+
+  test("JSONL drops unknown stored keys from the exported object", async () => {
+    // Stored object carries an `_internal` key that is NOT in the
+    // configured fields. Export should not surface it — only the
+    // configured fields land in the output.
+    const { db, dispose } = await setup({
+      final_label: '{"company":"Acme","amount":"100","_internal":"leaky-internal-id"}',
+    });
+    try {
+      const out = exportJsonlString(db, { extraction: { fields: FIELDS } });
+      const parsed = JSON.parse(out.trim());
+      expect(parsed.label).toEqual({ company: "Acme", amount: "100" });
+      expect(Object.keys(parsed.label)).toEqual(["company", "amount"]);
+      expect(JSON.stringify(parsed.label)).not.toContain("_internal");
+    } finally {
+      dispose();
+    }
+  });
+
+  test("CSV drops unknown stored keys from the JSON-stringified cell", async () => {
+    const { db, dispose } = await setup({
+      final_label: '{"company":"Acme","amount":"100","_internal":"leaky"}',
+    });
+    try {
+      const out = exportCsvString(db, { extraction: { fields: FIELDS } });
+      expect(out).not.toContain("_internal");
+      expect(out).not.toContain("leaky");
+    } finally {
+      dispose();
+    }
+  });
+});

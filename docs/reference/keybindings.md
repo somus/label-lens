@@ -124,9 +124,11 @@ The form overlay edits the structured object field-by-field. The draft is pre-po
 | `<char>` / `backspace` | While editing → append / pop from the edit buffer |
 | `Esc` | If editing → cancel the in-flight edit (revert to current draft value). If not editing → close the form. |
 
-Required-field validation gates the Review commit: any required field with a null/empty value blocks `Enter` (the overlay stays open). Use `x` (reject) to record "no valid extraction" or fix the field via Enter / edit / Enter first.
+Required-field validation gates the Review commit: any required field with a null value blocks `Enter` (the overlay stays open). Use `x` (reject) to record "no valid extraction" or fix the field via `e` / type / `Enter` first.
 
 Under `task: "extraction"`, the review-scope `1`–`9` and per-label-key shortcuts are intentionally disabled — they would commit a single string label, which is invalid for a structured Annotation. Pressing one flashes a hint to use `r` instead.
+
+The form overlay swallows keys before they reach the review scope. `e`, `Enter`, `↑/↓`, `Esc`, and printable characters (while editing) all dispatch to the form reducer; a custom `keys.overrides` rebinding `e` to a review-scope command does **not** affect the form — open the overlay with `r` first if you need the form's editor.
 
 ## Assistant overlay (`i`)
 

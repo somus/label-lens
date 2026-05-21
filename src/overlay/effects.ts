@@ -78,6 +78,12 @@ export function applyEffects(
   for (const effect of effects) {
     switch (effect.kind) {
       case "close":
+        // Drafts are bound to the open overlay session. Esc-out (close
+        // without commit) must clear them so a subsequent re-open of the
+        // form on the same record starts from the prior committed Review
+        // rather than the stale in-flight edit. multi-label takes the same
+        // approach via commitDecision; this covers the close-only path.
+        if (app.extractionDraft !== null) app.clearExtractionDraft();
         app.closeOverlay();
         break;
       case "commitDecision": {

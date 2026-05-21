@@ -41,11 +41,18 @@ export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string
     if (!accepted && !(rejected && opts.includeRejected) && !(skipped && opts.includeSkipped))
       continue;
     const meta = projectMeta(record.raw);
+    if (accepted && opts.extraction && review.final_label === null) {
+      // Defense-in-depth: form + accept gates refuse to write null for
+      // accepted/relabeled extraction rows. A null here means upstream
+      // corruption or a bypassed gate; fail loud rather than emit an
+      // implicitly-wrong `label: null` row.
+      throw new Error(
+        `record ${record.id}: accepted extraction row has null final_label; storage is corrupt`,
+      );
+    }
     const labelValue = accepted
       ? opts.extraction
-        ? review.final_label === null
-          ? null
-          : validateExportExtractionObject(review.final_label, record.id, opts.extraction.fields)
+        ? validateExportExtractionObject(review.final_label!, record.id, opts.extraction.fields)
         : opts.multiLabel
           ? review.final_label === null
             ? null

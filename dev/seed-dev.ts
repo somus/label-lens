@@ -161,14 +161,14 @@ async function patchConfigForMultiLabel(configPath: string): Promise<void> {
 /**
  * `labellens init` infers `classification` / `boundary` from the JSONL and
  * has no way to recognise extraction-shaped object predictions. Rewrite the
- * inferred config to `task: "extraction"` with the canonical fields and a
- * placeholder `labels` array (config schema requires labels.minItems=1 but
- * extraction does not use it).
+ * inferred config to `task: "extraction"` with the canonical fields and
+ * drop the inferred `labels` array (extraction stores structured objects
+ * keyed by `extraction.fields`; the flat label set is unused).
  */
 async function patchConfigForExtraction(configPath: string): Promise<void> {
   const parsed = JSON.parse(await Bun.file(configPath).text()) as LabellensConfig;
   parsed.task = "extraction";
-  parsed.labels = ["__placeholder__"];
+  parsed.labels = [];
   parsed.extraction = { fields: [...EXTRACTION_FIELDS] };
   await Bun.write(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
   console.log(
