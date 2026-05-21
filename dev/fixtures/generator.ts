@@ -19,7 +19,7 @@ export type GeneratedRecord = {
 };
 
 export type GeneratedPrediction = {
-  label: string | string[];
+  label: string | string[] | Record<string, string | null>;
   confidence?: number;
   source: string;
   reason?: string;
@@ -414,6 +414,158 @@ function mutateSet(
  * picker overlay's `r` flow.
  */
 export const EXTRA_LABELS = ["entertainment", "healthcare", "education", "fitness"] as const;
+
+/**
+ * Extraction task fixture. Structured invoice-extraction shape: every
+ * record carries a `predictions[]` array whose `label` is an object keyed
+ * by configured field names. Two seeded sources produce a mix of
+ * exact-match, partial, and dropped-required-field rows so the reviewer's
+ * accept / form-edit / reject paths all exercise on first launch.
+ */
+export const EXTRACTION_FIELDS = [
+  { name: "company", type: "string" as const, required: true },
+  { name: "amount", type: "string" as const, required: true, key: "amt" },
+  { name: "date", type: "string" as const, required: false },
+] as const;
+
+type ExtractionTruth = { company: string; amount: string; date: string | null };
+type ExtractionTemplate = { text: string; truth: ExtractionTruth };
+
+const EXTRACTION_TEMPLATES: ExtractionTemplate[] = [
+  {
+    text: "Invoice #4012 from Acme Industries for $1,250.00 dated 2026-05-10",
+    truth: { company: "Acme Industries", amount: "1250.00", date: "2026-05-10" },
+  },
+  {
+    text: "Receipt from BetaCorp; total 99.99 USD on 2026-04-22",
+    truth: { company: "BetaCorp", amount: "99.99", date: "2026-04-22" },
+  },
+  {
+    text: "Wire transfer to Gamma LLC — see attached PDF for $2,400",
+    truth: { company: "Gamma LLC", amount: "2400.00", date: null },
+  },
+  {
+    text: "Refund issued by Delta on May 3 for $42.00",
+    truth: { company: "Delta", amount: "42.00", date: "2026-05-03" },
+  },
+  {
+    text: "Subscription renewal: Epsilon Cloud $19.99/mo billed 2026-05-15",
+    truth: { company: "Epsilon Cloud", amount: "19.99", date: "2026-05-15" },
+  },
+  {
+    text: "Hotel charge — Zeta Inn, $325.50, checkout 2026-04-29",
+    truth: { company: "Zeta Inn", amount: "325.50", date: "2026-04-29" },
+  },
+  {
+    text: "Vendor payment to Eta Logistics, total 1875.00 USD, 2026-04-15",
+    truth: { company: "Eta Logistics", amount: "1875.00", date: "2026-04-15" },
+  },
+];
+
+export type ExtractionOptions = {
+  seed: number;
+  count: number;
+};
+
+export function generateExtraction(opts: ExtractionOptions): GeneratedSet {
+  const rand = rng(opts.seed);
+  const records: GeneratedRecord[] = [];
+  const truth: string[] = [];
+
+  for (let i = 0; i < opts.count; i++) {
+    const tpl = pick(rand, EXTRACTION_TEMPLATES);
+    const ts = Math.floor(rand() * 1e10)
+      .toString()
+      .padStart(10, "0");
+    const text = `[${ts}] ${tpl.text}`;
+    const primary = mutateExtraction(rand, tpl.truth, /*exactRate*/ 0.7);
+    const primaryConf = clamp(
+      0.55 + (exactMatch(primary, tpl.truth) ? rand() * 0.4 : -rand() * 0.3),
+    );
+    const predictions: GeneratedPrediction[] = [
+      {
+        // Use the `amt` source key so the `key` alias on the amount field
+        // exercises ingest's alias-resolution path.
+        label: toSourceShape(primary),
+        confidence: round(primaryConf, 2),
+        source: "extractor:gpt",
+      },
+    ];
+    if (rand() < 0.35) {
+      const secondary = mutateExtraction(rand, tpl.truth, 0.4);
+      predictions.push({
+        label: toSourceShape(secondary),
+        source: "regex.invoices",
+      });
+    }
+    if (rand() < 0.08) {
+      records.push({
+        text,
+        predictions,
+        issues: [
+          {
+            type: pick(rand, ["ambiguous", "edge_case", "label_issue"] as const),
+            score: round(0.5 + rand() * 0.5, 2),
+          },
+        ],
+      });
+    } else {
+      records.push({ text, predictions });
+    }
+    truth.push(
+      JSON.stringify({
+        company: tpl.truth.company,
+        amount: tpl.truth.amount,
+        date: tpl.truth.date,
+      }),
+    );
+  }
+  return { records, truth };
+}
+
+function toSourceShape(obj: {
+  company: string | null;
+  amount: string | null;
+  date: string | null;
+}): Record<string, string | null> {
+  // Source JSON uses `amt` (the `key` alias) instead of `amount`.
+  return { company: obj.company, amt: obj.amount, date: obj.date };
+}
+
+function exactMatch(
+  a: { company: string | null; amount: string | null; date: string | null },
+  b: ExtractionTruth,
+): boolean {
+  return a.company === b.company && a.amount === b.amount && (a.date ?? null) === (b.date ?? null);
+}
+
+function mutateExtraction(
+  rand: () => number,
+  truth: ExtractionTruth,
+  exactRate: number,
+): { company: string | null; amount: string | null; date: string | null } {
+  if (rand() < exactRate) {
+    return { company: truth.company, amount: truth.amount, date: truth.date };
+  }
+  // Wrong-amount, missing-date, missing-company-required, slight typo —
+  // each at modest probability so the reviewer's `a`-refuses, edit, and
+  // reject paths all see at least one row in a 30-row dataset.
+  const r = rand();
+  if (r < 0.25) {
+    return { company: truth.company, amount: null, date: truth.date }; // required field dropped
+  }
+  if (r < 0.45) {
+    return { company: null, amount: truth.amount, date: truth.date }; // required field dropped
+  }
+  if (r < 0.65) {
+    const bumped = truth.amount.replace(/\.\d+$/, "") || truth.amount;
+    return { company: truth.company, amount: bumped, date: truth.date }; // partial change
+  }
+  if (r < 0.85) {
+    return { company: truth.company, amount: truth.amount, date: null }; // optional dropped
+  }
+  return { company: `${truth.company}, Inc.`, amount: truth.amount, date: truth.date }; // tweak
+}
 
 export function serializeJsonl(rows: ReadonlyArray<unknown>): string {
   return `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`;
