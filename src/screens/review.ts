@@ -3,6 +3,7 @@ import { dispatch } from "../actions/dispatch.ts";
 import { bindingsFor, type CommandRegistry, defaultRegistry } from "../actions/registry.ts";
 import { type AppContext, enterReview } from "../app/context.ts";
 import { ASSISTANT_PRIVACY_NOTICE } from "../assistant/privacy_notice.ts";
+import { restoreCachedAssistantState } from "../assistant/restore-cached.ts";
 import { createChordResolver } from "../keymap/chord.ts";
 import type { Scope } from "../keymap/engine.ts";
 import { CONFIGURE_PROVIDERS, envVarFor } from "../overlay/configure-assistant.ts";
@@ -97,6 +98,14 @@ export function mountReviewScreen(args: {
   // Track chord pending key across renders so we only start the fade-out
   // motion on transition (calling play() per frame would reset progress).
   let lastChordKey: string | null = null;
+  // Memo for the per-record DB cache lookup. Invalidated whenever
+  // `currentRecordId` changes; otherwise the render reuses the prior
+  // resolution so heavy navigation doesn't hammer the assistant_queries
+  // table.
+  let cachedAssistantLookup: { recordId: string | null; state: AssistantState | null } = {
+    recordId: null,
+    state: null,
+  };
 
   const renderState = () => {
     if (!mounted) return;
@@ -284,10 +293,30 @@ export function mountReviewScreen(args: {
     const rawAssistantState =
       app.overlay?.kind === "assistant" ? app.overlay.state : app.savedAssistantState;
     const currentRecordId = cursor?.current()?.id ?? null;
-    const assistantState =
+    let assistantState =
       rawAssistantState !== null && rawAssistantState.recordId === currentRecordId
         ? rawAssistantState
         : null;
+    // Auto-display previously-cached suggestions on focus (including
+    // post-restart): when no in-memory state matches the current record
+    // and the assistant is configured, hydrate from the DB cache. The
+    // memoised slot below ensures the DB lookup runs at most once per
+    // record (not once per frame).
+    const currentRecord = cursor?.current() ?? null;
+    if (
+      assistantState === null &&
+      assistantEnabled &&
+      currentRecord !== null &&
+      currentRecordId !== null
+    ) {
+      if (cachedAssistantLookup.recordId !== currentRecordId) {
+        cachedAssistantLookup = {
+          recordId: currentRecordId,
+          state: restoreCachedAssistantState(app.db, app.config, currentRecord),
+        };
+      }
+      if (cachedAssistantLookup.state !== null) assistantState = cachedAssistantLookup.state;
+    }
     const assistantStrip = assistantEnabled
       ? renderAssistantStrip(assistantState, app.display, contentWidth)
       : Box({});
