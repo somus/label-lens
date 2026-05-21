@@ -130,6 +130,15 @@ export const openAssistantCommand: Command = {
         confidence: p.confidence ?? undefined,
         reason: p.reason ?? undefined,
       })),
+      ...(isExtraction
+        ? {
+            extractionFields: extractionFields.map((f) => ({
+              name: f.name,
+              type: "string" as const,
+              required: f.required,
+            })),
+          }
+        : {}),
       provider: assistant.provider ?? "",
       model: assistant.model ?? "",
       promptTemplateVersion: PROMPT_TEMPLATE_VERSION,

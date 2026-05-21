@@ -6,6 +6,12 @@ import { createHash } from "node:crypto";
  * and `prompt_template_version` means swapping models or editing the prompt
  * template invalidates cache entries automatically.
  */
+export type ExtractionFieldHint = {
+  name: string;
+  type: "string";
+  required: boolean;
+};
+
 export type CanonicalPromptInput = {
   task: string;
   labels: { name: string; definition?: string }[];
@@ -14,6 +20,13 @@ export type CanonicalPromptInput = {
   context_before: string | null;
   context_after: string | null;
   predictions: { label: string; source: string; confidence?: number; reason?: string }[];
+  /**
+   * Field schema for `task: "extraction"`. Drives a different system prompt
+   * + user-message section so the LLM understands it must return a
+   * structured object via `extractedObject`, not a `suggestedLabel` string.
+   * Omitted for other task kinds.
+   */
+  extraction_fields?: ExtractionFieldHint[];
   provider: string;
   model: string;
   prompt_template_version: string;
@@ -59,6 +72,13 @@ export function canonicalizePrompt(input: CanonicalPromptInput): string {
     model: input.model,
     prompt_template_version: input.prompt_template_version,
   };
+  if (input.extraction_fields !== undefined && input.extraction_fields.length > 0) {
+    ordered.extraction_fields = input.extraction_fields.map((f) => ({
+      name: f.name,
+      type: f.type,
+      required: f.required,
+    }));
+  }
   if (input.system_prompt_append !== undefined && input.system_prompt_append.length > 0) {
     ordered.system_prompt_append = input.system_prompt_append;
   }
@@ -82,6 +102,7 @@ export function buildPromptInput(args: {
   labels: { name: string; definition?: string }[];
   guidelines: string;
   predictions: { label: string; source: string; confidence?: number; reason?: string }[];
+  extractionFields?: ExtractionFieldHint[];
   provider: string;
   model: string;
   promptTemplateVersion: string;
@@ -108,6 +129,9 @@ export function buildPromptInput(args: {
     provider: args.provider,
     model: args.model,
     prompt_template_version: args.promptTemplateVersion,
+    ...(args.extractionFields !== undefined && args.extractionFields.length > 0
+      ? { extraction_fields: args.extractionFields }
+      : {}),
     ...(args.systemPromptAppend !== undefined && args.systemPromptAppend.length > 0
       ? { system_prompt_append: args.systemPromptAppend }
       : {}),
