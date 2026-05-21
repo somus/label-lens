@@ -29,7 +29,7 @@ One row per reviewed record. Reads `effective_reviews` — only the current stat
 | `id` | string | Stable record id (content hash by default, ADR 0001). |
 | `text` | string | Candidate text from the source JSONL. |
 | `context_before` / `context_after` | string \| null | If the source had them. |
-| `final_label` | string \| null \| string[] | The annotation. Null when status is `rejected` or `skipped`. For `task: "multi-label"`, emitted as a JSON array (`["spam","toxicity"]`) of the committed set. |
+| `label` (configurable via `output.fieldOverrides.label`; storage column is `final_label`) | string \| null \| string[] | The annotation. Null when status is `rejected` or `skipped`. For `task: "multi-label"`, emitted as a JSON array (`["spam","toxicity"]`) of the committed set. |
 | `prev_label` | string \| null | The label this overrode (typically the predicted label on relabel). For multi-label tasks, this is the encoded JSON-array text of the previous set. |
 | `status` | `accepted` \| `relabeled` \| `rejected` \| `skipped` | Latest effective state. |
 | `source_of_truth` | `human` \| `human+assistant` | `human+assistant` whenever the assistant panel was viewed for this record (ADR 0004). |
@@ -43,7 +43,7 @@ Records you skipped are included with `status: "skipped"` and `final_label: null
 
 For `task: "multi-label"` (see [task types](../explanation/task-types.md), shipped in #105):
 
-- Accepted/relabeled rows emit `label` as a JSON array of strings in canonical configured-label order, e.g. `"label": ["spam","toxicity"]`.
+- Accepted/relabeled rows emit `label` as a JSON array of strings in the order defined by the `labels` config array (canonical configured-label order), e.g. `"label": ["spam","toxicity"]`.
 - Rejected/skipped rows (when included via `--include-rejected` / `--include-skipped`) keep `label: null`, same as single-label.
 - `output.fieldOverrides.label` renames the emitted field for both task shapes.
 

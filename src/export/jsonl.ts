@@ -1,5 +1,5 @@
 import type { OutputFieldOverrides } from "../config/config.ts";
-import { decodeLabelSetStrict } from "../labels/label-set.ts";
+import { validateExportLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { projectMeta } from "./meta.ts";
@@ -41,7 +41,7 @@ export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string
       ? opts.multiLabel
         ? review.final_label === null
           ? null
-          : decodeMultiLabel(review.final_label, record.id)
+          : validateExportLabelSet(review.final_label, record.id)
         : review.final_label
       : null;
     const row: Record<string, unknown> = {
@@ -55,18 +55,4 @@ export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string
     lines.push(JSON.stringify(row));
   }
   return lines.length === 0 ? "" : `${lines.join("\n")}\n`;
-}
-
-function decodeMultiLabel(text: string, recordId: string): string[] {
-  let labels: string[];
-  try {
-    labels = decodeLabelSetStrict(text);
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    throw new Error(`record ${recordId}: ${reason}`);
-  }
-  if (labels.length === 0) {
-    throw new Error(`record ${recordId}: empty multi-label set is invalid for export`);
-  }
-  return labels;
 }
