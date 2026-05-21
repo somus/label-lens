@@ -24,6 +24,10 @@
         {
           "type": "string",
           "const": "multi-label"
+        },
+        {
+          "type": "string",
+          "const": "extraction"
         }
       ],
       "description": "Task kind."
@@ -104,6 +108,52 @@
         }
       },
       "description": "Classification-task specific config."
+    },
+    "extraction": {
+      "type": "object",
+      "required": [
+        "fields"
+      ],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "type",
+              "required"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Canonical field name. Used as the storage / export object key and the editor label."
+              },
+              "type": {
+                "type": "string",
+                "const": "string",
+                "description": "Field value type. Only string is supported in #112; arrays, numbers, booleans, and nested objects are future work."
+              },
+              "required": {
+                "type": "boolean",
+                "description": "When true, accept and edit-commit refuse the row if this field is null/empty."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Optional source-JSON key alias. When set, ingest reads the prediction object's `key` property; canonical storage still uses `name`."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Single field in an extraction task's structured prediction object."
+          },
+          "minItems": 1,
+          "description": "Ordered list of structured fields the reviewer can edit."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Extraction-task specific config."
     },
     "input": {
       "type": "object",

@@ -111,6 +111,22 @@ The trailing status on the rail summarises what `Enter` will commit: `accept [en
 | `Enter` | Commit current selected set (`accepted` if set equals primary Prediction, else `relabeled`). Empty selected set is refused — use `x` (reject) instead. |
 | `Esc` | Cancel |
 
+## Extraction form (`r` under `task: "extraction"`)
+
+The form overlay edits the structured object field-by-field. The draft is pre-populated from the prior committed Review value if one exists, else from the primary Prediction object.
+
+| Key | Action |
+|---|---|
+| `j` / `↓` | Move focus to the next field |
+| `k` / `↑` | Move focus to the previous field |
+| `Enter` | If editing → commit the typed value to the draft (exit edit). If not editing and the previous press just committed an edit → commit the Review. Otherwise → open inline edit on the focused field. |
+| `<char>` / `backspace` | While editing → append / pop from the edit buffer |
+| `Esc` | If editing → cancel the in-flight edit (revert to current draft value). If not editing → close the form. |
+
+Required-field validation gates the Review commit: any required field with a null/empty value blocks `Enter` (the overlay stays open). Use `x` (reject) to record "no valid extraction" or fix the field via Enter / edit / Enter first.
+
+Under `task: "extraction"`, the review-scope `1`–`9` and per-label-key shortcuts are intentionally disabled — they would commit a single string label, which is invalid for a structured Annotation. Pressing one flashes a hint to use `r` instead.
+
 ## Assistant overlay (`i`)
 
 | Key | Action |

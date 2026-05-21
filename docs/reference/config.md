@@ -34,6 +34,7 @@ For examples and task-selection guidance, see [Review task types](../explanation
 | `classification` | One label per record. |
 | `boundary` | Segmentation over a document — labels mark entry boundaries (`ENTRY_START`, `CONTINUATION`, etc.). |
 | `multi-label` | Multiple labels can be true at once. Predictions must supply label arrays; `Space` toggles in the relabel picker, `Enter` commits the current set. |
+| `extraction` | Form-style structured-field correction. Predictions must supply objects keyed by `extraction.fields[].name` (or its `key` alias). `r` opens the form; `Enter` enters edit / commits value / commits Review (two-press). `string \| null` field values only in #112. |
 
 ## `labels` (required)
 
@@ -113,6 +114,26 @@ CLI flags (`--include-rejected`, `--include-skipped`) override these defaults. W
 | Field | Default | Meaning |
 |---|---|---|
 | `previewLines` | `2` | Queue-sibling rows shown above/below the focused record. Set `0` to hide. These render dimmer than boundary's semantic neighbours. |
+
+## `extraction` (extraction task only)
+
+`extraction.fields` is required for `task: "extraction"`. Order is significant — it drives the form-overlay focus order, the canonical storage shape, and the JSONL/CSV export key order.
+
+```jsonc
+"extraction": {
+  "fields": [
+    { "name": "company", "type": "string", "required": true },
+    { "name": "amount",  "type": "string", "required": false, "key": "amt" }
+  ]
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `name` | string | yes | Canonical storage / export key and the editor label. |
+| `type` | `"string"` | yes | Only `string` is supported in #112. `null` represents empty/optional. |
+| `required` | boolean | yes | When `true`, `a` and form-commit refuse the row if this field is null or empty. |
+| `key` | string | no | Source-JSON alias. Ingest reads `prediction.label[key]`; storage / export still use `name`. |
 
 ## `display`
 

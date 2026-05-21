@@ -28,6 +28,7 @@ function stepOriginal(ctx: import("../../app/context.ts").AppContext, direction:
     // async navigation must clear the Set before yielding.
     ctx.clearViewedAssistant();
     ctx.clearMultiLabelDraft();
+    ctx.clearExtractionDraft();
   }
 }
 

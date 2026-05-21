@@ -1,16 +1,19 @@
 import { type Model, StringEnum, stream, type Tool, Type } from "@earendil-works/pi-ai";
-import type { AssistantConfig } from "../config/config.ts";
+import type { AssistantConfig, ExtractionField } from "../config/config.ts";
 import { cacheAssistantResponse, getCachedAssistantResponse } from "../store/assistant-queries.ts";
 import type { Db } from "../store/db.ts";
 import { envVarFor, resolveApiKey } from "./env.ts";
 import { type CanonicalPromptInput, canonicalizePrompt, hashPrompt } from "./prompt.ts";
 import { buildAssistantPrompt } from "./prompt-template.ts";
 import {
+  type AssistantExtractionResponse,
+  AssistantExtractionResponseSchema,
   type AssistantMultiLabelResponse,
   AssistantMultiLabelResponseSchema,
   type AssistantResponse,
   type AssistantResponseAny,
   AssistantResponseSchema,
+  isAssistantExtractionResponse,
   isAssistantMultiLabelResponse,
   isAssistantResponse,
 } from "./schema.ts";
@@ -24,6 +27,57 @@ const SUBMIT_TOOL_NAME = "submit_label_suggestion";
  * can only return one of our names. Falls back to the open AssistantResponseSchema
  * when labelNames is empty (testing / edge case).
  */
+function buildExtractionSubmitTool(fields: ExtractionField[]): Tool {
+  // Build a per-field-keyed object: each configured field name is a property
+  // whose value is `string | null`. Required fields ride in the `required`
+  // array so a hallucination that omits one is caught at validation time.
+  if (fields.length === 0) {
+    return {
+      name: SUBMIT_TOOL_NAME,
+      description:
+        "Submit your extraction suggestion for the candidate record. Call this exactly once with the complete object.",
+      parameters: AssistantExtractionResponseSchema,
+    };
+  }
+  const properties: Record<string, ReturnType<typeof Type.Union>> = {};
+  const required: string[] = [];
+  for (const f of fields) {
+    properties[f.name] = Type.Union([Type.String(), Type.Null()], {
+      description: `Value for the configured extraction field "${f.name}".`,
+    });
+    if (f.required) required.push(f.name);
+  }
+  const ExtractedObject = Type.Object(properties, {
+    required,
+    additionalProperties: false,
+    description: "Complete suggested extraction object keyed by configured field names.",
+  } as never);
+  const Constrained = Type.Object({
+    extractedObject: ExtractedObject,
+    confidence: StringEnum(["low", "medium", "high"], {
+      description: "Assistant's confidence in its own recommendation.",
+    }),
+    reasoning: Type.String({
+      description: "Markdown-formatted explanation of the recommendation.",
+    }),
+    evidenceFor: Type.Array(Type.String(), {
+      description: "Short bullet phrases supporting the suggested object.",
+    }),
+    evidenceAgainst: Type.Array(Type.String(), {
+      description: "Short bullet phrases against the suggested object.",
+    }),
+    recommendedAction: StringEnum(["accept", "relabel", "reject", "skip"], {
+      description: "How the reviewer should commit.",
+    }),
+  });
+  return {
+    name: SUBMIT_TOOL_NAME,
+    description:
+      "Submit your extraction suggestion for the candidate record. Call this exactly once with the complete object.",
+    parameters: Constrained,
+  };
+}
+
 function buildSubmitTool(labelNames: readonly string[], multiLabel = false): Tool {
   if (labelNames.length === 0) {
     return {
@@ -107,6 +161,9 @@ export type QueryAssistantArgs = {
   /** When true, the assistant emits a `suggestedLabels: string[]` payload via
    * the multi-label tool. When false (default), single-label. */
   multiLabel?: boolean;
+  /** When set, the assistant emits an `extractedObject` payload constrained
+   * to these field names. Mutually exclusive with `multiLabel`. */
+  extraction?: { fields: ExtractionField[] };
   /** Receives each text-delta token as the model streams. Caller renders into footer / reasoning buffer. */
   onToken?: (token: string) => void;
   /** Notified once when the privacy gate forces a halt — UI prompts the reviewer to acknowledge. */
@@ -170,6 +227,7 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
     promptInput,
     labelNames,
     multiLabel,
+    extraction,
     onToken,
     onPrivacyGate,
     signal,
@@ -216,7 +274,9 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
   // once. The tool's `suggestedLabel` parameter is a StringEnum over the
   // configured labels so the model can't hallucinate names that aren't in
   // config.labels.
-  const tool = buildSubmitTool(labelNames, multiLabel === true);
+  const tool = extraction
+    ? buildExtractionSubmitTool(extraction.fields)
+    : buildSubmitTool(labelNames, multiLabel === true);
   const ctx = {
     systemPrompt,
     messages: [{ role: "user" as const, content: userPrompt, timestamp: Date.now() }],
@@ -279,6 +339,40 @@ export async function queryAssistant(args: QueryAssistantArgs): Promise<QueryAss
       "no-tool-call",
       `Model finished without calling ${SUBMIT_TOOL_NAME}.`,
     );
+  }
+  if (extraction) {
+    if (!isAssistantExtractionResponse(finalToolCall.arguments)) {
+      throw new AssistantQueryError(
+        "schema-mismatch",
+        `${SUBMIT_TOOL_NAME} arguments do not match AssistantExtractionResponseSchema.`,
+      );
+    }
+    const response = finalToolCall.arguments as AssistantExtractionResponse;
+    const configured = new Set(extraction.fields.map((f) => f.name));
+    const unknown = Object.keys(response.extractedObject).filter((k) => !configured.has(k));
+    if (unknown.length > 0) {
+      throw new AssistantQueryError(
+        "invalid-label",
+        `Model suggested fields not in extraction.fields: ${unknown.join(", ")}.`,
+      );
+    }
+    const missing = extraction.fields
+      .filter((f) => f.required)
+      .filter(
+        (f) =>
+          response.extractedObject[f.name] === undefined ||
+          response.extractedObject[f.name] === null ||
+          response.extractedObject[f.name] === "",
+      )
+      .map((f) => f.name);
+    if (missing.length > 0) {
+      throw new AssistantQueryError(
+        "invalid-label",
+        `Model omitted required extraction field(s): ${missing.join(", ")}.`,
+      );
+    }
+    cacheAssistantResponse(db, recordId, promptHash, response);
+    return { response, wasCached: false };
   }
   if (multiLabel === true) {
     if (!isAssistantMultiLabelResponse(finalToolCall.arguments)) {

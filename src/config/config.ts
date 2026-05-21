@@ -176,6 +176,47 @@ const ClassificationConfigSchema = Type.Object(
   { description: "Classification-task specific config." },
 );
 
+const ExtractionFieldSchema = Type.Object(
+  {
+    name: Type.String({
+      minLength: 1,
+      description:
+        "Canonical field name. Used as the storage / export object key and the editor label.",
+    }),
+    type: Type.Literal("string", {
+      description:
+        "Field value type. Only string is supported in #112; arrays, numbers, booleans, and nested objects are future work.",
+    }),
+    required: Type.Boolean({
+      description: "When true, accept and edit-commit refuse the row if this field is null/empty.",
+    }),
+    key: Type.Optional(
+      Type.String({
+        minLength: 1,
+        description:
+          "Optional source-JSON key alias. When set, ingest reads the prediction object's `key` property; canonical storage still uses `name`.",
+      }),
+    ),
+  },
+  {
+    additionalProperties: false,
+    description: "Single field in an extraction task's structured prediction object.",
+  },
+);
+
+const ExtractionConfigSchema = Type.Object(
+  {
+    fields: Type.Array(ExtractionFieldSchema, {
+      minItems: 1,
+      description: "Ordered list of structured fields the reviewer can edit.",
+    }),
+  },
+  {
+    additionalProperties: false,
+    description: "Extraction-task specific config.",
+  },
+);
+
 const AssistantConfigSchema = Type.Object(
   {
     enabled: Type.Boolean({
@@ -351,7 +392,12 @@ export const LabellensConfigSchema = Type.Object(
   {
     $schema: Type.Optional(Type.String({ description: "URI of this config's JSON Schema." })),
     task: Type.Union(
-      [Type.Literal("classification"), Type.Literal("boundary"), Type.Literal("multi-label")],
+      [
+        Type.Literal("classification"),
+        Type.Literal("boundary"),
+        Type.Literal("multi-label"),
+        Type.Literal("extraction"),
+      ],
       {
         description: "Task kind.",
       },
@@ -367,6 +413,7 @@ export const LabellensConfigSchema = Type.Object(
     ),
     boundary: Type.Optional(BoundaryConfigSchema),
     classification: Type.Optional(ClassificationConfigSchema),
+    extraction: Type.Optional(ExtractionConfigSchema),
     input: Type.Object(
       {
         path: Type.String({ description: "Source JSONL. Resolved relative to the config file." }),
@@ -396,6 +443,8 @@ export type DisplayConfig = Static<typeof DisplayConfigSchema>;
 export type NavigationConfig = Static<typeof NavigationConfigSchema>;
 export type BoundaryConfig = Static<typeof BoundaryConfigSchema>;
 export type ClassificationConfig = Static<typeof ClassificationConfigSchema>;
+export type ExtractionConfig = Static<typeof ExtractionConfigSchema>;
+export type ExtractionField = Static<typeof ExtractionFieldSchema>;
 export type AssistantConfig = Static<typeof AssistantConfigSchema>;
 export type SignalsConfig = Static<typeof SignalsConfigSchema>;
 export type LowConfidenceConfig = Static<typeof LowConfidenceConfigSchema>;

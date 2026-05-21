@@ -1,4 +1,5 @@
-import type { OutputFieldOverrides } from "../config/config.ts";
+import type { ExtractionField, OutputFieldOverrides } from "../config/config.ts";
+import { validateExportExtractionObject } from "../labels/extraction-object.ts";
 import { validateExportLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
@@ -12,6 +13,9 @@ export type ExportJsonlOptions = {
   includeOrphans?: boolean;
   /** When true, decode `final_label` as a JSON array text and emit `string[]`. */
   multiLabel?: boolean;
+  /** When set, decode `final_label` as a JSON object and emit the corrected
+   * extraction object. Required-field validation aborts on missing values. */
+  extraction?: { fields: ExtractionField[] };
   fieldOverrides?: OutputFieldOverrides;
 };
 
@@ -38,11 +42,15 @@ export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string
       continue;
     const meta = projectMeta(record.raw);
     const labelValue = accepted
-      ? opts.multiLabel
+      ? opts.extraction
         ? review.final_label === null
           ? null
-          : validateExportLabelSet(review.final_label, record.id)
-        : review.final_label
+          : validateExportExtractionObject(review.final_label, record.id, opts.extraction.fields)
+        : opts.multiLabel
+          ? review.final_label === null
+            ? null
+            : validateExportLabelSet(review.final_label, record.id)
+          : review.final_label
       : null;
     const row: Record<string, unknown> = {
       [keys.id]: record.id,

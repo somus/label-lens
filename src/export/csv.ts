@@ -1,4 +1,5 @@
-import type { OutputFieldOverrides } from "../config/config.ts";
+import type { ExtractionField, OutputFieldOverrides } from "../config/config.ts";
+import { validateExportExtractionObject } from "../labels/extraction-object.ts";
 import { validateExportLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
@@ -12,6 +13,9 @@ export type ExportCsvOptions = {
   multiLabelSeparator?: string;
   /** When true, decode `final_label` as a JSON array text before joining. */
   multiLabel?: boolean;
+  /** When set, decode `final_label` as a JSON object, validate required
+   * fields, and JSON-stringify the canonical object into the label cell. */
+  extraction?: { fields: ExtractionField[] };
   fieldOverrides?: OutputFieldOverrides;
 };
 
@@ -63,14 +67,20 @@ export function exportCsvString(db: Db, opts: ExportCsvOptions = {}): string {
     if (!accepted && !(rejected && opts.includeRejected) && !(skipped && opts.includeSkipped))
       continue;
     const labelValue = accepted
-      ? opts.multiLabel
-        ? formatCsvLabel(
-            review.final_label === null
-              ? null
-              : validateExportLabelSet(review.final_label, record.id, { separator }),
-            separator,
-          )
-        : formatCsvLabel(review.final_label, separator)
+      ? opts.extraction
+        ? review.final_label === null
+          ? ""
+          : JSON.stringify(
+              validateExportExtractionObject(review.final_label, record.id, opts.extraction.fields),
+            )
+        : opts.multiLabel
+          ? formatCsvLabel(
+              review.final_label === null
+                ? null
+                : validateExportLabelSet(review.final_label, record.id, { separator }),
+              separator,
+            )
+          : formatCsvLabel(review.final_label, separator)
       : "";
     data.push({
       id: record.id,

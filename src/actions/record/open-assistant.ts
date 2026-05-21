@@ -7,6 +7,7 @@ import {
   queryAssistant,
 } from "../../assistant/provider.ts";
 import { labelKey, labelName } from "../../config/config.ts";
+import { decodeExtractionObject } from "../../labels/extraction-object.ts";
 import { decodeLabelSet } from "../../labels/label-set.ts";
 import { openAssistant } from "../../overlay/assistant.ts";
 import { openConfigureAssistant } from "../../overlay/configure-assistant.ts";
@@ -63,10 +64,16 @@ export const openAssistantCommand: Command = {
     const queueId = ctx.queueId;
     const predictedLabel = record.primaryPrediction?.label ?? null;
     const isMultiLabel = ctx.config.task === "multi-label";
+    const isExtraction = ctx.config.task === "extraction";
     const predictedSet =
       isMultiLabel && record.primaryPrediction
         ? decodeLabelSet(record.primaryPrediction.label)
         : [];
+    const extractionFields = ctx.config.extraction?.fields ?? [];
+    const predictedExtractionObject =
+      isExtraction && record.primaryPrediction
+        ? decodeExtractionObject(record.primaryPrediction.label, extractionFields)
+        : {};
     const configuredLabels = ctx.config.labels.map((e) => labelName(e));
 
     // Cancel any prior in-flight assistant request before we fire a new one.
@@ -76,11 +83,17 @@ export const openAssistantCommand: Command = {
     const controller = new AbortController();
     ctx.assistantAbort = { recordId: fireRecordId, controller };
 
-    const state = openAssistant(
-      fireRecordId,
-      predictedLabel,
-      isMultiLabel ? { multiLabel: { configuredLabels, predicted: predictedSet } } : undefined,
-    );
+    const openOptions = isMultiLabel
+      ? { multiLabel: { configuredLabels, predicted: predictedSet } }
+      : isExtraction
+        ? {
+            extraction: {
+              fields: extractionFields,
+              predictedObject: predictedExtractionObject,
+            },
+          }
+        : undefined;
+    const state = openAssistant(fireRecordId, predictedLabel, openOptions);
     ctx.openOverlay({ kind: "assistant", state });
 
     let model: import("@earendil-works/pi-ai").Model<string>;
@@ -140,6 +153,7 @@ export const openAssistantCommand: Command = {
       promptInput,
       labelNames,
       multiLabel: isMultiLabel,
+      ...(isExtraction ? { extraction: { fields: extractionFields } } : {}),
       signal: controller.signal,
       onToken: (token) => {
         // Only forward tokens while this exact record's panel is still open;

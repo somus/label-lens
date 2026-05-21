@@ -7,6 +7,7 @@ import { createChordResolver } from "../keymap/chord.ts";
 import type { Scope } from "../keymap/engine.ts";
 import { CONFIGURE_PROVIDERS, envVarFor } from "../overlay/configure-assistant.ts";
 import { applyEffects } from "../overlay/effects.ts";
+import type { ExtractionFormState } from "../overlay/extraction-form.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
 import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
@@ -545,6 +546,8 @@ function renderOverlay(
       return renderPicker(overlay.state, display, termWidth, termHeight);
     case "multi-label-picker":
       return renderMultiLabelPicker(overlay.state, display, termWidth, termHeight);
+    case "extraction-form":
+      return renderExtractionForm(overlay.state, display, termWidth, termHeight);
     case "note":
       return renderNote(overlay.state, display, termWidth, termHeight);
     case "assistant":
@@ -1233,6 +1236,50 @@ function renderMultiLabelPicker(
     Text({ content: "" }),
     Text({
       content: " [space] toggle · [enter] commit · [esc] cancel",
+      attributes: TextAttributes.DIM,
+    }),
+  );
+}
+
+function renderExtractionForm(
+  state: ExtractionFormState,
+  display: ResolvedDisplay,
+  termWidth: number,
+  termHeight: number,
+): ReturnType<typeof Box> {
+  const title = state.editing
+    ? `Edit: ${state.fields[state.focus]?.name ?? "?"}`
+    : "Extraction review";
+  return modalBox(
+    display,
+    termWidth,
+    termHeight,
+    0.55,
+    title,
+    Text({ content: "" }),
+    ...state.fields.map((f, i) => {
+      const focused = i === state.focus;
+      const cursor = focused ? "▸" : " ";
+      const value =
+        state.editing && focused ? `${state.editBuffer}_` : (state.draft[f.name] ?? "—");
+      const reqMarker = f.required ? "*" : " ";
+      const segs: Segment[] = [
+        { text: ` ${cursor} ${reqMarker} `, tone: focused ? "accent" : "default" },
+        { text: `${f.name}: `, tone: focused ? "default" : "muted" },
+        { text: String(value), tone: focused ? "accent" : "default" },
+      ];
+      return Text({
+        content: segmentsToStyledText(segs, display),
+        attributes: focused ? TextAttributes.BOLD : TextAttributes.NONE,
+      });
+    }),
+    Text({ content: "" }),
+    Text({
+      content: state.editing
+        ? " [enter] commit value · [esc] cancel edit"
+        : state.justExitedEdit
+          ? " [enter] commit review · [j/k] move focus · [esc] close"
+          : " [enter] edit · [j/k] move focus · [esc] close",
       attributes: TextAttributes.DIM,
     }),
   );

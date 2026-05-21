@@ -172,4 +172,48 @@ describe("validateConfigSchema", () => {
     const errors = validateConfigSchema(bad);
     expect(errors.length).toBeGreaterThan(0);
   });
+
+  test("accepts task: extraction with extraction.fields", () => {
+    const cfg = makeValid({
+      task: "extraction",
+      extraction: {
+        fields: [
+          { name: "company", type: "string", required: true },
+          { name: "amount", type: "string", required: false, key: "amt" },
+        ],
+      },
+    } as Partial<LabellensConfig>);
+    expect(validateConfigSchema(cfg)).toEqual([]);
+  });
+
+  test("rejects extraction.fields entry with unknown type", () => {
+    const bad = makeValid({
+      task: "extraction",
+      extraction: {
+        fields: [{ name: "amount", type: "number", required: false }],
+      },
+    } as unknown as Partial<LabellensConfig>);
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("rejects extraction.fields entry missing name", () => {
+    const bad = makeValid({
+      task: "extraction",
+      extraction: {
+        fields: [{ type: "string", required: true }],
+      },
+    } as unknown as Partial<LabellensConfig>);
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("rejects empty extraction.fields", () => {
+    const bad = makeValid({
+      task: "extraction",
+      extraction: { fields: [] },
+    } as Partial<LabellensConfig>);
+    const errors = validateConfigSchema(bad);
+    expect(errors.length).toBeGreaterThan(0);
+  });
 });

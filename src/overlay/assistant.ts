@@ -1,3 +1,10 @@
+import type { ExtractionField } from "../config/config.ts";
+import {
+  canonicalizeExtractionObject,
+  type ExtractionObject,
+  encodeExtractionObject,
+  extractionObjectsEqual,
+} from "../labels/extraction-object.ts";
 import { encodeLabelSet, labelSetsEqual, normalizeLabelSet } from "../labels/label-set.ts";
 import type {
   AssistantBase,
@@ -12,6 +19,10 @@ export type OpenAssistantOptions = {
   multiLabel?: {
     configuredLabels: string[];
     predicted: string[];
+  };
+  extraction?: {
+    fields: ExtractionField[];
+    predictedObject: ExtractionObject;
   };
 };
 
@@ -38,6 +49,14 @@ export function openAssistant(
           },
         }
       : {}),
+    ...(options?.extraction
+      ? {
+          extraction: {
+            fields: options.extraction.fields,
+            predictedObject: options.extraction.predictedObject,
+          },
+        }
+      : {}),
   };
 }
 
@@ -51,6 +70,7 @@ function baseOf(state: AssistantState): AssistantBase {
     predictedLabel: state.predictedLabel,
     reasoningExpanded: state.reasoningExpanded,
     ...(state.multiLabel ? { multiLabel: state.multiLabel } : {}),
+    ...(state.extraction ? { extraction: state.extraction } : {}),
   };
 }
 
@@ -75,6 +95,9 @@ function commit(state: AssistantState): ReduceResult {
   if (state.status !== "done") {
     return { overlay: packed(state), effects: [] };
   }
+  if (state.suggestionObject && state.extraction) {
+    return commitExtraction(state);
+  }
   if (state.suggestionSet && state.multiLabel) {
     return commitMultiLabel(state);
   }
@@ -95,6 +118,69 @@ function commit(state: AssistantState): ReduceResult {
     { kind: "close" },
   ];
   return { overlay: null, effects };
+}
+
+function commitExtraction(state: Extract<AssistantState, { status: "done" }>): ReduceResult {
+  if (!state.suggestionObject || !state.extraction) {
+    return { overlay: packed(state), effects: [] };
+  }
+  const action = state.recommendedAction;
+  const baseStatus = actionToStatus(action);
+  if (baseStatus === "rejected" || baseStatus === "skipped") {
+    const prevLabel =
+      baseStatus === "rejected"
+        ? encodeExtractionObject(state.extraction.predictedObject, state.extraction.fields)
+        : null;
+    return {
+      overlay: null,
+      effects: [
+        { kind: "markAssistantViewed", recordId: state.recordId },
+        {
+          kind: "commitDecision",
+          recordId: state.recordId,
+          status: baseStatus,
+          finalLabel: null,
+          prevLabel,
+          sourceOfTruth: "human+assistant",
+        },
+        { kind: "close" },
+      ],
+    };
+  }
+  // Required-field check before commit — assistant may have returned a missing
+  // required value despite the provider-side gate (legacy cached row, etc.).
+  for (const f of state.extraction.fields) {
+    if (!f.required) continue;
+    const v = state.suggestionObject[f.name] ?? null;
+    if (v === null || v === "") {
+      return { overlay: packed(state), effects: [] };
+    }
+  }
+  const matchesPredicted = extractionObjectsEqual(
+    state.suggestionObject,
+    state.extraction.predictedObject,
+  );
+  const status = matchesPredicted ? "accepted" : "relabeled";
+  const finalLabel = encodeExtractionObject(state.suggestionObject, state.extraction.fields);
+  const prevLabel =
+    status === "relabeled"
+      ? encodeExtractionObject(state.extraction.predictedObject, state.extraction.fields)
+      : null;
+  return {
+    overlay: null,
+    effects: [
+      { kind: "markAssistantViewed", recordId: state.recordId },
+      {
+        kind: "commitDecision",
+        recordId: state.recordId,
+        status,
+        finalLabel,
+        prevLabel,
+        sourceOfTruth: "human+assistant",
+      },
+      { kind: "close" },
+    ],
+  };
 }
 
 function commitMultiLabel(state: Extract<AssistantState, { status: "done" }>): ReduceResult {
@@ -191,6 +277,31 @@ export function reduceAssistant(state: AssistantState, event: OverlayEvent): Red
       // shape. TypeBox `Type.Object` is open by default, so a single-label
       // response that happens to carry an extra `suggestedLabels` key would
       // otherwise be misrouted to the multi-label branch.
+      if (state.extraction) {
+        if (!("extractedObject" in r)) {
+          return {
+            overlay: packed({
+              ...baseOf(state),
+              status: "error",
+              errorMessage: "Assistant returned a non-extraction response for an extraction task.",
+            }),
+            effects: [],
+          };
+        }
+        const { object } = canonicalizeExtractionObject(r.extractedObject, state.extraction.fields);
+        return {
+          overlay: packed({
+            ...baseOf(state),
+            status: "done",
+            suggestion: "",
+            suggestionObject: object,
+            confidence: r.confidence,
+            recommendedAction: r.recommendedAction,
+            reason: r.reasoning,
+          }),
+          effects: [],
+        };
+      }
       if (state.multiLabel) {
         if (!("suggestedLabels" in r)) {
           return {

@@ -15,7 +15,7 @@ Read [Prediction vs annotation](./prediction-vs-annotation.md) first if those te
 | One category per row, such as topic, intent, merchant type, or sentiment | `classification` | Supported |
 | One structural label per line or document segment, where nearby lines matter | `boundary` | Supported |
 | Several independent labels can be true for the same row | `multi-label` | Supported |
-| Structured fields to correct, such as names, dates, or amounts | Extraction review | Planned |
+| Structured fields to correct, such as names, dates, or amounts | `extraction` | Supported |
 | Two outputs to compare or rank | Pairwise / preference | Planned later |
 | Character spans to add, delete, or resize | NER / span review | Planned later |
 
@@ -151,9 +151,68 @@ Effective Review and undo semantics keep working with one current Review per Rec
 
 Bulk multi-label operations and exact-set / per-label set correction metrics are not in scope yet — basic totals / status / source stats remain available.
 
-## Planned task types
+## Extraction review
 
-Extraction review will correct structured fields with a form-like interface. It is for values such as names, dates, amounts, and companies, not character-level span editing.
+Use `extraction` when each record carries a structured object the reviewer should correct field-by-field — names, dates, amounts, companies. Extraction is form-style structured-field correction only: no character spans, no offsets, no NER. #112 supports `string | null` field values; arrays, numbers, booleans, and nested objects are future work.
+
+Good fits:
+
+- Invoice extraction review: `vendor`, `invoice_number`, `total`, `due_date`.
+- Receipt parsing review: `merchant`, `date`, `amount`, `currency`.
+- Resume / form parsing review: `name`, `email`, `start_date`, `end_date`.
+
+Minimal config shape:
+
+```jsonc
+{
+  "task": "extraction",
+  "labels": ["__placeholder__"],
+  "extraction": {
+    "fields": [
+      { "name": "company", "type": "string", "required": true },
+      { "name": "amount",  "type": "string", "required": false, "key": "amt" },
+      { "name": "date",    "type": "string", "required": false }
+    ]
+  },
+  "input": {
+    "path": "./data.jsonl",
+    "format": "jsonl",
+    "fields": { "text": "text" }
+  }
+}
+```
+
+Per-field options:
+
+- `name` (required) — canonical storage / export key and the editor label.
+- `type` (required) — `"string"` only in #112.
+- `required` (required) — when `true`, `accept` and form-commit refuse the row if this field is null or empty.
+- `key` (optional) — source-JSON alias. When set, ingest reads the prediction object's `key` property; canonical storage still uses `name`.
+
+Predictions must supply objects (not strings or arrays):
+
+```jsonl
+{"text":"Invoice from Acme for $100","predictions":[{"label":{"amt":"100","company":"Acme"},"source":"modelA"}]}
+```
+
+A non-object Prediction label under `task: "extraction"` is dropped with an ingest warning. Configured fields not present in the input become `null`. Source-JSON keys not declared in `extraction.fields` are preserved verbatim in the raw record and prediction.raw but never edited or exported as corrected fields. The canonical stored object follows configured field order.
+
+Review actions:
+
+- `a` accepts the primary Prediction object verbatim — refused (with a flash) if any required field is null/empty in that object.
+- `r` opens the form overlay. The draft is pre-populated from the prior committed Review value if one exists, else from the primary Prediction object.
+- Inside the form, `j` / `k` (or arrows) move focus between fields. `Enter` on a focused field opens inline edit; `Enter` while editing commits the typed value to the draft and exits edit; pressing `Enter` again on the same field (with no in-flight edit) commits the Review. `Esc` cancels an in-flight edit first, then closes the form.
+- Status follows object equality with the primary Prediction object: `accepted` when equal, `relabeled` when different.
+- Required-field validation also gates form-commit — the overlay refuses to commit a Review while any required field is null/empty.
+- `x` (reject) writes `final_label: null`; `s` (skip) writes `status: "skipped"`. `u` (undo) reverses the most recent decision. Effective Review and `human+assistant` audit semantics are unchanged.
+- `1`–`9` and per-label `key` shortcuts are intentionally disabled — they would commit a single string label, which is invalid for extraction. The flash directs the reviewer to `r`.
+- The Assistant (`i`) returns a complete suggested object validated against `extraction.fields`. The provider-side schema constrains the tool's keys to configured field names; missing required fields and unknown keys abort the response. `Enter` commits the suggested object with `human+assistant` audit semantics.
+
+Storage is canonical JSON object text reused in the existing `predictions.label`, `reviews.final_label`, and `reviews.prev_label` columns — no schema migration. Export decodes per `extraction.fields`: JSONL emits the corrected object directly in `label`, CSV JSON-stringifies it into the same column (rejected/skipped rows remain `label: null` / blank as in other tasks). Missing required fields or malformed stored values abort the export with the offending record id.
+
+`by-label:<l>` is not meaningful for extraction and matches no rows; per-field stats, per-field queues, field-level statuses, and other advanced extraction analytics are deferred.
+
+## Planned task types
 
 Pairwise / preference review will compare two or more candidate outputs and record a preference or winner.
 
@@ -165,5 +224,6 @@ NER / span review is intentionally deferred. Terminal span editing needs precise
 - Team assignment, adjudication, or workforce management.
 - Image, audio, video, or multimodal annotation.
 - First-class span editing today.
+- Per-field extraction analytics or per-field queues — only basic totals are surfaced.
 
 Those may integrate later through import/export bridges, but the current product is optimized for fast local review of pre-labeled text records.

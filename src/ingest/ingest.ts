@@ -1,5 +1,6 @@
-import { type LabellensConfig, labelName } from "../config/config.ts";
+import { type ExtractionField, type LabellensConfig, labelName } from "../config/config.ts";
 import type { FieldMap } from "../config/inference.ts";
+import { encodeExtractionObject } from "../labels/extraction-object.ts";
 import { encodeLabelSet, normalizeLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { safeIssueSource } from "../store/issues.ts";
@@ -13,9 +14,11 @@ import { contentHashId } from "./id.ts";
 import { streamJsonl } from "./jsonl.ts";
 
 export type IngestTaskOptions = {
-  task: "classification" | "boundary" | "multi-label";
+  task: "classification" | "boundary" | "multi-label" | "extraction";
   /** Configured label names. Required for `task: "multi-label"` normalisation. */
   labels: string[];
+  /** Configured extraction fields. Required for `task: "extraction"` normalisation. */
+  extractionFields?: ExtractionField[];
 };
 
 export type IngestResult = {
@@ -40,6 +43,7 @@ export function ingestTaskOptionsFromConfig(config: LabellensConfig): IngestTask
   return {
     task: config.task,
     labels: config.labels.map(labelName),
+    extractionFields: config.extraction?.fields,
   };
 }
 
@@ -71,7 +75,9 @@ export async function ingestFile(
   };
   let rowIndex = 0;
   const multiLabel = taskOptions?.task === "multi-label";
+  const extraction = taskOptions?.task === "extraction";
   const configuredLabels = taskOptions?.labels ?? [];
+  const extractionFields = taskOptions?.extractionFields ?? [];
 
   let buffer: PendingRecord[] = [];
 
@@ -102,6 +108,24 @@ export async function ingestFile(
 
     const normalisedPredictions: RecordPredictionInput[] = [];
     for (const p of predictions) {
+      if (extraction) {
+        if (typeof p.label !== "object" || p.label === null || Array.isArray(p.label)) {
+          recordWarning(
+            `ingest: record ${id} source=${p.source} dropped — extraction task requires object label, got ${
+              p.label === null ? "null" : typeof p.label
+            }`,
+          );
+          continue;
+        }
+        normalisedPredictions.push({
+          label: encodeExtractionObject(p.label, extractionFields),
+          confidence: typeof p.confidence === "number" ? p.confidence : null,
+          source: p.source,
+          reason: p.reason ?? null,
+          raw: JSON.stringify(p),
+        });
+        continue;
+      }
       if (multiLabel) {
         if (!Array.isArray(p.label)) {
           recordWarning(

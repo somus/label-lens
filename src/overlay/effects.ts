@@ -109,6 +109,9 @@ export function applyEffects(
         if (app.multiLabelDraft?.recordId === effect.recordId) {
           app.clearMultiLabelDraft();
         }
+        if (app.extractionDraft?.recordId === effect.recordId) {
+          app.clearExtractionDraft();
+        }
         const cursor = refreshQueue(app, queueId);
         if (effect.status === "accepted") {
           app.motion.play("footer.accept", flash(80, "success"));
