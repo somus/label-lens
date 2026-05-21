@@ -26,6 +26,71 @@ export function decodeLabelSet(text: string): string[] {
   return parsed.filter((v): v is string => typeof v === "string");
 }
 
+/**
+ * Strict counterpart to `decodeLabelSet`. Used by export, where silently
+ * coercing malformed storage to `[]` would emit a wrong dataset. Throws
+ * `Error` on non-JSON, non-array, or arrays with non-string elements.
+ *
+ * Error messages intentionally do not embed the offending `text` — the
+ * stored value may be large or sensitive; callers (e.g. `validateExportLabelSet`)
+ * prefix the record id so the failure is locatable without leaking the blob.
+ *
+ * Empty arrays and empty-string elements are accepted by the decoder — they
+ * are valid JSON shapes. Higher-layer rules (export refuses empty sets;
+ * ingest/commit refuses labels outside the configured set) catch them.
+ */
+export function decodeLabelSetStrict(text: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("malformed label set: not valid JSON");
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error("malformed label set: expected JSON array");
+  }
+  for (const v of parsed) {
+    if (typeof v !== "string") {
+      throw new Error("malformed label set: non-string element");
+    }
+  }
+  return parsed as string[];
+}
+
+/**
+ * Decode + validate a stored multi-label set for export. Wraps
+ * `decodeLabelSetStrict` with the export-specific rules:
+ *
+ * - record-id-prefixed error messages (so the user can find the bad row),
+ * - empty-set rejection (#110: empty accepted/relabeled is invalid),
+ * - optional CSV separator-collision check naming the offending label.
+ */
+export function validateExportLabelSet(
+  text: string,
+  recordId: string,
+  opts: { separator?: string } = {},
+): string[] {
+  let labels: string[];
+  try {
+    labels = decodeLabelSetStrict(text);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`record ${recordId}: ${reason}`);
+  }
+  if (labels.length === 0) {
+    throw new Error(`record ${recordId}: empty multi-label set is invalid for export`);
+  }
+  if (opts.separator !== undefined) {
+    const collision = labels.find((l) => l.includes(opts.separator!));
+    if (collision !== undefined) {
+      throw new Error(
+        `record ${recordId}: label "${collision}" contains CSV separator "${opts.separator}"; change output.csvMultiLabelSeparator`,
+      );
+    }
+  }
+  return labels;
+}
+
 export function normalizeLabelSet(input: unknown, configured: string[]): NormalizeResult {
   const dropped: string[] = [];
   const duplicates: string[] = [];

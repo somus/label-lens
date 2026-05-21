@@ -136,4 +136,54 @@ describe("runExportCli", () => {
       /requires a path/,
     );
   });
+
+  test("wraps export validation throws as ExportCliError so the CLI prints a clean message", async () => {
+    // Seed a multi-label config so we can inject a malformed final_label
+    // and confirm performExport's plain Error surfaces as ExportCliError
+    // (otherwise main.ts would let it propagate to a bun stack trace).
+    const dir = mkdtempSync(join(tmpdir(), "labellens-cli-strict-"));
+    try {
+      const stateDir = join(dir, ".labellens");
+      mkdirSync(stateDir);
+      const dbPath = join(stateDir, "state.db");
+      const inputPath = join(dir, "in.jsonl");
+      writeFileSync(
+        inputPath,
+        `${JSON.stringify({
+          text: "x",
+          predictions: [{ label: ["spam"], source: "a" }],
+        })}\n`,
+        "utf8",
+      );
+      writeFileSync(
+        join(dir, "labellens.config.json"),
+        JSON.stringify({
+          task: "multi-label",
+          labels: ["spam", "toxicity"],
+          input: { path: inputPath, format: "jsonl", fields: DEFAULT_FIELDS },
+          output: { path: join(dir, "reviewed.jsonl"), format: "jsonl" },
+        }),
+      );
+      const db = openDb(dbPath);
+      await ingestFile(db, inputPath, DEFAULT_FIELDS, {
+        task: "multi-label",
+        labels: ["spam", "toxicity"],
+      });
+      const id = db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
+      insertReview(db, {
+        record_id: id,
+        status: "accepted",
+        final_label: "not json",
+        prev_label: null,
+        source_of_truth: "human",
+      });
+      db.$client.close();
+
+      const promise = runExportCli({ args: ["jsonl"], cwd: dir });
+      await expect(promise).rejects.toBeInstanceOf(ExportCliError);
+      await expect(promise).rejects.toThrow(new RegExp(`malformed.*${id}|${id}.*malformed`, "i"));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

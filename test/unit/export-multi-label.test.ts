@@ -17,7 +17,12 @@ const cfg: LabellensConfig = {
   output: { path: "/tmp/out.jsonl", format: "jsonl" },
 } as unknown as LabellensConfig;
 
-async function setup(): Promise<{
+type ReviewOverrides = {
+  status?: "accepted" | "relabeled" | "rejected" | "skipped";
+  final_label?: string | null;
+};
+
+async function setup(overrides: ReviewOverrides = {}): Promise<{
   db: Db;
   id: string;
   dispose: () => void;
@@ -37,8 +42,9 @@ async function setup(): Promise<{
   const id = db.all<{ id: string }>(sql`SELECT id FROM records LIMIT 1`)[0]!.id;
   insertReview(db, {
     record_id: id,
-    status: "accepted",
-    final_label: '["spam","toxicity"]',
+    status: overrides.status ?? "accepted",
+    final_label:
+      overrides.final_label === undefined ? '["spam","toxicity"]' : overrides.final_label,
     prev_label: null,
     source_of_truth: "human",
   });
@@ -83,6 +89,153 @@ test("CSV export joins multi-label set with configured separator", async () => {
     const lines = out.trim().split("\r\n");
     const cells = lines[1]!.split(",");
     expect(cells[2]).toBe("spam|toxicity");
+  } finally {
+    dispose();
+  }
+});
+
+test("JSONL multi-label export fails on an accepted empty array", async () => {
+  const { db, id, dispose } = await setup({ final_label: "[]" });
+  try {
+    expect(() => exportJsonlString(db, { multiLabel: true })).toThrow(
+      new RegExp(`empty.*${id}|${id}.*empty`, "i"),
+    );
+  } finally {
+    dispose();
+  }
+});
+
+test("JSONL multi-label export fails on malformed (non-JSON) final_label", async () => {
+  const { db, id, dispose } = await setup({ final_label: "not json" });
+  try {
+    expect(() => exportJsonlString(db, { multiLabel: true })).toThrow(
+      new RegExp(`malformed.*${id}|${id}.*malformed`, "i"),
+    );
+  } finally {
+    dispose();
+  }
+});
+
+test("JSONL multi-label export fails on non-array JSON final_label", async () => {
+  const { db, id, dispose } = await setup({ final_label: '"spam"' });
+  try {
+    expect(() => exportJsonlString(db, { multiLabel: true })).toThrow(
+      new RegExp(`array.*${id}|${id}.*array`, "i"),
+    );
+  } finally {
+    dispose();
+  }
+});
+
+test("JSONL multi-label export fails on array with non-string element", async () => {
+  const { db, id, dispose } = await setup({ final_label: '["spam",42]' });
+  try {
+    expect(() => exportJsonlString(db, { multiLabel: true })).toThrow(
+      new RegExp(`string.*${id}|${id}.*string`, "i"),
+    );
+  } finally {
+    dispose();
+  }
+});
+
+test("CSV multi-label export fails on accepted empty array", async () => {
+  const { db, id, dispose } = await setup({ final_label: "[]" });
+  try {
+    expect(() => exportCsvString(db, { multiLabel: true })).toThrow(
+      new RegExp(`empty.*${id}|${id}.*empty`, "i"),
+    );
+  } finally {
+    dispose();
+  }
+});
+
+test("CSV multi-label export fails on malformed final_label", async () => {
+  const { db, id, dispose } = await setup({ final_label: "not json" });
+  try {
+    expect(() => exportCsvString(db, { multiLabel: true })).toThrow(
+      new RegExp(`malformed.*${id}|${id}.*malformed`, "i"),
+    );
+  } finally {
+    dispose();
+  }
+});
+
+test("CSV multi-label export fails when a label contains the configured separator", async () => {
+  const { db, id, dispose } = await setup({ final_label: '["a;b","c"]' });
+  try {
+    expect(() => exportCsvString(db, { multiLabel: true })).toThrow(
+      new RegExp(`separator.*${id}|${id}.*separator|a;b`, "i"),
+    );
+  } finally {
+    dispose();
+  }
+});
+
+test("JSONL multi-label honours output.fieldOverrides.label", async () => {
+  const { db, dispose } = await setup();
+  try {
+    const out = exportJsonlString(db, {
+      multiLabel: true,
+      fieldOverrides: { label: "tags" },
+    });
+    const parsed = JSON.parse(out.trim());
+    expect(parsed.tags).toEqual(["spam", "toxicity"]);
+    expect(parsed.label).toBeUndefined();
+  } finally {
+    dispose();
+  }
+});
+
+test("JSONL multi-label emits label:null for rejected rows included via includeRejected", async () => {
+  const { db, dispose } = await setup({ status: "rejected", final_label: null });
+  try {
+    const out = exportJsonlString(db, { multiLabel: true, includeRejected: true });
+    const parsed = JSON.parse(out.trim());
+    expect(parsed.label).toBeNull();
+  } finally {
+    dispose();
+  }
+});
+
+test("JSONL multi-label emits label:null for skipped rows included via includeSkipped", async () => {
+  const { db, dispose } = await setup({ status: "skipped", final_label: null });
+  try {
+    const out = exportJsonlString(db, { multiLabel: true, includeSkipped: true });
+    const parsed = JSON.parse(out.trim());
+    expect(parsed.label).toBeNull();
+  } finally {
+    dispose();
+  }
+});
+
+test("CSV multi-label emits blank label cell for rejected rows included via includeRejected", async () => {
+  const { db, dispose } = await setup({ status: "rejected", final_label: null });
+  try {
+    const out = exportCsvString(db, { multiLabel: true, includeRejected: true });
+    const cells = out.trim().split("\r\n")[1]!.split(",");
+    expect(cells[2]).toBe("");
+  } finally {
+    dispose();
+  }
+});
+
+test("CSV multi-label emits blank label cell for skipped rows included via includeSkipped", async () => {
+  const { db, dispose } = await setup({ status: "skipped", final_label: null });
+  try {
+    const out = exportCsvString(db, { multiLabel: true, includeSkipped: true });
+    const cells = out.trim().split("\r\n")[1]!.split(",");
+    expect(cells[2]).toBe("");
+  } finally {
+    dispose();
+  }
+});
+
+test("CSV multi-label export succeeds when configured separator avoids the conflict", async () => {
+  const { db, dispose } = await setup({ final_label: '["a;b","c"]' });
+  try {
+    const out = exportCsvString(db, { multiLabel: true, multiLabelSeparator: "|" });
+    const cells = out.trim().split("\r\n")[1]!.split(",");
+    expect(cells[2]).toBe("a;b|c");
   } finally {
     dispose();
   }

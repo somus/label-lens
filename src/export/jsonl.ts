@@ -1,5 +1,5 @@
 import type { OutputFieldOverrides } from "../config/config.ts";
-import { decodeLabelSet } from "../labels/label-set.ts";
+import { validateExportLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { projectMeta } from "./meta.ts";
@@ -41,7 +41,7 @@ export function exportJsonlString(db: Db, opts: ExportJsonlOptions = {}): string
       ? opts.multiLabel
         ? review.final_label === null
           ? null
-          : decodeLabelSet(review.final_label)
+          : validateExportLabelSet(review.final_label, record.id)
         : review.final_label
       : null;
     const row: Record<string, unknown> = {

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   decodeLabelSet,
+  decodeLabelSetStrict,
   encodeLabelSet,
   labelSetsEqual,
   normalizeLabelSet,
@@ -56,6 +57,47 @@ test("normalizeLabelSet drops non-string entries with their stringified form", (
   const r = normalizeLabelSet(["spam", 42, null], configured);
   expect(r.set).toEqual(["spam"]);
   expect(r.dropped).toEqual(["42", "null"]);
+});
+
+test("decodeLabelSetStrict returns the array on canonical input", () => {
+  expect(decodeLabelSetStrict('["spam","toxicity"]')).toEqual(["spam", "toxicity"]);
+  expect(decodeLabelSetStrict("[]")).toEqual([]);
+});
+
+test("decodeLabelSetStrict throws on non-JSON text", () => {
+  expect(() => decodeLabelSetStrict("not-json")).toThrow(/malformed/i);
+});
+
+test("decodeLabelSetStrict throws on JSON that is not an array", () => {
+  expect(() => decodeLabelSetStrict('"spam"')).toThrow(/array/i);
+  expect(() => decodeLabelSetStrict("null")).toThrow(/array/i);
+  expect(() => decodeLabelSetStrict("{}")).toThrow(/array/i);
+});
+
+test("decodeLabelSetStrict throws when any element is not a string", () => {
+  expect(() => decodeLabelSetStrict('["spam",42,"toxicity"]')).toThrow(/string/i);
+  expect(() => decodeLabelSetStrict("[null]")).toThrow(/string/i);
+});
+
+test("decodeLabelSetStrict accepts empty-string elements; configured-label match catches them upstream", () => {
+  // Strict decoder validates only the JSON shape. Empty strings are valid
+  // strings; ingest/commit normalisation refuses anything not in the
+  // configured label set, so an empty string can never reach storage via
+  // the supported paths. The decoder must not assume label semantics.
+  expect(decodeLabelSetStrict('[""]')).toEqual([""]);
+});
+
+test("decodeLabelSetStrict error messages do not embed the raw input text", () => {
+  // Stored values could be large or contain sensitive content. The decoder
+  // intentionally omits the blob; the export-side wrapper prefixes the
+  // record id so callers can still locate the bad row.
+  const huge = `"${"x".repeat(5000)}"`;
+  try {
+    decodeLabelSetStrict(huge);
+    throw new Error("expected throw");
+  } catch (err) {
+    expect((err as Error).message).not.toContain("xxxx");
+  }
 });
 
 test("labelSetsEqual is order-insensitive", () => {

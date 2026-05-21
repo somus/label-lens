@@ -1,6 +1,11 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { type ExportFormat, parseExportArgument, performExport } from "../actions/export/run.ts";
+import {
+  type ExportFormat,
+  parseExportArgument,
+  performExport,
+  type RunExportResult,
+} from "../actions/export/run.ts";
 import { type LabellensConfig, validateFieldOverrides } from "../config/config.ts";
 import { ConfigLoadError, loadConfig } from "../config/load.ts";
 import { openDb } from "../store/db.ts";
@@ -64,13 +69,22 @@ export async function runExportCli({ args, cwd }: RunExportCliArgs): Promise<voi
 
   const db = openDb(stateDbPath);
   try {
-    const result = performExport(db, config, {
-      format,
-      includeRejected: parsed.includeRejected,
-      includeSkipped: parsed.includeSkipped,
-      includeOrphans: parsed.includeOrphans,
-      outputPath: parsed.outputPath,
-    });
+    let result: RunExportResult;
+    try {
+      result = performExport(db, config, {
+        format,
+        includeRejected: parsed.includeRejected,
+        includeSkipped: parsed.includeSkipped,
+        includeOrphans: parsed.includeOrphans,
+        outputPath: parsed.outputPath,
+      });
+    } catch (err) {
+      // performExport throws plain Errors for validation failures
+      // (malformed multi-label state, empty sets, CSV separator
+      // collisions). Surface them as a clean CLI message rather than a
+      // bun stack trace.
+      throw new ExportCliError(err instanceof Error ? err.message : String(err), 1);
+    }
     console.log(`Exported ${result.format} to ${result.path}`);
   } finally {
     db.$client.close();

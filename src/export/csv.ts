@@ -1,5 +1,5 @@
 import type { OutputFieldOverrides } from "../config/config.ts";
-import { decodeLabelSet } from "../labels/label-set.ts";
+import { validateExportLabelSet } from "../labels/label-set.ts";
 import type { Db } from "../store/db.ts";
 import { latestEffectiveByRecord, type QueueQuery, queueRecords } from "../store/queries.ts";
 import { withOrphanFilter } from "./where.ts";
@@ -65,7 +65,9 @@ export function exportCsvString(db: Db, opts: ExportCsvOptions = {}): string {
     const labelValue = accepted
       ? opts.multiLabel
         ? formatCsvLabel(
-            review.final_label === null ? null : decodeLabelSet(review.final_label),
+            review.final_label === null
+              ? null
+              : validateExportLabelSet(review.final_label, record.id, { separator }),
             separator,
           )
         : formatCsvLabel(review.final_label, separator)
