@@ -75,7 +75,7 @@ export function overlayFooterHint(overlay: Overlay, preset: OverlayKeyPreset = "
       ];
     case "extraction-form":
       return [
-        { text: "[j/k] ", tone: "accent" },
+        { text: "[↑/↓] ", tone: "accent" },
         { text: "focus  ", tone: "muted" },
         { text: "[enter] ", tone: "accent" },
         { text: "edit · commit value · commit review  ", tone: "muted" },
