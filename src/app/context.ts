@@ -137,13 +137,6 @@ export type AppContext = {
   multiLabelDraft: { recordId: string; selected: Set<string> } | null;
   clearMultiLabelDraft(): void;
   /**
-   * Extraction task only: in-progress structured-object draft the reviewer is
-   * editing. Cleared on record navigation so each focus session resumes from
-   * the prior committed Review (if any) or the primary Prediction.
-   */
-  extractionDraft: { recordId: string; object: Record<string, string | null> } | null;
-  clearExtractionDraft(): void;
-  /**
    * In-flight assistant stream's AbortController. Set by `record.openAssistant`
    * when a query fires; cleared (and aborted) by `cancelAssistantStream` when
    * the reviewer dismisses the overlay or navigates to a different record so
@@ -444,10 +437,6 @@ export function createAppContext(args: {
     multiLabelDraft: null,
     clearMultiLabelDraft() {
       ctx.multiLabelDraft = null;
-    },
-    extractionDraft: null,
-    clearExtractionDraft() {
-      ctx.extractionDraft = null;
     },
     savedAssistantState: null,
     clearSavedAssistant() {

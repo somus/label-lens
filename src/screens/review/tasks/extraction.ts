@@ -26,22 +26,16 @@ export function createExtractionTask(args: {
 function renderExtractionFieldRail(
   args: DecisionRenderArgs & { fields: ExtractionField[] },
 ): ReturnType<typeof Box> {
-  const { record, display, contentWidth, extractionDraft, fields } = args;
+  const { record, display, contentWidth, fields } = args;
   if (!record) return Box({});
   const predicted = record.primaryPrediction
     ? decodeExtractionObject(record.primaryPrediction.label, fields)
     : {};
   const confidence = record.primaryPrediction?.confidence ?? null;
-  const draftActive = extractionDraft !== undefined;
   const rows = fields.map((f) => {
     const predVal = predicted[f.name] ?? null;
-    const draftVal = draftActive ? (extractionDraft![f.name] ?? null) : predVal;
-    return renderFieldRow(f, predVal, draftVal, draftActive);
+    return renderFieldRow(f, predVal);
   });
-
-  const headerTrailing = draftActive
-    ? commitIntentSegments(predicted, extractionDraft!, fields)
-    : undefined;
 
   const hintSegments: Segment[] = [
     { text: " ", tone: "default" },
@@ -56,7 +50,7 @@ function renderExtractionFieldRail(
   ];
 
   const confidenceRow =
-    !draftActive && confidence !== null
+    confidence !== null
       ? Text({
           content: segmentsToStyledText(
             [{ text: `   ${Math.round(confidence * 100)}%`, tone: "muted" }],
@@ -71,7 +65,6 @@ function renderExtractionFieldRail(
       display,
       label: "fields",
       width: contentWidth,
-      ...(headerTrailing && headerTrailing.length > 0 ? { trailing: headerTrailing } : {}),
     }),
     Text({ content: " " }),
     ...rows.map((segs) =>
@@ -90,16 +83,10 @@ function renderExtractionFieldRail(
   );
 }
 
-function renderFieldRow(
-  field: ExtractionField,
-  predicted: string | null,
-  draft: string | null,
-  draftActive: boolean,
-): Segment[] {
-  const glyph = draftActive ? draftGlyph(predicted, draft) : { text: "◆", tone: "accent" as const };
-  const valueTone: Segment["tone"] =
-    draft === null && field.required ? "warning" : draftActive ? "accent" : "default";
-  const value = draft === null ? (field.required ? "<required>" : "—") : draft;
+function renderFieldRow(field: ExtractionField, predicted: string | null): Segment[] {
+  const glyph: Segment = { text: "◆", tone: "accent" };
+  const valueTone: Segment["tone"] = predicted === null && field.required ? "warning" : "default";
+  const value = predicted === null ? (field.required ? "<required>" : "—") : predicted;
   return [
     { text: " ", tone: "default" },
     glyph,
@@ -107,47 +94,5 @@ function renderFieldRow(
     { text: field.name, tone: "muted" },
     { text: ": ", tone: "muted" },
     { text: value, tone: valueTone },
-  ];
-}
-
-function draftGlyph(predicted: string | null, draft: string | null): Segment {
-  if ((predicted ?? null) === (draft ?? null)) return { text: "=", tone: "accent" };
-  if (predicted === null && draft !== null) return { text: "+", tone: "success" };
-  if (predicted !== null && draft === null) return { text: "-", tone: "danger" };
-  return { text: "~", tone: "warning" };
-}
-
-function commitIntentSegments(
-  predicted: Record<string, string | null>,
-  draft: Record<string, string | null>,
-  fields: ExtractionField[],
-): Segment[] {
-  let missing = 0;
-  let changed = 0;
-  for (const f of fields) {
-    const p = predicted[f.name] ?? null;
-    const d = draft[f.name] ?? null;
-    if (f.required && (d === null || d === "")) missing++;
-    if (p !== d) changed++;
-  }
-  if (missing > 0) {
-    return [
-      { text: `missing ${missing} required`, tone: "warning" },
-      { text: "  ", tone: "default" },
-      { text: "[x]", tone: "accent" },
-      { text: " reject", tone: "muted" },
-    ];
-  }
-  if (changed === 0) {
-    return [
-      { text: "accept", tone: "success" },
-      { text: "  ", tone: "default" },
-      { text: "[enter]", tone: "accent" },
-    ];
-  }
-  return [
-    { text: `relabel (${changed} changed)`, tone: "accent" },
-    { text: "  ", tone: "default" },
-    { text: "[enter]", tone: "accent" },
   ];
 }

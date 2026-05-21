@@ -22,7 +22,6 @@ export function switchQueue(ctx: AppContext, queueId: QueueId): void {
   ctx.queueId = queueId;
   ctx.clearViewedAssistant();
   ctx.clearMultiLabelDraft();
-  ctx.clearExtractionDraft();
   ctx.clearSavedAssistant();
   ctx.motion.play("status.queue", flash(120, "info"));
   ctx.setFlash(`Queue: ${def.label}`, "info", 1500);

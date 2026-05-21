@@ -1,5 +1,4 @@
 import type { ExtractionField, LabelConfigEntry } from "../../../config/config.ts";
-import type { ExtractionObject } from "../../../labels/extraction-object.ts";
 import type { Box } from "../../../render/box.ts";
 import type { ResolvedDisplay } from "../../../render/capability.ts";
 import type { RecordWithPrimaryPrediction } from "../../../types.ts";
@@ -17,9 +16,6 @@ export type DecisionRenderArgs = {
    * Renderers ignore this when undefined or when the task is single-label.
    * Threaded from `AppContext.multiLabelDraft` by the review screen. */
   multiLabelDraft?: Set<string>;
-  /** In-progress extraction draft object for the focused record, if any.
-   * Threaded from `AppContext.extractionDraft` by the review screen. */
-  extractionDraft?: ExtractionObject;
   /** Configured extraction fields. Required for the extraction renderer. */
   extractionFields?: ExtractionField[];
 };
