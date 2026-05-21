@@ -74,16 +74,10 @@ export function overlayFooterHint(overlay: Overlay, preset: OverlayKeyPreset = "
         { text: "cancel", tone: "muted" },
       ];
     case "extraction-form":
-      return [
-        { text: "[↑/↓] ", tone: "accent" },
-        { text: "focus  ", tone: "muted" },
-        { text: "[e] ", tone: "accent" },
-        { text: "edit  ", tone: "muted" },
-        { text: "[enter] ", tone: "accent" },
-        { text: "commit  ", tone: "muted" },
-        { text: "[esc] ", tone: "accent" },
-        { text: "close", tone: "muted" },
-      ];
+      // Suppress the bottom hint bar entirely — the form modal carries its
+      // own keymap footer (rendered by `renderExtractionForm`), so duplicating
+      // those shortcuts on the global bar is noise.
+      return [];
     case "note":
       return [
         { text: "[enter] ", tone: "accent" },
