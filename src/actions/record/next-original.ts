@@ -29,6 +29,7 @@ function stepOriginal(ctx: import("../../app/context.ts").AppContext, direction:
     ctx.clearViewedAssistant();
     ctx.clearMultiLabelDraft();
     ctx.clearExtractionDraft();
+    ctx.clearSavedAssistant();
   }
 }
 

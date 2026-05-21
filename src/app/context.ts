@@ -2,7 +2,7 @@ import type { CommandRegistry } from "../actions/command.ts";
 import type { LabellensConfig } from "../config/config.ts";
 import { type Cursor, openCursor } from "../cursor/cursor.ts";
 import { createSmartLearning, type SmartLearning } from "../learning/smart-learning.ts";
-import type { Overlay, OverlayKeyPreset } from "../overlay/types.ts";
+import type { AssistantState, Overlay, OverlayKeyPreset } from "../overlay/types.ts";
 import {
   createMotionController,
   type MotionController,
@@ -150,6 +150,17 @@ export type AppContext = {
    */
   assistantAbort: { recordId: string; controller: AbortController } | null;
   cancelAssistantStream(): void;
+  /**
+   * Suspended assistant overlay state. Set when the reviewer opens a
+   * non-assistant overlay (e.g. the extraction form via `r`) while a
+   * completed assistant suggestion is on screen — captures the `done`
+   * state so the inline assistant strip stays populated underneath the
+   * new overlay. `closeOverlay` restores it as the active overlay so the
+   * suggestion is interactive again once the foreground overlay closes.
+   * Cleared on record navigation alongside the other per-record drafts.
+   */
+  savedAssistantState: AssistantState | null;
+  clearSavedAssistant(): void;
   /**
    * True when `--local-only` was set on the CLI. Threaded into provider
    * validation so a misconfigured remote provider aborts before any network
@@ -342,6 +353,22 @@ export function createAppContext(args: {
       inputPendingUntil = Date.now() + 16;
     },
     openOverlay(o) {
+      // Save+restore: when the reviewer opens a non-assistant overlay
+      // while the assistant overlay is showing a completed suggestion,
+      // suspend the assistant state so the inline strip stays populated
+      // underneath. Closing the new overlay (see `closeOverlay`) restores
+      // it. Loading/streaming/error states are not saved — the user can
+      // re-fire `i` to re-query (cache hit if applicable).
+      if (o.kind === "assistant") {
+        // Re-firing `i` (or another overlay handing back control) replaces
+        // any suspended state.
+        ctx.savedAssistantState = null;
+      } else if (ctx.overlay?.kind === "assistant") {
+        if (ctx.overlay.state.status === "done") {
+          ctx.savedAssistantState = ctx.overlay.state;
+        }
+        ctx.cancelAssistantStream();
+      }
       ctx.overlay = o;
       ctx.requestRender();
     },
@@ -351,7 +378,15 @@ export function createAppContext(args: {
       // funnel through here. Aborts that target a different record are
       // already a no-op so this is safe to call unconditionally.
       ctx.cancelAssistantStream();
-      ctx.overlay = null;
+      if (ctx.overlay !== null && ctx.overlay.kind !== "assistant" && ctx.savedAssistantState) {
+        // Restore the suspended assistant overlay instead of closing to
+        // null. The strip stays interactive (Tab, Enter, Esc) and the
+        // reviewer can dismiss it on the next Esc.
+        ctx.overlay = { kind: "assistant", state: ctx.savedAssistantState };
+        ctx.savedAssistantState = null;
+      } else {
+        ctx.overlay = null;
+      }
       ctx.requestRender();
     },
     paletteHistory: [],
@@ -371,6 +406,10 @@ export function createAppContext(args: {
     extractionDraft: null,
     clearExtractionDraft() {
       ctx.extractionDraft = null;
+    },
+    savedAssistantState: null,
+    clearSavedAssistant() {
+      ctx.savedAssistantState = null;
     },
     assistantAbort: null,
     cancelAssistantStream() {

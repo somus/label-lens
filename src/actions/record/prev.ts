@@ -18,6 +18,7 @@ export const prev: Command = {
       ctx.clearViewedAssistant();
       ctx.clearMultiLabelDraft();
       ctx.clearExtractionDraft();
+      ctx.clearSavedAssistant();
     }
   },
 };

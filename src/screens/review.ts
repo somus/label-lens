@@ -273,7 +273,12 @@ export function mountReviewScreen(args: {
     // entirely — discovery happens via the `[i] setup assistant` chip
     // in the action footer.
     const assistantEnabled = app.config.assistant?.enabled === true;
-    const assistantState = app.overlay?.kind === "assistant" ? app.overlay.state : null;
+    // Active overlay is the foreground source; `savedAssistantState`
+    // covers the case where the reviewer opened a non-assistant overlay
+    // (e.g. the extraction form) on top of a completed suggestion —
+    // the strip stays populated while the foreground overlay is up.
+    const assistantState =
+      app.overlay?.kind === "assistant" ? app.overlay.state : app.savedAssistantState;
     const assistantStrip = assistantEnabled
       ? renderAssistantStrip(assistantState, app.display, contentWidth)
       : Box({});

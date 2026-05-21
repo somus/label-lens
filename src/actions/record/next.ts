@@ -21,6 +21,7 @@ export const next: Command = {
       ctx.clearViewedAssistant();
       ctx.clearMultiLabelDraft();
       ctx.clearExtractionDraft();
+      ctx.clearSavedAssistant();
     }
   },
 };
