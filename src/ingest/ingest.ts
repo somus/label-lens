@@ -101,7 +101,7 @@ export async function ingestFile(
       continue;
     }
 
-    const input = mapInput(obj, fields, text);
+    const input = mapInput(obj, fields, text, extraction);
     const id = input.id ?? contentHashId(input.text, input.context_before, input.context_after);
     const predictions = input.predictions ?? [];
     const issuesIn = input.issues ?? [];
@@ -185,7 +185,12 @@ export async function ingestFile(
   return { ingested, skipped, warnings, warningCount };
 }
 
-function mapInput(obj: Record<string, unknown>, fields: FieldMap, text: string): InputRecord {
+function mapInput(
+  obj: Record<string, unknown>,
+  fields: FieldMap,
+  text: string,
+  extraction: boolean,
+): InputRecord {
   const out: InputRecord = { text };
   if (fields.id) {
     const v = obj[fields.id];
@@ -210,12 +215,19 @@ function mapInput(obj: Record<string, unknown>, fields: FieldMap, text: string):
     out.predictions = explicitPredictions as InputPrediction[];
   } else if (fields.prediction) {
     const label = obj[fields.prediction];
-    if (typeof label === "string" || Array.isArray(label)) {
+    // Extraction tasks accept object-shape predictions as the shorthand
+    // `{"prediction": { ... }}` form alongside the explicit
+    // `predictions[]` shape. Without this branch the prediction is
+    // silently dropped, leaving extraction records with no Prediction
+    // and breaking accept/relabel semantics.
+    const isObject =
+      extraction && typeof label === "object" && label !== null && !Array.isArray(label);
+    if (typeof label === "string" || Array.isArray(label) || isObject) {
       const conf = fields.confidence ? obj[fields.confidence] : undefined;
       const src = fields.source ? obj[fields.source] : undefined;
       out.predictions = [
         {
-          label: label as string,
+          label: label as InputPrediction["label"],
           confidence: typeof conf === "number" ? conf : undefined,
           source: typeof src === "string" ? src : "unknown",
         },
