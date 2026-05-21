@@ -20,18 +20,17 @@ j       # next
 
 Faster: configure per-label keys (`config.labels[].key = "u"` for `utility`) — then a single `u` press relabels.
 
-## Path B — mark + skim
+## Path B — mark + bulk
 
-Best when you want to inspect a subset then act in one pass.
+Best when you want to inspect a subset, pick candidates, then commit in one shot.
 
 ```
-:by-label shopping       # narrow to shopping
-j m j m j m              # mark candidates
-[                        # cycle to marked queue
-1 j 1 j 1                # commit replacement on each
+:by-label shopping        # narrow to shopping
+j m j m j m               # mark candidates while skimming
+:bulk-relabel utility     # relabel all marked records in one batch
 ```
 
-V1 will add `:bulk relabel <label>` against marked. In MVP the manual loop is the workflow.
+A confirmation overlay shows the eligible count and excluded count (already-reviewed records) before any write lands. `u` reverses the whole batch as one logical undo.
 
 ## Path C — `labellens migrate --rename`
 

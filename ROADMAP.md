@@ -1,6 +1,6 @@
 # LabelLens roadmap
 
-Features deferred past v0.1. Listed by pre-v1 release bucket (`v0.2`, `v0.3`, etc.), not by date. The goal is to ship coherent minor-version bundles before v1.0. Items move out of this file when they ship.
+Features deferred past v0.3. Listed by pre-v1 release bucket (`v0.3`, `v0.4`, etc.), not by date. The goal is to ship coherent minor-version bundles before v1.0. Items move out of this file when they ship.
 
 For shipped behaviour, see [PRD.md](./PRD.md). For load-bearing design decisions, see [docs/adr/](./docs/adr/).
 
@@ -8,18 +8,9 @@ For shipped behaviour, see [PRD.md](./PRD.md). For load-bearing design decisions
 
 Larger features deferred until the MVP loop is polished. Each bucket below matches the GitHub milestone with the same name.
 
-### v0.2 Reviewer ergonomics and smart prioritization
+### v0.3 Similarity and duplicate review (remaining)
 
-- **Keybinding presets (#117).** Add built-in `simple` and `vim` keybinding presets, make `simple` the default for missing `keys.preset`, and let projects define config-local custom presets. The current vim-inspired keymap remains available as `vim`.
-- **Active learning and smart prioritization (#93).** As reviewers commit decisions, re-weight built-in prioritization signals (`low_confidence`, `source_disagreement`, `exact_duplicate`) based on current-session relabel lift. Imported issue scores stay fixed, learned weights stay session-local, and reranking must not jump current focus.
-- **Confidence threshold tuning (#103).** Let reviewers configure `signals.lowConfidence.default` plus per-source overrides. Threshold changes recompute computed `low_confidence` Issues and feed both the `low-confidence` Queue and smart-pending score.
-
-**Later.** Model-in-the-loop active learning remains v1.0+; it needs model selection, training cadence, calibration, and cold-start handling.
-
-### v0.3 Batch and similarity review
-
-- **Bulk operations (#94).** Reviewer tags Records with `marked`, then runs `:bulk accept`, `:bulk relabel <label>`, `:bulk reject`, `:bulk skip`, or `:bulk unmark`. Batch Review entries share `reviews.batch_id`, write normal audit rows, and undo as one logical action.
-- **Embedding similarity view and cluster review (#95).** Store one active embedding per Record and expose `:similar` / `:similar-to <record-id>` Queues ranked by cosine similarity. Cluster review uses marked Records plus #94 bulk actions; no automatic Annotation propagation.
+- **Embedding similarity view and cluster review (#95).** Store one active embedding per Record and expose `:similar` / `:similar-to <record-id>` Queues ranked by cosine similarity. Cluster review uses marked Records plus bulk actions; no automatic Annotation propagation.
 - **Near-duplicate detection and conflicting cluster flagging (#107).** Add pure TypeScript 64-bit SimHash over normalized `record.text`, emit `near_duplicate` and `near_duplicate_conflict` computed Issues, and keep exact duplicates on the existing `exact_duplicate` path.
 - **Conflict queues (#108).** Add an aggregate `conflicts` Queue backed by explicit conflict-style Issue types such as `source_disagreement`, `near_duplicate_conflict`, `*_conflict`, and `conflict:*`. Producer issues compute conflicts; this issue only routes and surfaces them.
 
@@ -44,9 +35,6 @@ Larger features deferred until the MVP loop is polished. Each bucket below match
 
 ### v0.7 Additional review task types
 
-- **Multi-label classification task (#105).** Add `task: "multi-label"` through TaskRenderer, storing canonical JSON array text in existing Prediction and Review label fields while keeping one Review row per Record.
-- **Multi-label export shape (#110).** Export reviewed multi-label Annotations as JSON arrays in JSONL and joined CSV cells using `output.csvMultiLabelSeparator`, failing on malformed stored labels or ambiguous separator values.
-- **Extraction review task without spans (#112).** Add `task: "extraction"` as form-style structured field correction for configured string/null fields. This is object review, not NER/span editing or blank-data annotation.
 - **Pairwise / preference review task (#113).** Add `task: "preference"` for winner selection among pre-generated candidates, with stable candidate IDs, number-key accelerators, assistant recommendations, and object-shaped exports.
 
 ### v0.8 Dataset and export adapters
