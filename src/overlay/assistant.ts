@@ -375,5 +375,10 @@ function reduceKey(state: AssistantState, name: string): ReduceResult {
     return { overlay: packed(toggled), effects: [] };
   }
   if (name === "return") return commit(state);
-  return { overlay: packed(state), effects: [] };
+  // Assistant is an inline section (ADR 0009), not a modal stack — any
+  // key it doesn't itself handle should fall through to the review scope
+  // so `q`, `a`, `x`, `s`, `j/k`, `:`, `?`, etc. continue to work while
+  // the suggestion footer is visible. Multi-label picker and the
+  // extraction form use the same pattern.
+  return { overlay: packed(state), effects: [], propagated: true };
 }

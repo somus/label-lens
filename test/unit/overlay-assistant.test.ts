@@ -199,6 +199,29 @@ describe("key handling", () => {
     }
   });
 
+  test("unknown keys propagate so review-scope bindings still fire (ADR 0009)", () => {
+    // Assistant is an inline section, not a modal — q (quit), a (accept),
+    // x (reject), s (skip), j/k (nav), etc. must still trigger their
+    // review-scope commands while the suggestion footer is visible.
+    const s = openAssistant(RECORD_ID);
+    for (const name of ["q", "a", "x", "s", "j", "k", ":", "?"]) {
+      const r = press(s, name);
+      expect(r.propagated).toBe(true);
+    }
+  });
+
+  test("escape, tab, return are NOT propagated (assistant owns these)", () => {
+    const s = state(
+      reduceAssistant(openAssistant(RECORD_ID), {
+        kind: "streamEnd",
+        response: validResponse,
+      }),
+    );
+    expect(press(s, "tab").propagated).toBeUndefined();
+    expect(press(s, "return").propagated).toBeUndefined();
+    expect(press(s, "escape").propagated).toBeUndefined();
+  });
+
   test("empty reasoning still settles to done; reducer keeps Tab toggle for symmetry", () => {
     let s = openAssistant(RECORD_ID);
     const done = asStatus(
