@@ -330,7 +330,11 @@ export function mountReviewScreen(args: {
     // Overlay mounts at the root level (added after Chrome so it paints
     // on top) and centers against the full terminal — no clipping by
     // sidebar / queue-preview rails since it's not inside the main column.
-    if (app.overlay) {
+    //
+    // The assistant overlay is intentionally skipped here: it renders
+    // inline below the chip / fields rail via `renderAssistantStrip`
+    // (ADR 0009), not as a stacked modal.
+    if (app.overlay && app.overlay.kind !== "assistant") {
       renderer.root.add(
         renderOverlay(app.overlay, app, renderer.terminalWidth, renderer.terminalHeight),
       );
@@ -530,7 +534,7 @@ function modalBox(
 }
 
 function renderOverlay(
-  overlay: Overlay,
+  overlay: Exclude<Overlay, { kind: "assistant" }>,
   app: AppContext,
   termWidth: number,
   termHeight: number,
@@ -545,11 +549,6 @@ function renderOverlay(
       return renderExtractionForm(overlay.state, display, termWidth, termHeight);
     case "note":
       return renderNote(overlay.state, display, termWidth, termHeight);
-    case "assistant":
-      // Assistant overlay renders inline (below the chip rail) via
-      // renderAssistantStrip in the main body, not as a modal stack. Return
-      // an empty box so the overlay layer doesn't double-render.
-      return Box({});
     case "configure-assistant":
       return renderConfigureAssistant(overlay.state, display, termWidth, termHeight);
     case "palette":
