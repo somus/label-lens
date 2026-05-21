@@ -10,7 +10,7 @@ import { applyEffects } from "../overlay/effects.ts";
 import type { ExtractionFormState } from "../overlay/extraction-form.ts";
 import { GUIDELINES_PAGE, type GuidelinesState } from "../overlay/guidelines.ts";
 import { HELP_PAGE, type HelpState } from "../overlay/help.ts";
-import { flashFooterHint, overlayFooterHint } from "../overlay/hints.ts";
+import { flashFooterHint } from "../overlay/hints.ts";
 import type { MultiLabelPickerState } from "../overlay/multi-label-picker.ts";
 import type { QueueState } from "../overlay/queue.ts";
 import { reduceOverlay } from "../overlay/reduce.ts";
@@ -300,16 +300,11 @@ export function mountReviewScreen(args: {
     );
 
     const flashActive = !app.overlay && flash !== null;
-    // Assistant + note overlays keep the registry-derived footer so the
-    // reviewer still sees accept/reject/relabel under them — the commit
-    // shortcuts stay live while the overlay is open.
-    const overlayWantsCustomHint =
-      app.overlay !== null && app.overlay.kind !== "assistant" && app.overlay.kind !== "note";
-    const footerHint = overlayWantsCustomHint
-      ? overlayFooterHint(app.overlay!, app.keyPreset)
-      : app.overlay
-        ? undefined
-        : flashFooterHint(flash, app.display, flashActive);
+    // Footer always renders the registry-derived review-scope shortcuts.
+    // Overlays no longer hijack the bar — every modal carries its own
+    // intra-modal keymap footer if it needs one. Flash messages still
+    // take over when the screen is unmodalled.
+    const footerHint = app.overlay ? undefined : flashFooterHint(flash, app.display, flashActive);
 
     // Skip the per-frame sidebar snapshot when the sidebar is hidden.
     // `getSidebarData` queries the DB (signal counts, queue progress) +
